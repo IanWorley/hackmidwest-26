@@ -10,14 +10,17 @@ import type { IConfiguration } from "dependency-cruiser";
  */
 const inPackage = (name: string): string => `(^|node_modules/)${name}(/|$)`;
 
+const WORKSPACES = "^(apps|packages)/";
 const WEB_SRC = "^apps/web/src/";
 const API_WORKSPACE = "^apps/api/";
 const API_SRC = "^apps/api/src/";
-const API_DB_CLIENT = "^apps/api/src/db/client\\.ts$";
 const API_CONFIG = "^apps/api/src/config\\.ts$";
+const DB_WORKSPACE = "^packages/db/";
+const DB_CLIENT = "^packages/db/src/client\\.ts$";
+const DB_TEST_FIXTURE = "^packages/db/src/testing\\.ts$";
 const LIBSQL_DRIVER = inPackage("@libsql/[^/]+");
 const BUN_BUILTINS = "^bun:";
-const BUILD_OUTPUT = "^apps/[^/]+/dist/";
+const BUILD_OUTPUT = "^(apps|packages)/[^/]+/dist/";
 
 // Drizzle's adapters create their own client from a URL.
 const DATABASE_DRIVERS = [
@@ -29,7 +32,8 @@ const DRIZZLE_MIGRATOR = "(^|node_modules/)drizzle-orm/[^/]+/migrator(\\.js)?$";
 
 const SERVER_ONLY = [
   API_WORKSPACE,
-  inPackage("@hackmidwest/api"),
+  DB_WORKSPACE,
+  inPackage("@hackmidwest/(api|db)"),
   inPackage("drizzle-orm"),
   inPackage("drizzle-typebox"),
   inPackage("drizzle-kit"),
@@ -52,21 +56,21 @@ export default {
       to: { path: SERVER_ONLY, reachable: true },
     },
     {
-      name: "api-driver-only-in-db-client",
+      name: "db-driver-only-in-client",
       comment:
-        "Only apps/api/src/db/client.ts opens database connections. Use openDatabase() instead.",
+        "Only packages/db/src/client.ts opens database connections. Use openDatabase() from @hackmidwest/db.",
       severity: "error",
-      from: { path: API_WORKSPACE, pathNot: API_DB_CLIENT },
+      from: { path: WORKSPACES, pathNot: DB_CLIENT },
       to: { path: DATABASE_DRIVERS, pathNot: DRIZZLE_MIGRATOR },
     },
     {
       name: "api-only-entry-points-open-resources",
       comment:
-        "Only entry points read config or open the database, directly or through another module. App and " +
-        "feature code receive `db` by injection; `import type { Database }` is fine.",
+        "Only src/index.ts reads config and only tests use the database fixture, directly or through another " +
+        "module. App and feature code receive config and `db` as parameters.",
       severity: "error",
       from: { path: API_SRC, pathNot: API_SRC_ENTRY_POINTS },
-      to: { path: [API_CONFIG, API_DB_CLIENT], reachable: true },
+      to: { path: [API_CONFIG, DB_TEST_FIXTURE], reachable: true },
     },
   ],
   options: {

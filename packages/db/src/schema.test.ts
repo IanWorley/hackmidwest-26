@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
-import { createTestDatabase } from "../../test/database";
 import { tasks } from "./schema";
+import { createTestDatabase } from "./testing";
 
 it("rejects an empty title even when a caller bypasses the HTTP validator", async () => {
   const store = await createTestDatabase();

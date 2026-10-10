@@ -1,6 +1,6 @@
 import { cors } from "@elysiajs/cors";
+import type { Database } from "@hackmidwest/db";
 import { Elysia } from "elysia";
-import type { Database } from "./db/client";
 import { createTasksModule } from "./features/tasks";
 
 type AppDependencies = {

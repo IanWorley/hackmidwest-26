@@ -1,5 +1,5 @@
+import { createTestDatabase } from "@hackmidwest/db/testing";
 import { describe, expect, it } from "vitest";
-import { createTestDatabase } from "../../test/database";
 import { createApp } from "../app";
 import { HTTP_CREATED, TASKS_PATH } from "./tasks";
 

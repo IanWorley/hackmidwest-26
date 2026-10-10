@@ -1,6 +1,7 @@
 import {
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -13,8 +14,9 @@ import { expect, it } from "vitest";
 import config from "../.dependency-cruiser";
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("../", import.meta.url));
+const ROOT_INSTALL_DIRECTORY = "node_modules";
 const INSTALL_DIRECTORIES = [
-  "node_modules",
+  ROOT_INSTALL_DIRECTORY,
   "apps/api/node_modules",
   "apps/web/node_modules",
 ];
@@ -25,10 +27,15 @@ type BoundaryProbe = {
   readonly violatedRules: readonly string[];
 };
 
-const API_DB_CLIENT_STUB = {
-  "apps/api/src/db/client.ts":
-    "export type Database = object;\nexport function openDatabase() {}\n",
+const API_CONFIG_STUB = {
+  "apps/api/src/config.ts": "export function readApiConfig() {}\n",
 };
+// Relative imports keep the fixture inside the sandbox; the workspace symlink points at the real repository.
+const DB_TEST_FIXTURE_STUB = {
+  "packages/db/src/testing.ts": "export function createTestDatabase() {}\n",
+};
+const IMPORT_DB_TEST_FIXTURE =
+  'import { createTestDatabase } from "../../../../packages/db/src/testing";\nexport const probe = createTestDatabase;\n';
 
 const PROBES: readonly BoundaryProbe[] = [
   {
@@ -42,7 +49,7 @@ const PROBES: readonly BoundaryProbe[] = [
       "apps/web/src/probe.ts": 'import "./helper";\n',
       "apps/web/src/helper.ts": 'import "@libsql/client";\n',
     },
-    violatedRules: ["web-no-server-code"],
+    violatedRules: ["db-driver-only-in-client", "web-no-server-code"],
   },
   {
     behavior: "web cannot load an Elysia runtime value",
@@ -61,48 +68,46 @@ const PROBES: readonly BoundaryProbe[] = [
     violatedRules: [],
   },
   {
-    behavior: "API feature code cannot import the database driver",
+    behavior: "API code cannot import the database driver",
     files: {
       "apps/api/src/features/probe.ts":
         'import { createClient } from "@libsql/client";\nexport const probe = createClient;\n',
     },
-    violatedRules: ["api-driver-only-in-db-client"],
+    violatedRules: ["db-driver-only-in-client"],
   },
   {
     behavior:
-      "API feature code cannot open a connection through Drizzle's libSQL adapter",
+      "API code cannot open a connection through Drizzle's libSQL adapter",
     files: {
       "apps/api/src/features/probe.ts":
         'import { drizzle } from "drizzle-orm/libsql";\nexport const probe = drizzle;\n',
     },
-    violatedRules: ["api-driver-only-in-db-client"],
+    violatedRules: ["db-driver-only-in-client"],
   },
   {
-    behavior: "API feature code cannot open a database",
+    behavior: "API feature code cannot read config",
     files: {
-      ...API_DB_CLIENT_STUB,
+      ...API_CONFIG_STUB,
       "apps/api/src/features/probe.ts":
-        'import { openDatabase } from "../db/client";\nexport const probe = openDatabase;\n',
+        'import { readApiConfig } from "../config";\nexport const probe = readApiConfig;\n',
     },
     violatedRules: ["api-only-entry-points-open-resources"],
   },
   {
-    behavior: "API feature code cannot open a database through an entry point",
+    behavior:
+      "API feature code cannot reach the database test fixture through a helper",
     files: {
-      ...API_DB_CLIENT_STUB,
-      "apps/api/test/database.ts":
-        'import { openDatabase } from "../src/db/client";\nexport const createTestDatabase = openDatabase;\n',
-      "apps/api/src/features/probe.ts":
-        'import { createTestDatabase } from "../../test/database";\nexport const probe = createTestDatabase;\n',
+      ...DB_TEST_FIXTURE_STUB,
+      "apps/api/src/features/helper.ts": IMPORT_DB_TEST_FIXTURE,
+      "apps/api/src/features/probe.ts": 'import "./helper";\n',
     },
     violatedRules: ["api-only-entry-points-open-resources"],
   },
   {
-    behavior: "API feature code may import the Database type",
+    behavior: "API tests may use the database test fixture",
     files: {
-      ...API_DB_CLIENT_STUB,
-      "apps/api/src/features/probe.ts":
-        'import type { Database } from "../db/client";\nexport type Probe = Database;\n',
+      ...DB_TEST_FIXTURE_STUB,
+      "apps/api/src/features/probe.test.ts": IMPORT_DB_TEST_FIXTURE,
     },
     violatedRules: [],
   },
@@ -133,7 +138,10 @@ async function cruiseProbe(files: BoundaryProbe["files"]) {
       writeFileSync(join(sandbox, path), source);
     }
     const { options, ...ruleSet } = config;
-    const { output } = await cruise(["apps"], {
+    const roots = readdirSync(sandbox).filter(
+      (entry) => entry !== ROOT_INSTALL_DIRECTORY,
+    );
+    const { output } = await cruise(roots, {
       ...options,
       baseDir: sandbox,
       validate: true,
@@ -143,7 +151,7 @@ async function cruiseProbe(files: BoundaryProbe["files"]) {
       throw new Error("Expected a structured cruise result");
     }
     const names = output.summary.violations.map(({ rule }) => rule.name);
-    return [...new Set(names)];
+    return [...new Set(names)].sort();
   } finally {
     rmSync(sandbox, { recursive: true, force: true });
   }

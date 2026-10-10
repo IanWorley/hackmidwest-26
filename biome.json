@@ -32,7 +32,12 @@
   },
   "overrides": [
     {
-      "includes": ["apps/**", "!apps/api/src/index.ts", "!apps/api/scripts/**"],
+      "includes": [
+        "apps/**",
+        "packages/**",
+        "!apps/api/src/index.ts",
+        "!packages/db/scripts/**"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -44,7 +49,7 @@
     {
       "includes": [
         "apps/api/src/**",
-        "apps/api/test/**",
+        "packages/db/src/**",
         "!apps/api/src/index.ts"
       ],
       "linter": {
@@ -54,7 +59,27 @@
               "level": "error",
               "options": {
                 "deniedGlobals": {
-                  "Bun": "API modules also run under Vitest on Node. Use Node APIs, and read env only in src/index.ts."
+                  "Bun": "This code also runs under Vitest on Node. Use Node APIs, and read env only in entry points."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/api/src/**", "!apps/api/src/index.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@hackmidwest/db": {
+                    "importNames": ["openDatabase"],
+                    "message": "Only src/index.ts opens the database. Accept `db: Database` as a parameter."
+                  }
                 }
               }
             }
@@ -71,7 +96,9 @@
               "level": "error",
               "options": {
                 "paths": {
-                  "@hackmidwest/api": "Import types from @hackmidwest/api/contract."
+                  "@hackmidwest/api": "Import types from @hackmidwest/api/contract.",
+                  "@hackmidwest/db": "The web app reaches data only through the API.",
+                  "@hackmidwest/db/testing": "The web app reaches data only through the API."
                 },
                 "patterns": [
                   {
