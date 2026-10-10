@@ -1,6 +1,6 @@
-import { Value } from "@sinclair/typebox/value";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Value } from "@sinclair/typebox/value";
 import { t } from "elysia";
 import type { DatabaseLocation } from "./db/client";
 
