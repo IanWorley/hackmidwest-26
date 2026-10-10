@@ -1,6 +1,6 @@
+import { openDatabase } from "@hackmidwest/db";
 import { createApp } from "./app";
 import { readApiConfig } from "./config";
-import { openDatabase } from "./db/client";
 
 const config = readApiConfig(process.env);
 const store = openDatabase(config.database);
