@@ -44,8 +44,8 @@ Y". Build output under `dist/` is not scanned, but importing it still counts.
 Biome adds the checks dependency-cruiser cannot see:
 
 - Its `noRestrictedImports` overrides govern which specifiers web may write, including type imports, and stop API
-  code other than `src/index.ts` from importing `openDatabase`. Apps may not import `packages/db` source files by
-  relative path, so the package's exports are the only way in. Features import tables and the `Database` type from
+  code other than `src/index.ts` from importing `openDatabase`. Apps may not import `packages/db` by relative path or
+  any package through a `node_modules` path, so the package's exports are the only way in. Features import tables and the `Database` type from
   the same package, so this is a name check, not a module check.
 - `noProcessEnv` limits `process.env` to `apps/api/src/index.ts` and `packages/db/scripts/`.
 - `noRestrictedGlobals` bans the `Bun` global, including `Bun.env`, in the same files as `node-compatible-source`.

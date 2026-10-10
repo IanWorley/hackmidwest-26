@@ -85,6 +85,10 @@
                   {
                     "group": ["**/packages/db", "**/packages/db/**"],
                     "message": "Import from @hackmidwest/db or @hackmidwest/db/testing, never from its source files."
+                  },
+                  {
+                    "group": ["**/node_modules/**"],
+                    "message": "Import packages by name, never through a node_modules path."
                   }
                 ]
               }
@@ -114,6 +118,10 @@
                   {
                     "group": ["**/packages/db", "**/packages/db/**"],
                     "message": "The web app reaches data only through the API."
+                  },
+                  {
+                    "group": ["**/node_modules/**"],
+                    "message": "Import packages by name, never through a node_modules path."
                   }
                 ]
               }
