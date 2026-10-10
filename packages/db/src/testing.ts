@@ -1,8 +1,8 @@
-import { openDatabase } from "./client";
+import { type DatabaseStore, openDatabase } from "./client";
 import { applyMigrations } from "./migrations";
 
 /** A fresh connection plus real migrations is the fixture; no SQL copy lives in tests. */
-export async function createTestDatabase() {
+export async function createTestDatabase(): Promise<DatabaseStore> {
   const store = openDatabase({ kind: "memory" });
   try {
     await applyMigrations(store.db);

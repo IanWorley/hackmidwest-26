@@ -1,0 +1,27 @@
+// Group-level severities can only be written as strings, and a string cannot list
+// exceptions, so this file stays exception-free and biome.jsonc extends it.
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "linter": {
+    // Group severities skip stable domain rules, such as React's
+    // noLeakedRender, until their domain is on.
+    "domains": {
+      "drizzle": "all",
+      "playwright": "all",
+      "project": "all",
+      "react": "all",
+      "test": "all",
+      "types": "all"
+    },
+    "rules": {
+      "a11y": "error",
+      "complexity": "error",
+      "correctness": "error",
+      "nursery": "error",
+      "performance": "error",
+      "security": "error",
+      "style": "error",
+      "suspicious": "error"
+    }
+  }
+}

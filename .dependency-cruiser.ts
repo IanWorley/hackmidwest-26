@@ -8,7 +8,9 @@ import type { IConfiguration } from "dependency-cruiser";
  * or not (an undeclared package keeps its bare specifier, e.g. "drizzle-orm/libsql"). Matching both means a
  * rule can't pass just because the import failed to resolve.
  */
-const inPackage = (name: string): string => `(^|node_modules/)${name}(/|$)`;
+function inPackage(name: string): string {
+  return `(^|node_modules/)${name}(/|$)`;
+}
 
 const WORKSPACES = "^(apps|packages)/";
 const WEB_SRC = "^apps/web/src/";
@@ -45,6 +47,8 @@ const SERVER_ONLY = [
   ...BUN_MODULES,
 ];
 
+const HTTP_FRAMEWORKS = [inPackage("elysia"), inPackage("@elysiajs/[^/]+")];
+
 const API_ENTRY_POINT = "^apps/api/src/index\\.ts$";
 const TEST_FILE = "\\.test\\.ts$";
 
@@ -66,6 +70,14 @@ export default {
       severity: "error",
       from: { path: WORKSPACES, pathNot: DB_CLIENT },
       to: { path: DATABASE_DRIVERS, pathNot: DRIZZLE_MIGRATOR },
+    },
+    {
+      name: "db-no-http",
+      comment:
+        "packages/db owns persistence. HTTP belongs in an app, so the package never loads an HTTP framework.",
+      severity: "error",
+      from: { path: DB_WORKSPACE },
+      to: { path: HTTP_FRAMEWORKS },
     },
     {
       name: "node-compatible-source",

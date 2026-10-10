@@ -1,0 +1,29 @@
+{
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "root": false,
+  "extends": "//",
+  "linter": {
+    "rules": {
+      "style": {
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "fetch": "Call application endpoints through the Eden client."
+            }
+          }
+        },
+        // Add bans with `paths`; a `patterns` list here would replace the
+        // root's. Server packages are already undeclared dependencies here.
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@hackmidwest/api": "Import types from @hackmidwest/api/contract."
+            }
+          }
+        }
+      }
+    }
+  }
+}

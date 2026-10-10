@@ -7,8 +7,16 @@ const HTTPS_PROTOCOL = "https:";
 const ORIGIN_PATH = "/";
 const PublicApiUrlSchema = Type.String({ minLength: MIN_URL_LENGTH });
 
+interface WebConfig {
+  readonly apiBaseUrl: string;
+}
+
 /** Accept a public HTTP origin usable by both Start SSR and browser navigation. */
-export function readWebConfig({ apiBaseUrl }: { apiBaseUrl: unknown }) {
+export function readWebConfig({
+  apiBaseUrl,
+}: {
+  apiBaseUrl: unknown;
+}): WebConfig {
   if (!Value.Check(PublicApiUrlSchema, apiBaseUrl)) {
     throw new Error("VITE_API_BASE_URL must be configured");
   }

@@ -13,7 +13,7 @@ Three Bun workspaces:
   Feature work runs as [Effect](https://effect.website) programs; Elysia stays the HTTP layer.
 - `apps/web` is TanStack Start. It imports one thing from the API: the `App` **type**, via the
   `@hackmidwest/api/contract` export (types-only condition, so a runtime import cannot resolve).
-  Biome also rejects relative imports into API source and any import of `@hackmidwest/db`.
+  Biome rejects relative imports into any other workspace's source.
 
 ```
 packages/db/src/schema.ts (Drizzle table + TASK_TITLE_LENGTH)
@@ -36,6 +36,7 @@ Y". Build output under `dist/` is not scanned, but importing it still counts.
 - `db-driver-only-in-client`: in every workspace, only `packages/db/src/client.ts` opens connections: `@libsql/*`,
   Drizzle's `libsql` and `bun-sqlite` adapters (which build their own client from a URL), `bun:sqlite`, or
   `node:sqlite`. Drizzle's migrators are allowed.
+- `db-no-http`: `packages/db` never loads Elysia or an `@elysiajs/*` package. HTTP belongs in an app.
 - `node-compatible-source`: API and database source also runs on Node under Vitest, so only the Bun entry point
   `apps/api/src/index.ts` may load `bun` or `bun:*` modules.
 - `api-only-entry-points-open-resources`: in `apps/api/src`, only `index.ts` and tests may reach `config.ts` or the
@@ -45,14 +46,17 @@ Y". Build output under `dist/` is not scanned, but importing it still counts.
 
 Biome adds the checks dependency-cruiser cannot see:
 
-- Its `noRestrictedImports` overrides govern which specifiers apps may write, including type imports. Neither app
-  may import `packages/db` by relative path or anything through a `node_modules` path, so the package's exports are
-  the only way in. Web also may not import any `@hackmidwest/db` export or API source.
+- The root `noRestrictedImports` patterns govern which specifiers any workspace may write, including type imports.
+  No workspace may import another workspace's source or a `packages/*` folder by relative path, or anything through
+  a `node_modules` path, so package exports are the only way in.
+- `noUndeclaredDependencies` keeps each workspace to its `package.json`. Web does not declare `@hackmidwest/db`, so
+  no `@hackmidwest/db` export resolves there, type imports included.
 - `noProcessEnv` limits `process.env` to `apps/api/src/index.ts` and `packages/db/scripts/`.
-- `noRestrictedGlobals` bans the `Bun` global, including `Bun.env`, in the same files as `node-compatible-source`.
+- `noRestrictedGlobals` bans the `Bun` global, including `Bun.env`, in the same files as `node-compatible-source`,
+  and bans `fetch` in the web app so Eden stays the only HTTP client.
 
-`test/module-boundaries.test.ts` runs small probe files through dependency-cruiser and Biome with the real
-configuration, so a rule that silently stops matching, including a Biome override that replaces another, fails a test
+`test/module-boundaries.test.ts` runs the probe files in `test/boundary-probes.ts` through dependency-cruiser and
+Biome with the real configuration, so a rule that silently stops matching, including a Biome override that replaces another, fails a test
 instead of passing lint.
 
 ## Effect in the API
@@ -77,6 +81,44 @@ listTasks(): Effect<Task[], TaskStorageError, Database>
 - `@hackmidwest/db`, its `migrate` and `seed` scripts, and `config.ts` stay plain async TypeScript. They are tooling
   and shared storage, not request features, so `packages/db` has no Effect dependency.
 
+## Lint policy
+
+Biome is configured at three levels:
+
+- `biome.strict.jsonc` sets each rule group, nursery included, to `"error"` and turns on the domains this
+  stack uses (React, test, types, project, Drizzle, Playwright). A Biome upgrade's new rules are errors
+  as soon as the version bumps. Group severities can only be strings, which can't carry exceptions, so
+  this file holds none.
+- `biome.jsonc` extends it. It sets rule options and lists every repo-wide exception with its reason.
+  Exceptions include framework rules for Solid, Qwik, and Next that misread React, and Bundler-incompatible
+  `useImportExtensions`.
+- Each workspace's `biome.jsonc` has `"root": false, "extends": "//"` and only that workspace's exceptions,
+  copied from `templates/biome/` (library, server app, web app).
+
+Exceptions live in `linter.rules` or in narrowly scoped `overrides`. Repo-wide rule settings stay out of a
+root `"**"` override, because an override from the root beats a workspace's `linter.rules` and would silently
+cancel the workspace's choice.
+
+Import boundaries split the same way. Every workspace gets the boundaries that hold for all of them from
+the root, so a missing workspace config cannot drop them:
+
+- No relative import into another workspace's `src`. Workspaces meet through package names, which keeps
+  each `package.json` the one dependency graph.
+- `noUndeclaredDependencies` enforces that graph, and dev dependencies are importable only from tests, test
+  setup, and `*.config.ts` files.
+- `noBunModules` keeps `bun` and `bun:*` modules out, so code runs under Vitest on Node. The API entry point is
+  the one exception.
+
+A workspace config adds rules specific to its kind. Server and library configs ban the `Bun` global in `src`,
+and the web config bans `fetch`. Runtime bans that must follow subpaths and import chains, such as Elysia in web
+or HTTP frameworks in `packages/db`, belong to dependency-cruiser. A workspace `patterns` list would replace the
+root's `patterns` rather than add to them, so workspaces add import bans with `paths` only. A rule's options in
+an override likewise replace that rule's options for the matched files.
+
+A missing workspace config leaves the root policy in place, including the shared boundaries and every
+dependency-cruiser rule. The workspace loses only its kind-specific globals bans. A nested
+config without `"root": false` is a Biome error.
+
 ## Testing
 
 Vitest runs on Node, so the API uses `@libsql/client/sqlite3` (works on Bun and Node) rather than `bun:sqlite`.
@@ -95,6 +137,10 @@ API tests call `app.handle(new Request(...))` — real validation and serializat
 - One generic 500 for every storage failure and defect, in exchange for no invented availability policy.
 - Promise-backed Drizzle queries under `Effect.tryPromise`. Interruption cannot cancel a libSQL write, so request
   abort signals are not forwarded and inserts are never retried.
+- `useExplicitType` is off because it has no allow-list. `useExplicitReturnType` stays on, and each workspace
+  names the builders (Elysia app, Drizzle connection, TanStack router) whose inferred types are the contract.
+- Nursery rules are errors, in exchange for upgrade churn. Biome is pinned exactly, so that churn lands only
+  in a deliberate upgrade PR.
 - Moving to Postgres changes table builders, the driver/client, migrations, and the test fixture — no dialect
   abstraction is built ahead of time.
 
@@ -104,6 +150,15 @@ Four candidate designs were sketched in parallel (2× gpt-6-astra, 2× gpt-6.1-s
 gpt-6-astra cross-judge. Candidate 4 (API-owned database, two workspaces) won 22/25 at the time; the other three put the
 database in a shared `packages/db`, which had a single consumer. Grafted in: two cached CI jobs (candidate 1),
 a rejection test proving nothing is stored (candidate 2), and a seed idempotency test (candidate 3).
+
+The lint policy came from two parallel candidates (gpt-6-astra, gpt-6.1-sol). Both listed every rule
+explicitly in one root file of roughly 600 lines. Both used a schema-derived script to keep that list complete
+and a workspace-coverage guard that ran before `lint`. The synthesis replaced the rule list with group
+severities, which cover new rules without a list or script. It dropped the coverage guard because both
+failure modes appeared to fail safe. Review found that the web boundary lived only in the web config, so
+the cross-workspace ban moved to the root. From candidate 1 it took the per-kind templates, the root filename overrides
+for tool configs, and keeping inferred builder types. From candidate 2 it took `useExplicitReturnType` with
+per-workspace allow-lists rather than turning the rule off.
 
 The database moved to `packages/db` once a second backend (the agent API) was planned, the extraction trigger
 the original design named. Storage-only was chosen over exporting shared validators to keep HTTP rules per API.

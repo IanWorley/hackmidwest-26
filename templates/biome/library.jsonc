@@ -1,0 +1,33 @@
+{
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "root": false,
+  "extends": "//",
+  "overrides": [
+    {
+      "includes": ["src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "Bun": "This code also runs on Node under Vitest. Use Node APIs, and read env only in entry points."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      // The package's public entry point re-exports its modules.
+      "includes": ["src/index.ts"],
+      "linter": {
+        "rules": {
+          "performance": { "noBarrelFile": "off" }
+        }
+      }
+    }
+  ]
+}

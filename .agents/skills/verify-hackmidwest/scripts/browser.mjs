@@ -1,6 +1,7 @@
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
+import process from "node:process";
 
 const { WEB_URL, API_URL, ARTIFACTS, TOOLS_DIR } = process.env;
 const STEP_TIMEOUT_MS = 15_000;
@@ -19,21 +20,20 @@ const { chromium } = createRequire(join(TOOLS_DIR, "package.json"))(
 );
 mkdirSync(ARTIFACTS, { recursive: true });
 const logFile = join(ARTIFACTS, "browser.log");
-const log = (line) => {
-  const entry = `${new Date().toISOString()} ${line}`;
-  console.log(entry);
-  appendFileSync(logFile, `${entry}\n`);
-};
 
 const steps = parseSteps(process.argv.slice(2));
 const browser = await chromium.launch();
 const page = await browser.newPage();
 page.setDefaultTimeout(STEP_TIMEOUT_MS);
 page.on("console", (message) => {
-  if (message.type() === "error") log(`console.error ${message.text()}`);
+  if (message.type() === "error") {
+    log(`console.error ${message.text()}`);
+  }
 });
 page.on("requestfinished", async (request) => {
-  if (!request.url().startsWith(API_URL)) return;
+  if (!request.url().startsWith(API_URL)) {
+    return;
+  }
   const response = await request.response();
   log(`net ${request.method()} ${request.url()} -> ${response?.status()}`);
 });
@@ -58,6 +58,11 @@ try {
   await browser.close();
 }
 
+/**
+ * @param {keyof typeof STEP_ARGS} verb
+ * @param {string[]} args
+ * @returns {Promise<void>}
+ */
 async function runStep(verb, args) {
   switch (verb) {
     case "goto":
@@ -93,27 +98,46 @@ async function runStep(verb, args) {
       log(`  saved ${args[0]}.aria.yml ${args[0]}.png`);
       return;
     }
+    default:
+      throw new Error(`unhandled step '${verb}'`);
   }
 }
 
+/**
+ * @param {string[]} argv
+ * @returns {[keyof typeof STEP_ARGS, ...string[]][]}
+ */
 function parseSteps(argv) {
   const parsed = [];
   for (let i = 0; i < argv.length; ) {
     const verb = argv[i];
     const names = STEP_ARGS[verb];
-    if (names === undefined)
+    if (names === undefined) {
       usageError(
         `unknown step '${verb}'; known: ${Object.keys(STEP_ARGS).join(", ")}`,
       );
+    }
     const args = argv.slice(i + 1, i + 1 + names.length);
-    if (args.length < names.length)
+    if (args.length < names.length) {
       usageError(`usage: ${verb} ${names.map((n) => `<${n}>`).join(" ")}`);
+    }
     parsed.push([verb, ...args]);
     i += 1 + names.length;
   }
   return parsed;
 }
 
+/** @param {string} line */
+function log(line) {
+  const entry = `${new Date().toISOString()} ${line}`;
+  console.log(entry);
+  appendFileSync(logFile, `${entry}\n`);
+}
+
+/**
+ * @param {string} message
+ * @returns {never}
+ */
 function usageError(message) {
   console.error(`browser: ${message}`);
   process.exit(EXIT_USAGE);

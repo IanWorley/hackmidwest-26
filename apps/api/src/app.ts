@@ -3,10 +3,10 @@ import { Elysia } from "elysia";
 import { createTasksModule } from "./features/tasks";
 import type { RunRequest } from "./runtime";
 
-type AppDependencies = {
+interface AppDependencies {
   readonly runRequest: RunRequest;
   readonly webOrigin: string;
-};
+}
 
 /** Construct an app without opening a database, reading env, or starting a listener. */
 export function createApp({ runRequest, webOrigin }: AppDependencies) {

@@ -11,8 +11,8 @@ import {
   type RunRequest,
 } from "../runtime";
 
-export const TASKS_PATH = "/api/tasks";
-export const HTTP_CREATED = 201;
+const TASKS_PATH = "/api/tasks";
+const HTTP_CREATED = 201;
 
 const { createSelectSchema, createInsertSchema } = createSchemaFactory({
   typeboxInstance: t,
@@ -82,3 +82,5 @@ export function createTasksModule(runRequest: RunRequest) {
       },
     );
 }
+
+export { HTTP_CREATED, TASKS_PATH };
