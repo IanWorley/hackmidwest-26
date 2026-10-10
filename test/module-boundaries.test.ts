@@ -42,8 +42,14 @@ const API_CONFIG_STUB = {
   "apps/api/src/config.ts": "export function readApiConfig() {}\n",
 };
 // Relative imports keep the fixture inside the sandbox; the workspace symlink points at the real repository.
+const DB_CONNECTION_STUB = {
+  "packages/db/src/client.ts":
+    "export type Database = object;\nexport function openDatabase() {}\n",
+};
 const DB_TEST_FIXTURE_STUB = {
-  "packages/db/src/testing.ts": "export function createTestDatabase() {}\n",
+  ...DB_CONNECTION_STUB,
+  "packages/db/src/testing.ts":
+    'import { openDatabase } from "./client";\nexport const createTestDatabase = openDatabase;\n',
 };
 const IMPORT_DB_TEST_FIXTURE =
   'import { createTestDatabase } from "../../../../packages/db/src/testing";\nexport const probe = createTestDatabase;\n';
@@ -118,7 +124,27 @@ const PROBES: readonly BoundaryProbe[] = [
       "apps/api/src/features/probe.ts":
         'import { readApiConfig } from "../config";\nexport const probe = readApiConfig;\n',
     },
-    violatedRules: ["api-config-only-in-entry-point"],
+    violatedRules: ["api-only-entry-points-open-resources"],
+  },
+  {
+    behavior: "API feature code cannot open a database connection",
+    files: {
+      ...DB_CONNECTION_STUB,
+      "apps/api/src/features/probe.ts":
+        'import { openDatabase } from "../../../../packages/db/src/client";\nexport const probe = openDatabase;\n',
+    },
+    violatedRules: ["api-only-entry-points-open-resources"],
+  },
+  {
+    behavior: "API feature code may import tables and the Database type",
+    files: {
+      ...DB_CONNECTION_STUB,
+      "packages/db/src/index.ts":
+        'export type { Database } from "./client";\nexport const tasks = {};\n',
+      "apps/api/src/features/probe.ts":
+        'import { tasks } from "../../../../packages/db/src/index";\nexport const probe = tasks;\n',
+    },
+    violatedRules: [],
   },
   {
     behavior:
@@ -128,7 +154,10 @@ const PROBES: readonly BoundaryProbe[] = [
       "apps/api/src/features/helper.ts": IMPORT_DB_TEST_FIXTURE,
       "apps/api/src/features/probe.ts": 'import "./helper";\n',
     },
-    violatedRules: ["api-db-fixture-only-in-tests"],
+    violatedRules: [
+      "api-db-fixture-only-in-tests",
+      "api-only-entry-points-open-resources",
+    ],
   },
   {
     behavior: "the API entry point cannot use the database test fixture",
@@ -177,14 +206,6 @@ const LINT_PROBES: readonly BoundaryProbe[] = [
     files: {
       "apps/web/src/probe.ts":
         'import type { Database } from "../../../packages/db/src/client";\nexport type Probe = Database;\n',
-    },
-    violatedRules: ["style/noRestrictedImports"],
-  },
-  {
-    behavior: "API feature code cannot import openDatabase",
-    files: {
-      "apps/api/src/features/probe.ts":
-        'import { openDatabase } from "@hackmidwest/db";\nexport const probe = openDatabase;\n',
     },
     violatedRules: ["style/noRestrictedImports"],
   },
