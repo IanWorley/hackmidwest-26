@@ -50,8 +50,9 @@ Biome adds the checks dependency-cruiser cannot see:
 - `noProcessEnv` limits `process.env` to `apps/api/src/index.ts` and `packages/db/scripts/`.
 - `noRestrictedGlobals` bans the `Bun` global, including `Bun.env`, in the same files as `node-compatible-source`.
 
-`test/module-boundaries.test.ts` cruises small probe files against the real rule set, so a rule that silently stops
-matching fails a test instead of passing lint.
+`test/module-boundaries.test.ts` runs small probe files through dependency-cruiser and Biome with the real
+configuration, so a rule that silently stops matching, including a Biome override that replaces another, fails a test
+instead of passing lint.
 
 ## Effect in the API
 
