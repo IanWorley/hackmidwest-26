@@ -6,7 +6,7 @@ A Bun monorepo with two apps:
 
 | App | Stack | Port |
 |-----|-------|------|
-| `apps/web` | TanStack Start (React, file-based TanStack Router) | 3000 |
+| `apps/web` | TanStack Start (React + React Compiler, file-based TanStack Router) | 3000 |
 | `apps/api` | ElysiaJS on Bun, Drizzle ORM + SQLite | 3001 |
 
 Types flow end to end with no hand-written DTOs:

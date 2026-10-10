@@ -1,11 +1,11 @@
 import { fileURLToPath } from "node:url";
-import react from "@vitejs/plugin-react";
 import { defineProject } from "vitest/config";
+import { reactPlugins } from "./react-plugins";
 
 // Unit tests do not load Start's route compiler or need an API process.
 export default defineProject({
   root: fileURLToPath(new URL(".", import.meta.url)),
-  plugins: [react()],
+  plugins: reactPlugins(),
   test: {
     name: "web",
     environment: "jsdom",

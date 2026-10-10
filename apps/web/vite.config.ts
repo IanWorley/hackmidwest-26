@@ -1,7 +1,7 @@
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
+import { reactPlugins } from "./react-plugins";
 import { readWebConfig } from "./src/config";
 import routeGeneration from "./tsr.config.json";
 
@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
           generatedRouteTree: GENERATED_ROUTE_TREE,
         },
       }),
-      react(),
+      ...reactPlugins(),
     ],
   };
 });

@@ -10,6 +10,7 @@
     "src/**/*.tsx",
     "vite.config.ts",
     "vitest.config.ts",
+    "react-plugins.ts",
     "test/**/*.ts"
   ],
   "exclude": ["dist", "node_modules"]
