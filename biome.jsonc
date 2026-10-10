@@ -1,0 +1,125 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["./biome.strict.jsonc"],
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": ["**", "!**/routeTree.gen.ts", "!**/dist", "!**/.data"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "correctness": {
+        "noUndeclaredDependencies": {
+          "level": "error",
+          "options": {
+            "devDependencies": [
+              "**/*.test.ts",
+              "**/*.test.tsx",
+              "**/test/**",
+              "**/*.config.ts"
+            ]
+          }
+        },
+        // tsconfig uses Bundler resolution, where imports are extensionless.
+        "useImportExtensions": "off",
+        // Solid and Qwik rules misread React components.
+        "noSolidDestructuredProps": "off",
+        "useQwikValidLexicalScope": "off"
+      },
+      "style": {
+        // Next.js rule; TanStack Start renders <head> from the root route.
+        "noHeadElement": "off",
+        // The negation keeps `../src` and `../../src` (a workspace's own
+        // source) legal. A workspace `patterns` list replaces this one, so
+        // workspaces add bans with `paths` only.
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["../**/*/src/**", "!../**/../src/**"],
+                "message": "Import another workspace through its package name, not a relative path into its source."
+              },
+              {
+                "group": ["**/packages/*", "**/packages/*/**"],
+                "message": "Import a shared package through its package exports, never from its folder."
+              },
+              {
+                "group": ["**/node_modules/**"],
+                "message": "Import packages by name, never through a node_modules path."
+              }
+            ]
+          }
+        }
+      },
+      "nursery": {
+        // React Native rule; it treats DOM text as native raw text.
+        "noReactNativeRawText": "off",
+        // No allow-list option, so it would force annotations onto the
+        // Elysia, Drizzle, and TanStack builders whose inferred types are the
+        // contract. useExplicitReturnType covers functions with an allow-list.
+        "useExplicitType": "off",
+        "useConsistentFunctionStyle": {
+          "level": "error",
+          "options": { "style": "declaration" }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      // Vite, Vitest, drizzle-kit, and dependency-cruiser load these from
+      // Node and require a default export.
+      "includes": [
+        "**/vite.config.ts",
+        "**/vitest.config.ts",
+        "**/drizzle.config.ts",
+        ".dependency-cruiser.ts"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": { "noNodejsModules": "off" },
+          "style": { "noDefaultExport": "off" }
+        }
+      }
+    },
+    {
+      // Repository tests drive tools from Node.
+      "includes": ["test/**"],
+      "linter": {
+        "rules": {
+          "correctness": { "noNodejsModules": "off" }
+        }
+      }
+    },
+    {
+      // Agent skill CLIs: env vars are their input, console is their output,
+      // and steps run in order. `goto` waits for network idle because a
+      // following `snap` has no element to wait on.
+      "includes": [".agents/skills/**/scripts/**"],
+      "linter": {
+        "rules": {
+          "correctness": { "noNodejsModules": "off" },
+          "nursery": { "noPlaywrightNetworkidle": "off" },
+          "performance": { "noAwaitInLoops": "off" },
+          "style": { "noProcessEnv": "off" },
+          "suspicious": { "noConsole": "off" }
+        }
+      }
+    }
+  ]
+}

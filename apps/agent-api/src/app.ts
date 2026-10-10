@@ -3,9 +3,9 @@ import { createHealthModule } from "./features/health";
 import { createTaskSummaryModule } from "./features/task-summary";
 import type { RunRequest } from "./runtime";
 
-type AppDependencies = {
+interface AppDependencies {
   readonly runRequest: RunRequest;
-};
+}
 
 export function createApp({ runRequest }: AppDependencies) {
   return new Elysia()

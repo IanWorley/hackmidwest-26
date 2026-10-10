@@ -53,4 +53,17 @@ CI runs format, lint, typecheck, build, and tests on every PR. [autofix.ci](http
 - `apps/web/src/routes/` — file-based routes; loaders call the API through Eden.
 - `apps/web/src/lib/api.ts` — the single Eden client.
 
+## Adding an app or package
+
+1. Create `apps/<name>` or `packages/<name>` with its `package.json`, and add the path to the root `workspaces` list.
+2. Copy the Biome template for its kind to `<workspace>/biome.jsonc`:
+
+   | Kind | Template |
+   |------|----------|
+   | Shared package (`packages/*`) | `templates/biome/library.jsonc` |
+   | Bun server app (`apps/*`) | `templates/biome/server-app.jsonc` |
+   | Browser app (`apps/*`) | `templates/biome/web-app.jsonc` |
+
+3. Run `bun run lint`. Every rule is an error, so fix the code first; add an exception to the workspace's `biome.jsonc` only with a comment saying why.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the change workflow and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design rationale.

@@ -1,0 +1,53 @@
+{
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "root": false,
+  "extends": "//",
+  "overrides": [
+    {
+      // The build-time plugin list shared by vite.config.ts and
+      // vitest.config.ts; its imports are build tools.
+      "includes": ["react-plugins.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUndeclaredDependencies": {
+              "level": "error",
+              "options": { "devDependencies": true }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "linter": {
+    "rules": {
+      "style": {
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {
+            "deniedGlobals": {
+              "fetch": "Call application endpoints through the Eden client."
+            }
+          }
+        },
+        // Add bans with `paths`; a `patterns` list here would replace the
+        // root's. Server packages are already undeclared dependencies here.
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@hackmidwest/api": "Import types from @hackmidwest/api/contract."
+            }
+          }
+        }
+      },
+      "nursery": {
+        // TanStack registers the router and loader data by their inferred types.
+        "useExplicitReturnType": {
+          "level": "error",
+          "options": { "allowedNames": ["getRouter", "loadTasks"] }
+        }
+      }
+    }
+  }
+}

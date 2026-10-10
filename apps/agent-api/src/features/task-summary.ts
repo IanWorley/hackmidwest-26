@@ -8,7 +8,7 @@ import {
   TasksApi,
 } from "../runtime";
 
-export const TASK_SUMMARY_PATH = "/tasks/summary";
+const TASK_SUMMARY_PATH = "/tasks/summary";
 
 const count = t.Integer({ minimum: 0 });
 const taskSummaryResponse = t.Object({
@@ -50,3 +50,5 @@ export function createTaskSummaryModule(runRequest: RunRequest) {
     },
   );
 }
+
+export { TASK_SUMMARY_PATH };

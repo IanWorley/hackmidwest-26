@@ -7,8 +7,8 @@ import {
   type RunRequest,
 } from "../runtime";
 
-export const HEALTH_PATH = "/health";
-export const HEALTHY_STATUS = "ok";
+const HEALTH_PATH = "/health";
+const HEALTHY_STATUS = "ok";
 
 const healthResponse = t.Object({ status: t.Literal(HEALTHY_STATUS) });
 
@@ -26,3 +26,5 @@ export function createHealthModule(runRequest: RunRequest) {
     },
   );
 }
+
+export { HEALTH_PATH, HEALTHY_STATUS };

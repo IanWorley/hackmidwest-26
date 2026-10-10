@@ -1,3 +1,4 @@
+import process from "node:process";
 import { openDatabase } from "@hackmidwest/db/connection";
 import { createApp } from "./app";
 import { readApiConfig } from "./config";
@@ -14,7 +15,7 @@ const EXIT_FAILURE = 1;
 const SHUTDOWN_SIGNALS = ["SIGINT", "SIGTERM"] satisfies NodeJS.Signals[];
 let shutdown: Promise<void> | undefined;
 
-async function release() {
+async function release(): Promise<void> {
   try {
     await runtime.dispose();
   } finally {
@@ -23,8 +24,8 @@ async function release() {
 }
 
 // Both signals converge on the same shutdown operation.
-function stop() {
-  shutdown ??= (async () => {
+function stop(): Promise<void> {
+  shutdown ??= (async (): Promise<void> => {
     try {
       await app.stop();
     } finally {
@@ -42,7 +43,7 @@ try {
 }
 for (const signal of SHUTDOWN_SIGNALS) {
   process.once(signal, () => {
-    void stop().catch(() => {
+    stop().catch(() => {
       process.exitCode = EXIT_FAILURE;
     });
   });

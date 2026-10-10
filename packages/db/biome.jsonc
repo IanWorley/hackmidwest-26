@@ -1,0 +1,67 @@
+{
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "root": false,
+  "extends": "//",
+  "linter": {
+    "rules": {
+      "correctness": {
+        // Persistence runs on Bun and Node and needs their file APIs.
+        "noNodejsModules": "off"
+      },
+      "nursery": {
+        // The connection's type is inferred from Drizzle; Database derives from it.
+        "useExplicitReturnType": {
+          "level": "error",
+          "options": { "allowedNames": ["openDatabase"] }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "Bun": "This code also runs on Node under Vitest. Use Node APIs, and read env only in entry points."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      // The package's public entry point re-exports its modules.
+      "includes": ["src/index.ts"],
+      "linter": {
+        "rules": {
+          "performance": { "noBarrelFile": "off" }
+        }
+      }
+    },
+    {
+      // Drizzle needs every table; the namespace import keeps schema.ts the
+      // only list of them.
+      "includes": ["src/client.ts"],
+      "linter": {
+        "rules": {
+          "performance": { "noNamespaceImport": "off" }
+        }
+      }
+    },
+    {
+      // Operator CLI scripts read the environment once at startup.
+      "includes": ["scripts/**"],
+      "linter": {
+        "rules": {
+          "style": { "noProcessEnv": "off" }
+        }
+      }
+    }
+  ]
+}

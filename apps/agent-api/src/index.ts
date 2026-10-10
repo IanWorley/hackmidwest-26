@@ -1,3 +1,4 @@
+import process from "node:process";
 import { createApp } from "./app";
 import { readAgentApiConfig } from "./config";
 import { createAgentApiRuntime } from "./runtime";
@@ -10,8 +11,8 @@ const EXIT_FAILURE = 1;
 const SHUTDOWN_SIGNALS = ["SIGINT", "SIGTERM"] satisfies NodeJS.Signals[];
 let shutdown: Promise<void> | undefined;
 
-function stop() {
-  shutdown ??= (async () => {
+function stop(): Promise<void> {
+  shutdown ??= (async (): Promise<void> => {
     try {
       await app.stop();
     } finally {
@@ -29,7 +30,7 @@ try {
 }
 for (const signal of SHUTDOWN_SIGNALS) {
   process.once(signal, () => {
-    void stop().catch(() => {
+    stop().catch(() => {
       process.exitCode = EXIT_FAILURE;
     });
   });

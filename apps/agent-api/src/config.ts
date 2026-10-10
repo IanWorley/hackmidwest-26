@@ -8,24 +8,31 @@ const HTTPS_PROTOCOL = "https:";
 const ORIGIN_PATH = "/";
 
 const EnvironmentSchema = t.Object({
-  AGENT_API_PORT: t.String({ pattern: "^[0-9]+$" }),
-  TASKS_API_URL: t.String(),
+  agentApiPort: t.String({ pattern: "^[0-9]+$" }),
+  tasksApiUrl: t.String(),
 });
 const PortSchema = t.Integer({ minimum: MIN_TCP_PORT, maximum: MAX_TCP_PORT });
 
-export function readAgentApiConfig(environment: NodeJS.ProcessEnv) {
+interface AgentApiConfig {
+  readonly port: number;
+  readonly tasksApiUrl: string;
+}
+
+export function readAgentApiConfig(
+  environment: NodeJS.ProcessEnv,
+): AgentApiConfig {
   const input = {
-    AGENT_API_PORT: environment.AGENT_API_PORT,
-    TASKS_API_URL: environment.TASKS_API_URL,
+    agentApiPort: environment.AGENT_API_PORT,
+    tasksApiUrl: environment.TASKS_API_URL,
   };
   if (!Value.Check(EnvironmentSchema, input)) {
     throw new Error("AGENT_API_PORT and TASKS_API_URL must be configured");
   }
-  const port = Number(input.AGENT_API_PORT);
+  const port = Number(input.agentApiPort);
   if (!Value.Check(PortSchema, port)) {
     throw new Error("AGENT_API_PORT must be a valid TCP port");
   }
-  const tasksApi = new URL(input.TASKS_API_URL);
+  const tasksApi = new URL(input.tasksApiUrl);
   if (
     (tasksApi.protocol !== HTTP_PROTOCOL &&
       tasksApi.protocol !== HTTPS_PROTOCOL) ||

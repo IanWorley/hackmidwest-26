@@ -2,6 +2,15 @@ import type { Database as DrizzleDatabase } from "@hackmidwest/db";
 import { Context, Effect, Layer, ManagedRuntime } from "effect";
 import { type ElysiaCustomStatusResponse, status, t } from "elysia";
 
+type InternalServerFailure = ElysiaCustomStatusResponse<
+  typeof HTTP_INTERNAL_SERVER_ERROR,
+  typeof internalServerErrorResponse.static
+>;
+
+function apiLayer(db: DrizzleDatabase) {
+  return Layer.succeed(Database, db);
+}
+
 export class Database extends Context.Service<Database, DrizzleDatabase>()(
   "@hackmidwest/api/Database",
 ) {}
@@ -14,15 +23,6 @@ export const internalServerErrorResponse = t.Object({
   message: t.Literal(INTERNAL_ERROR_MESSAGE),
 });
 
-type InternalServerFailure = ElysiaCustomStatusResponse<
-  typeof HTTP_INTERNAL_SERVER_ERROR,
-  typeof internalServerErrorResponse.static
->;
-
-function apiLayer(db: DrizzleDatabase) {
-  return Layer.succeed(Database, db);
-}
-
 export type ApiServices = Layer.Success<ReturnType<typeof apiLayer>>;
 
 /** Run one complete request program. Any failure or defect is logged and becomes a declared 500. */
@@ -30,10 +30,10 @@ export type RunRequest = <A, E>(
   program: Effect.Effect<A, E, ApiServices>,
 ) => Promise<A | InternalServerFailure>;
 
-export type ApiRuntime = {
+export interface ApiRuntime {
   readonly runRequest: RunRequest;
   readonly dispose: () => Promise<void>;
-};
+}
 
 export function createApiRuntime(db: DrizzleDatabase): ApiRuntime {
   const runtime = ManagedRuntime.make(apiLayer(db));

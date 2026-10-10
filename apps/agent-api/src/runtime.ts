@@ -2,6 +2,15 @@ import { Context, Effect, Layer, ManagedRuntime } from "effect";
 import { type ElysiaCustomStatusResponse, status, t } from "elysia";
 import type { TasksApiClient } from "./tasks-api";
 
+type InternalServerFailure = ElysiaCustomStatusResponse<
+  typeof HTTP_INTERNAL_SERVER_ERROR,
+  typeof internalServerErrorResponse.static
+>;
+
+function agentApiLayer(tasksApi: TasksApiClient) {
+  return Layer.succeed(TasksApi, tasksApi);
+}
+
 export class TasksApi extends Context.Service<TasksApi, TasksApiClient>()(
   "@hackmidwest/agent-api/TasksApi",
 ) {}
@@ -14,25 +23,16 @@ export const internalServerErrorResponse = t.Object({
   message: t.Literal(INTERNAL_ERROR_MESSAGE),
 });
 
-type InternalServerFailure = ElysiaCustomStatusResponse<
-  typeof HTTP_INTERNAL_SERVER_ERROR,
-  typeof internalServerErrorResponse.static
->;
-
-function agentApiLayer(tasksApi: TasksApiClient) {
-  return Layer.succeed(TasksApi, tasksApi);
-}
-
 export type AgentApiServices = Layer.Success<ReturnType<typeof agentApiLayer>>;
 
 export type RunRequest = <A, E>(
   program: Effect.Effect<A, E, AgentApiServices>,
 ) => Promise<A | InternalServerFailure>;
 
-export type AgentApiRuntime = {
+export interface AgentApiRuntime {
   readonly runRequest: RunRequest;
   readonly dispose: () => Promise<void>;
-};
+}
 
 export function createAgentApiRuntime(
   tasksApi: TasksApiClient,

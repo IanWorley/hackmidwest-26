@@ -16,19 +16,22 @@ const ANY_FREE_PORT = 0;
 const TASKS_API_LIST_PATH = "/api/tasks";
 const HTTP_NOT_FOUND = 404;
 
-type TasksApiReply = { readonly status: number; readonly body: unknown };
+interface TasksApiReply {
+  readonly status: number;
+  readonly body: unknown;
+}
 
 async function withTasksApi(
   reply: TasksApiReply,
   run: (app: ReturnType<typeof createApp>) => Promise<void>,
 ): Promise<void> {
   const listener: RequestListener = (request, response) => {
-    const isListTasks =
-      request.method === "GET" && request.url === TASKS_API_LIST_PATH;
-    response.writeHead(isListTasks ? reply.status : HTTP_NOT_FOUND, {
-      "content-type": "application/json",
-    });
-    response.end(isListTasks ? JSON.stringify(reply.body) : "");
+    if (request.method !== "GET" || request.url !== TASKS_API_LIST_PATH) {
+      response.writeHead(HTTP_NOT_FOUND).end();
+      return;
+    }
+    response.writeHead(reply.status, { "content-type": "application/json" });
+    response.end(JSON.stringify(reply.body));
   };
   const server = createServer(listener);
   await new Promise<void>((resolve) =>

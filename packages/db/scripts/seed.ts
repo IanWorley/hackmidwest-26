@@ -1,3 +1,4 @@
+import process from "node:process";
 import { openDatabase } from "../src/client";
 import { readDatabaseLocation } from "../src/location";
 import { seedDemoTasks } from "../src/seed";
