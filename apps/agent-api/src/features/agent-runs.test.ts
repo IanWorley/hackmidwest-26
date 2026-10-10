@@ -8,6 +8,7 @@ import { AGENT_RUNS_PATH, failOrphanedRuns } from "./agent-runs";
 const REQUEST_ORIGIN = "http://agent-api.test";
 const PROMPT = "Plan the demo";
 const SSE_DATA_PREFIX = "data: ";
+const TERMINAL_EVENT = /^event: (done|failed)$/m;
 const COMPLETED: AgentRunEnd = { status: "completed", stopReason: "end_turn" };
 
 type TestContext = {
@@ -103,6 +104,25 @@ describe(`POST ${AGENT_RUNS_PATH}`, () => {
         output: "Step one.",
         ...ending,
       });
+    }),
+  );
+
+  it.each([
+    { status: "completed", ending: COMPLETED },
+    { status: "failed", ending: new Error("Provider unavailable") },
+  ])("records a $status ending before announcing it", ({ status, ending }) =>
+    withApp(providerYielding(["Partial"], ending), async ({ app }) => {
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const response = await app.handle(startRun());
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let received = "";
+      while (reader !== undefined && !TERMINAL_EVENT.test(received)) {
+        const { value } = await reader.read();
+        received += decoder.decode(value);
+      }
+
+      expect(await getRun(app, 1)).toMatchObject({ status });
     }),
   );
 

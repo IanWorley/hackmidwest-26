@@ -113,12 +113,19 @@ async function* streamRun(
 ): AsyncGenerator<AgentRunStreamEvent> {
   let output = "";
   let end: RunEnd | undefined;
+  const record = async (ending: RunEnd) => {
+    end = ending;
+    await db
+      .update(agentRuns)
+      .set({ ...ending, output })
+      .where(eq(agentRuns.id, runId));
+  };
   try {
     yield { type: "started", runId };
     const chunks = provider.run(request, signal);
     for (let step = await chunks.next(); ; step = await chunks.next()) {
       if (step.done) {
-        end = step.value;
+        await record(step.value);
         yield { type: "done", ...step.value };
         return;
       }
@@ -129,14 +136,13 @@ async function* streamRun(
     if (signal.aborted) {
       return;
     }
-    end = FAILED;
     console.error(`Agent run ${runId} failed`, error);
+    await record(FAILED);
     yield { type: "failed", message: RUN_FAILED_MESSAGE };
   } finally {
-    await db
-      .update(agentRuns)
-      .set({ ...(end ?? CANCELLED), output })
-      .where(eq(agentRuns.id, runId));
+    if (end === undefined) {
+      await record(CANCELLED);
+    }
   }
 }
 
