@@ -1,7 +1,7 @@
-import { createClient } from "@libsql/client/sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
+import { createClient } from "@libsql/client/sqlite3";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 

@@ -1,5 +1,5 @@
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { fileURLToPath } from "node:url";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig, loadEnv } from "vite";
 import { reactPlugins } from "./react-plugins";
 import { readWebConfig } from "./src/config";
