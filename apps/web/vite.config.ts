@@ -1,0 +1,42 @@
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import react from "@vitejs/plugin-react";
+import { fileURLToPath } from "node:url";
+import { defineConfig, loadEnv } from "vite";
+import { readWebConfig } from "./src/config";
+import routeGeneration from "./tsr.config.json";
+
+const ROOT_ENV_DIRECTORY = fileURLToPath(new URL("../../", import.meta.url));
+const ROUTES_DIRECTORY = fileURLToPath(
+  new URL(routeGeneration.routesDirectory, import.meta.url),
+);
+const GENERATED_ROUTE_TREE = fileURLToPath(
+  new URL(routeGeneration.generatedRouteTree, import.meta.url),
+);
+
+export default defineConfig(({ mode }) => {
+  const environment = loadEnv(mode, ROOT_ENV_DIRECTORY, "");
+  readWebConfig({ apiBaseUrl: environment.VITE_API_BASE_URL });
+  // WEB_ORIGIN is also the API's CORS origin, so the dev port has one source.
+  const webPort = Number(new URL(requireEnv(environment, "WEB_ORIGIN")).port);
+  return {
+    envDir: ROOT_ENV_DIRECTORY,
+    server: { port: webPort, strictPort: true },
+    plugins: [
+      tanstackStart({
+        router: {
+          routesDirectory: ROUTES_DIRECTORY,
+          generatedRouteTree: GENERATED_ROUTE_TREE,
+        },
+      }),
+      react(),
+    ],
+  };
+});
+
+function requireEnv(environment: Record<string, string>, key: string): string {
+  const value = environment[key];
+  if (value === undefined || value === "") {
+    throw new Error(`${key} must be configured`);
+  }
+  return value;
+}

@@ -1,0 +1,30 @@
+{
+  "name": "@hackmidwest/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "routes:generate": "tsr generate",
+    "typecheck": "tsr generate && tsc --project tsconfig.json",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@hackmidwest/api": "workspace:*",
+    "@elysiajs/eden": "1.4.9",
+    "@tanstack/react-start": "1.168.61",
+    "@tanstack/react-router": "1.170.42",
+    "@sinclair/typebox": "0.34.52",
+    "elysia": "1.4.30",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tanstack/router-cli": "1.167.41",
+    "@vitejs/plugin-react": "6.1.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/dom": "10.4.1",
+    "jsdom": "30.1.2"
+  }
+}

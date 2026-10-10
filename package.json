@@ -1,0 +1,40 @@
+{
+  "name": "hackmidwest-26",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "engines": {
+    "bun": "1.3.x",
+    "node": ">=24.20.0 <25"
+  },
+  "scripts": {
+    "dev": "concurrently --kill-others --names api,web \"bun run --cwd apps/api dev\" \"bun run --cwd apps/web dev\"",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "routes:generate": "bun run --cwd apps/web routes:generate",
+    "check:api": "tsc --project tsconfig.json && bun run --cwd apps/api typecheck",
+    "check:web": "bun run --cwd apps/web typecheck",
+    "check": "concurrently --kill-others-on-fail \"bun run check:api\" \"bun run check:web\"",
+    "build:api": "bun run --cwd apps/api build",
+    "build:web": "bun run --cwd apps/web build",
+    "build": "concurrently --kill-others-on-fail \"bun run build:api\" \"bun run build:web\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "bun run --cwd apps/api db:generate",
+    "db:migrate": "bun run --cwd apps/api db:migrate",
+    "db:seed": "bun run --cwd apps/api db:seed"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "24.10.1",
+    "concurrently": "10.0.6",
+    "typescript": "5.9.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
+  }
+}
