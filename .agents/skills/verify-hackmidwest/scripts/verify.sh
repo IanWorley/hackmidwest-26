@@ -193,9 +193,12 @@ cmd_publish() {
   [[ -d "$art" ]] || die "no evidence at $art"
   [[ -z "$summary" || -f "$summary" ]] || die "summary file '$summary' not found"
 
-  local files=() pattern
+  local files=() pattern match
   shopt -s nullglob
-  for pattern in "${EVIDENCE_PATTERNS[@]}"; do files+=("$art"/$pattern); done
+  for pattern in "${EVIDENCE_PATTERNS[@]}"; do
+    # nullglob drops unmatched globs but keeps literal names such as browser.log, so check each.
+    for match in "$art"/$pattern; do if [[ -e "$match" ]]; then files+=("$match"); fi; done
+  done
   shopt -u nullglob
   (( ${#files[@]} )) || die "no evidence files in $art"
 
