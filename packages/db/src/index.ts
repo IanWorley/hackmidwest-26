@@ -4,4 +4,9 @@ export {
   openDatabase,
 } from "./client";
 export { readDatabaseLocation } from "./location";
-export { TASK_TITLE_LENGTH, tasks } from "./schema";
+export {
+  AGENT_RUN_STATUSES,
+  agentRuns,
+  TASK_TITLE_LENGTH,
+  tasks,
+} from "./schema";

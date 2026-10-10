@@ -8,6 +8,8 @@ Edit `packages/db/src/schema.ts` to change persistence; it is the only place tab
 
 The seed (`packages/db/src/seed.ts`) inserts one row at a reserved development fixture key and ignores conflicts. A second run preserves any existing row. It does not clear tables. Seed only your local development database. `DB_PATH` resolves against the root; the directory is created on first open. `.env` and `.data/` are ignored.
 
+To add an agent provider, add its id to `PROVIDER_IDS` in `apps/agent-api/src/providers/provider.ts`, implement `AgentProvider` in a sibling file with the vendor's official SDK, and register it in `apps/agent-api/src/index.ts`; the compiler flags the missing registration. Agent-run tests use a scripted fake provider, never a live model.
+
 Add focused Vitest tests next to the feature or table, one behavior per test. API tests construct `createApp` and call `app.handle`; every database test gets its own migrated memory connection via `createTestDatabase()` from `@hackmidwest/db/testing`. Close it in `finally`. Web tests render components with Testing Library. API tests run in Node fork workers using libSQL, never `bun:sqlite`. Vitest is the unit test runner; do not add a competing Bun test suite.
 
 Before opening a PR, run `bun run fix`, `bun run lint`, `bun run check`, `bun run build`, and `bun run test`. CI runs two jobs: static checks (format, lint, typecheck, build) and unit tests. Dependency versions are exact; commit `bun.lock` with every dependency change and rerun all checks. Use conventional commit messages. Agent-written PRs identify the model, provider, and reasoning effort (e.g. `## Model: Claude Code (Opus 5.5) Reasoning: low`), then describe the change and validation clearly.

@@ -2,12 +2,13 @@
 
 # HackMidwest-26
 
-A Bun monorepo with two apps and a shared database package:
+A Bun monorepo with three apps and a shared database package:
 
 | App | Stack | Port |
 |-----|-------|------|
 | `apps/web` | TanStack Start (React + React Compiler, file-based TanStack Router) | 3000 |
-| `apps/api` | ElysiaJS on Bun | 3001 |
+| `apps/api` | ElysiaJS on Bun — tasks API | 3001 |
+| `apps/agent-api` | ElysiaJS on Bun — streams agent runs from pluggable LLM providers | 3002 |
 | `packages/db` | Drizzle ORM + SQLite (libSQL): tables, migrations, seed | — |
 
 Types flow end to end with no hand-written DTOs:
@@ -27,11 +28,20 @@ bun run dev
 
 Open <http://localhost:3000/tasks>. The API serves `GET/POST /api/tasks` on <http://localhost:3001>.
 
+The agent API needs Anthropic credentials (`ANTHROPIC_API_KEY` in `.env`). Start a run and watch it stream:
+
+```sh
+curl -N -X POST localhost:3002/api/agent-runs \
+  -H 'content-type: application/json' \
+  -d '{"provider":"anthropic","prompt":"Plan a hackathon demo"}'
+curl localhost:3002/api/agent-runs/1   # the recorded run
+```
+
 ## Commands
 
 | Command | What it does |
 |---------|--------------|
-| `bun run dev` | Run API and web together; Ctrl+C stops both |
+| `bun run dev` | Run both APIs and web together; Ctrl+C stops all |
 | `bun run test` / `test:watch` | Vitest unit tests (`--project api` or `--project web` to narrow) |
 | `bun run format` / `format:check` | Biome formatter |
 | `bun run lint` | Biome linter and import order |
@@ -48,6 +58,8 @@ CI runs format, lint, typecheck, build, and tests on every PR. [autofix.ci](http
 - `packages/db/src/schema.ts` — tables and their shared limits.
 - `apps/api/src/features/` — one Elysia module per feature; validators derived from tables, plus queries.
 - `apps/api/src/contract.ts` — the type-only `App` export the web app consumes.
+- `apps/agent-api/src/providers/` — the `AgentProvider` interface and one adapter per LLM vendor.
+- `apps/agent-api/src/features/agent-runs.ts` — `POST /api/agent-runs` (SSE) and `GET /api/agent-runs/:id`.
 - `apps/web/src/routes/` — file-based routes; loaders call the API through Eden.
 - `apps/web/src/lib/api.ts` — the single Eden client.
 

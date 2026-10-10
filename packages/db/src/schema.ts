@@ -20,3 +20,17 @@ export const tasks = sqliteTable(
     ),
   ],
 );
+
+export const AGENT_RUN_STATUSES = ["running", "completed", "failed"] as const;
+
+/** One prompt sent to one provider; output accumulates as the provider streams. */
+export const agentRuns = sqliteTable("agent_runs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  provider: text("provider").notNull(),
+  prompt: text("prompt").notNull(),
+  status: text("status", { enum: AGENT_RUN_STATUSES })
+    .notNull()
+    .default("running"),
+  output: text("output").notNull().default(""),
+  stopReason: text("stop_reason"),
+});
