@@ -10,7 +10,7 @@ Project skills live in `.agents/skills/`, which Codex, Cursor, OpenCode, and VS 
 
 A PR is not ready until it shows the change working in the real app. Passing tests and a clean typecheck are not proof.
 
-1. If the change affects what a user sees or calls (a page under `apps/web/src/routes`, or an endpoint in `apps/api`), run the `verify-hackmidwest` skill (`.agents/skills/verify-hackmidwest/SKILL.md`) against the PR branch.
+1. If the change affects what a user sees or calls (a page under `apps/web/src/routes`, or an endpoint in `apps/api` or `apps/agent-api`), run the `verify-hackmidwest` skill (`.agents/skills/verify-hackmidwest/SKILL.md`) against the PR branch.
 2. Drive every entry point that the skill's feature map lists for the features you touched. If you add or change a feature, update its feature file in the same PR.
 3. Capture screenshots for UI changes. Capture HTTP transcripts and a database read for API changes.
 4. Run `verify.sh publish <pr-number> <summary.md>` to post the screenshots and transcripts as a PR comment. The summary says what each artifact proves.

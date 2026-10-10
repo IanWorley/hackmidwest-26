@@ -46,3 +46,4 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [Task list](./tasks-list.md) covers the server-rendered `/tasks` page, its ordering, and completion state.
 - [Create a task](./create-task.md) covers `POST /api/tasks`, its validation, and seeing the new task on `/tasks`.
 - [Task list load failure](./tasks-load-error.md) covers the error alert shown when the API is unreachable.
+- [Agent runs](./agent-runs.md) covers `POST /api/agent-runs` streaming, reading a run back, and request validation.

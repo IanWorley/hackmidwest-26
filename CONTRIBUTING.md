@@ -1,12 +1,14 @@
 # Contributing
 
-Use the Bun and Node versions recorded in `.bun-version` and `.node-version`. Install at the repository root with `bun install --frozen-lockfile`, copy `.env.example` to `.env`, then run `bun run db:migrate`, `bun run db:seed`, and `bun run dev`. Stop both processes with Ctrl+C. The root dev command supervises both; do not run a second API against the same SQLite file.
+Use the Bun and Node versions recorded in `.bun-version` and `.node-version`. Install at the repository root with `bun install --frozen-lockfile`, copy `.env.example` to `.env`, then run `bun run db:migrate`, `bun run db:seed`, and `bun run dev`. Stop them with Ctrl+C. The root dev command supervises all three processes. Do not run a second copy of either API against the same SQLite file; the agent API marks every `running` run failed when it starts.
 
 Edit a TypeScript file under `apps/web/src/routes` to add a page. Start generates the route tree during dev and build. `bun run check:web` generates it before typechecking, so a fresh clone needs no prior dev session. `routeTree.gen.ts` is ignored and never edited by hand. Route identifiers inside `createFileRoute` must match the filename and stay literals for the generator.
 
 Edit `packages/db/src/schema.ts` to change persistence; it is the only place tables live. Run `bun run db:generate`, inspect the SQL, commit its migration and metadata, then run `bun run db:migrate`. Schema edits and generated migrations go in the same PR. Migrations have one operator at a time; app startup never migrates. Never use `drizzle-kit push` against shared data. Tests use committed migrations, so a stale schema change fails its focused behavior test.
 
 The seed (`packages/db/src/seed.ts`) inserts one row at a reserved development fixture key and ignores conflicts. A second run preserves any existing row. It does not clear tables. Seed only your local development database. `DB_PATH` resolves against the root; the directory is created on first open. `.env` and `.data/` are ignored.
+
+To add an agent provider, add its id to `PROVIDER_IDS` in `apps/agent-api/src/providers/provider.ts`, implement `AgentProvider` in a sibling file with the vendor's official SDK (yield text, return `completed` or `refused`, throw on failure), and register it in `apps/agent-api/src/index.ts`; the compiler flags the missing registration. Agent-run tests use a scripted fake provider, never a live model.
 
 Add focused Vitest tests next to the feature or table, one behavior per test. API tests construct `createApp` and call `app.handle`; every database test gets its own migrated memory connection via `createTestDatabase()` from `@hackmidwest/db/testing`. Close it in `finally`. Web tests render components with Testing Library. API tests run in Node fork workers using libSQL, never `bun:sqlite`. Vitest is the unit test runner; do not add a competing Bun test suite.
 
