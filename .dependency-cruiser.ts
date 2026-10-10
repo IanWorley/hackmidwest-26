@@ -42,7 +42,8 @@ const SERVER_ONLY = [
   BUN_BUILTINS,
 ];
 
-const API_SRC_ENTRY_POINTS = ["^apps/api/src/index\\.ts$", "\\.test\\.ts$"];
+const API_ENTRY_POINT = "^apps/api/src/index\\.ts$";
+const TEST_FILE = "\\.test\\.ts$";
 
 export default {
   forbidden: [
@@ -64,13 +65,22 @@ export default {
       to: { path: DATABASE_DRIVERS, pathNot: DRIZZLE_MIGRATOR },
     },
     {
-      name: "api-only-entry-points-open-resources",
+      name: "api-config-only-in-entry-point",
       comment:
-        "Only src/index.ts reads config and only tests use the database fixture, directly or through another " +
-        "module. App and feature code receive config and `db` as parameters.",
+        "Only src/index.ts (and tests) read config, directly or through another module. App and feature code " +
+        "receive config as parameters.",
       severity: "error",
-      from: { path: API_SRC, pathNot: API_SRC_ENTRY_POINTS },
-      to: { path: [API_CONFIG, DB_TEST_FIXTURE], reachable: true },
+      from: { path: API_SRC, pathNot: [API_ENTRY_POINT, TEST_FILE] },
+      to: { path: API_CONFIG, reachable: true },
+    },
+    {
+      name: "api-db-fixture-only-in-tests",
+      comment:
+        "Only *.test.ts files use @hackmidwest/db/testing, directly or through another module. Production " +
+        "code, including src/index.ts, opens the database with openDatabase().",
+      severity: "error",
+      from: { path: API_SRC, pathNot: TEST_FILE },
+      to: { path: DB_TEST_FIXTURE, reachable: true },
     },
   ],
   options: {

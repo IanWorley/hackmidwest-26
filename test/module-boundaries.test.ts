@@ -91,7 +91,7 @@ const PROBES: readonly BoundaryProbe[] = [
       "apps/api/src/features/probe.ts":
         'import { readApiConfig } from "../config";\nexport const probe = readApiConfig;\n',
     },
-    violatedRules: ["api-only-entry-points-open-resources"],
+    violatedRules: ["api-config-only-in-entry-point"],
   },
   {
     behavior:
@@ -101,7 +101,16 @@ const PROBES: readonly BoundaryProbe[] = [
       "apps/api/src/features/helper.ts": IMPORT_DB_TEST_FIXTURE,
       "apps/api/src/features/probe.ts": 'import "./helper";\n',
     },
-    violatedRules: ["api-only-entry-points-open-resources"],
+    violatedRules: ["api-db-fixture-only-in-tests"],
+  },
+  {
+    behavior: "the API entry point cannot use the database test fixture",
+    files: {
+      ...DB_TEST_FIXTURE_STUB,
+      "apps/api/src/index.ts":
+        'import { createTestDatabase } from "../../../packages/db/src/testing";\nexport const probe = createTestDatabase;\n',
+    },
+    violatedRules: ["api-db-fixture-only-in-tests"],
   },
   {
     behavior: "API tests may use the database test fixture",

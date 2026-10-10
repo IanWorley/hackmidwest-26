@@ -33,8 +33,10 @@ rule means "at runtime, X must not load Y":
 - `db-driver-only-in-client`: in every workspace, only `packages/db/src/client.ts` opens connections: `@libsql/*`,
   Drizzle's `libsql` and `bun-sqlite` adapters (which build their own client from a URL), or `bun:sqlite`. Drizzle's
   migrators are allowed.
-- `api-only-entry-points-open-resources`: in `apps/api/src`, no module except `index.ts` may reach `config.ts`, and no
-  module except a `*.test.ts` file may reach the `@hackmidwest/db/testing` fixture, even through another module.
+- `api-config-only-in-entry-point`: in `apps/api/src`, only `index.ts` and tests may reach `config.ts`, even through
+  another module.
+- `api-db-fixture-only-in-tests`: in `apps/api/src`, only `*.test.ts` files may reach the `@hackmidwest/db/testing`
+  fixture, even through another module. That includes `index.ts`.
 
 Biome adds the checks dependency-cruiser cannot see:
 
@@ -44,7 +46,7 @@ Biome adds the checks dependency-cruiser cannot see:
   the same package, so this is a name check, not a module check.
 - `noProcessEnv` limits `process.env` to `apps/api/src/index.ts` and `packages/db/scripts/`.
 - `noRestrictedGlobals` bans `Bun`, including `Bun.env`, in API and database source, which also run under Vitest on
-  Node.
+  Node. `apps/api/src/index.ts` is exempt: it is the Bun entry point and never runs under Vitest.
 
 `test/module-boundaries.test.ts` cruises small probe files against the real rule set, so a rule that silently stops
 matching fails a test instead of passing lint.
