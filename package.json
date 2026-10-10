@@ -15,7 +15,8 @@
     "dev": "concurrently --kill-others --names api,web \"bun run --cwd apps/api dev\" \"bun run --cwd apps/web dev\"",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "lint": "biome check --formatter-enabled=false .",
+    "lint": "biome check --formatter-enabled=false . && bun run lint:boundaries",
+    "lint:boundaries": "depcruise apps --config .dependency-cruiser.ts",
     "fix": "biome check --write .",
     "routes:generate": "bun run --cwd apps/web routes:generate",
     "check:api": "tsc --project tsconfig.json && bun run --cwd apps/api typecheck",
@@ -34,6 +35,7 @@
     "@biomejs/biome": "2.5.15",
     "@types/node": "24.10.1",
     "concurrently": "10.0.6",
+    "dependency-cruiser": "18.5.0",
     "typescript": "5.9.3",
     "vite": "8.3.4",
     "vitest": "5.0.3"

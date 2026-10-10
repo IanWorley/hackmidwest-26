@@ -21,6 +21,26 @@ schema.ts (Drizzle table)
 Router loaders own data fetching and caching. TanStack Query is deliberately omitted until a feature needs
 polling, optimistic updates, or shared client cache.
 
+## Module boundaries
+
+`bun run lint` runs dependency-cruiser with `.dependency-cruiser.ts` after Biome. It checks the graph of source
+imports that survive compilation (build output under `dist/` is excluded), so `import type` never counts and every
+rule means "at runtime, X must not load Y":
+
+- `web-no-server-code`: nothing under `apps/web/src` may reach API source, Drizzle, libSQL, Elysia, or `bun:*`
+  through any chain of imports. The `App` type import from `@hackmidwest/api/contract` is erased, so it passes.
+- `api-driver-only-in-db-client`: only `src/db/client.ts` opens connections: `@libsql/*`, Drizzle's `libsql` and
+  `bun-sqlite` adapters (which build their own client from a URL), or `bun:sqlite`. Drizzle's migrators are allowed.
+- `api-only-entry-points-open-resources`: only `src/index.ts`, `scripts/`, `test/`, and tests import `config.ts`
+  or `db/client.ts` at runtime, directly or through another module. App and feature code receive `db` by injection.
+
+Biome adds three checks dependency-cruiser cannot see. Its `noRestrictedImports` override governs which specifiers
+web may write, including type imports. `noProcessEnv` limits `process.env` to `src/index.ts` and `scripts/`.
+`noRestrictedGlobals` bans `Bun`, including `Bun.env`, in API source and test helpers, which also run under Vitest on
+Node.
+`test/module-boundaries.test.ts` cruises small probe files against the real rule set, so a rule that silently stops
+matching fails a test instead of passing lint.
+
 ## Testing
 
 Vitest runs on Node, so the API uses `@libsql/client/sqlite3` (works on Bun and Node) rather than `bun:sqlite`.

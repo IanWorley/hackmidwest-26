@@ -32,6 +32,37 @@
   },
   "overrides": [
     {
+      "includes": ["apps/**", "!apps/api/src/index.ts", "!apps/api/scripts/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noProcessEnv": "error"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/api/src/**",
+        "apps/api/test/**",
+        "!apps/api/src/index.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "Bun": "API modules also run under Vitest on Node. Use Node APIs, and read env only in src/index.ts."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["apps/web/**"],
       "linter": {
         "rules": {
