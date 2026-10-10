@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -29,6 +30,7 @@ const ROOT_INSTALL_DIRECTORY = "node_modules";
 const INSTALL_DIRECTORIES = [
   ROOT_INSTALL_DIRECTORY,
   "apps/api/node_modules",
+  "apps/agent-api/node_modules",
   "apps/web/node_modules",
 ];
 
@@ -177,12 +179,86 @@ const PROBES: readonly BoundaryProbe[] = [
     violatedRules: [],
   },
   {
+    behavior: "agent API code cannot load Bun modules",
+    files: {
+      "apps/agent-api/src/features/probe.ts":
+        'import { file } from "bun";\nexport const probe = file;\n',
+    },
+    violatedRules: ["node-compatible-source"],
+  },
+  {
+    behavior: "agent API feature code cannot read config",
+    files: {
+      "apps/agent-api/src/config.ts":
+        "export function readAgentApiConfig() {}\n",
+      "apps/agent-api/src/features/probe.ts":
+        'import { readAgentApiConfig } from "../config";\nexport const probe = readAgentApiConfig;\n',
+    },
+    violatedRules: ["api-only-entry-points-open-resources"],
+  },
+  {
+    behavior: "the agent API cannot load the tasks API's code",
+    files: {
+      "apps/api/src/runtime.ts": "export function createApiRuntime() {}\n",
+      "apps/agent-api/src/features/probe.ts":
+        'import { createApiRuntime } from "../../../api/src/runtime";\nexport const probe = createApiRuntime;\n',
+    },
+    violatedRules: ["apps-are-independent"],
+  },
+  {
+    behavior: "agent API code may import the API contract type",
+    files: {
+      "apps/agent-api/src/probe.ts":
+        'import type { App } from "@hackmidwest/api/contract";\nexport type Probe = App;\n',
+    },
+    violatedRules: [],
+  },
+  {
+    behavior: "agent API code cannot load the tasks table",
+    files: {
+      "packages/db/src/index.ts": "export const tasks = {};\n",
+      "apps/agent-api/src/features/probe.ts":
+        'import { tasks } from "../../../../packages/db/src/index";\nexport const probe = tasks;\n',
+    },
+    violatedRules: ["agent-api-reads-tasks-over-http"],
+  },
+  {
+    behavior: "the agent API cannot open the database through a helper package",
+    files: {
+      ...DB_CONNECTION_STUB,
+      "packages/bridge/index.ts":
+        'export { openDatabase } from "../db/src/client";\n',
+      "apps/agent-api/src/index.ts":
+        'import { openDatabase } from "../../../packages/bridge/index";\nexport const probe = openDatabase;\n',
+    },
+    violatedRules: ["agent-api-reads-tasks-over-http"],
+  },
+  {
+    behavior:
+      "the agent API cannot load the tasks API through a helper package",
+    files: {
+      "apps/api/src/runtime.ts": "export function createApiRuntime() {}\n",
+      "packages/bridge/index.ts":
+        'export { createApiRuntime } from "../../apps/api/src/runtime";\n',
+      "apps/agent-api/src/features/probe.ts":
+        'import { createApiRuntime } from "../../../../packages/bridge/index";\nexport const probe = createApiRuntime;\n',
+    },
+    violatedRules: ["apps-are-independent"],
+  },
+  {
+    behavior: "agent API code cannot load the API contract at runtime",
+    files: {
+      "apps/agent-api/src/probe.ts": 'import "@hackmidwest/api/contract";\n',
+    },
+    violatedRules: ["apps-are-independent"],
+  },
+  {
     behavior: "web cannot load the API build output",
     files: {
       "apps/api/dist/index.js": 'import "@libsql/client";\n',
       "apps/web/src/probe.ts": 'import "../../api/dist/index.js";\n',
     },
-    violatedRules: ["web-no-server-code"],
+    violatedRules: ["apps-are-independent", "web-no-server-code"],
   },
   {
     behavior: "build output is not checked",
@@ -233,6 +309,55 @@ const LINT_PROBES: readonly BoundaryProbe[] = [
     violatedRules: ["style/noRestrictedGlobals"],
   },
   {
+    behavior:
+      "agent API code cannot import the API's source types by relative path",
+    files: {
+      "apps/agent-api/src/features/probe.ts":
+        'import type { App } from "../../../api/src/app";\nexport type Probe = App;\n',
+    },
+    violatedRules: ["style/noRestrictedImports"],
+  },
+  {
+    behavior: "web cannot import the agent API's source types by relative path",
+    files: {
+      "apps/web/src/probe.ts":
+        'import type { RunRequest } from "../../agent-api/src/runtime";\nexport type Probe = RunRequest;\n',
+    },
+    violatedRules: ["style/noRestrictedImports"],
+  },
+  {
+    behavior: "agent API code may import its own modules by relative path",
+    files: {
+      "apps/agent-api/src/features/probe.ts":
+        'import type { RunRequest } from "../runtime";\nexport type Probe = RunRequest;\n',
+    },
+    violatedRules: [],
+  },
+  {
+    behavior: "agent API feature code cannot read process.env",
+    files: {
+      "apps/agent-api/src/features/probe.ts":
+        "export const probe = process.env.AGENT_API_PORT;\n",
+    },
+    violatedRules: ["style/noProcessEnv"],
+  },
+  {
+    behavior: "agent API code cannot use the Bun global",
+    files: {
+      "apps/agent-api/src/features/probe.ts":
+        "export const probe = Bun.env.AGENT_API_PORT;\n",
+    },
+    violatedRules: ["style/noRestrictedGlobals"],
+  },
+  {
+    behavior: "the agent API entry point may read process.env",
+    files: {
+      "apps/agent-api/src/index.ts":
+        "export const probe = process.env.AGENT_API_PORT;\n",
+    },
+    violatedRules: [],
+  },
+  {
     behavior: "the API entry point may read process.env",
     files: {
       "apps/api/src/index.ts": "export const probe = process.env.API_PORT;\n",
@@ -242,7 +367,10 @@ const LINT_PROBES: readonly BoundaryProbe[] = [
 ];
 
 function writeSandbox(files: BoundaryProbe["files"]) {
-  const sandbox = mkdtempSync(join(tmpdir(), "module-boundaries-"));
+  // macOS tmpdir() is a symlink; resolved import paths must share the sandbox's real prefix.
+  const sandbox = realpathSync(
+    mkdtempSync(join(tmpdir(), "module-boundaries-")),
+  );
   for (const [path, source] of Object.entries(files)) {
     mkdirSync(join(sandbox, dirname(path)), { recursive: true });
     writeFileSync(join(sandbox, path), source);

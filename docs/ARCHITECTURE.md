@@ -2,7 +2,7 @@
 
 ## Shape
 
-Three Bun workspaces:
+Four Bun workspaces:
 
 - `packages/db` (`@hackmidwest/db`) owns persistence: Drizzle tables, the libSQL connection
   (`@hackmidwest/db/connection`), committed migrations, the seed, and the `createTestDatabase()` fixture
@@ -11,6 +11,13 @@ Three Bun workspaces:
   dependency. It ships TypeScript source; Bun and Vitest load it directly, with no build step.
 - `apps/api` owns HTTP: Elysia features and the TypeBox validators derived from `@hackmidwest/db` tables.
   Feature work runs as [Effect](https://effect.website) programs; Elysia stays the HTTP layer.
+- `apps/agent-api` (`@hackmidwest/agent-api`) is a second, independent Elysia backend for agent and AI callers, on
+  `AGENT_API_PORT`. It follows the API's shape (its own `config.ts`, `runtime.ts`, `app.ts`, `index.ts`, and
+  `features/`), but shares no code with it. It never opens the database: features read tasks from `apps/api` over
+  HTTP through the `TasksApi` service, an Eden client typed by the same `@hackmidwest/api/contract` the web uses
+  (`TASKS_API_URL`). So `apps/api` stays the only SQLite writer and owns every task rule. It has no CORS (no browser
+  calls it) and no type contract (no client imports it yet). Today it serves `GET /health` and a placeholder
+  `GET /tasks/summary`.
 - `apps/web` is TanStack Start. It imports one thing from the API: the `App` **type**, via the
   `@hackmidwest/api/contract` export (types-only condition, so a runtime import cannot resolve).
   Biome also rejects relative imports into API source and any import of `@hackmidwest/db`.
@@ -31,24 +38,32 @@ polling, optimistic updates, or shared client cache.
 imports that survive compilation, so `import type` never counts and every rule means "at runtime, X must not load
 Y". Build output under `dist/` is not scanned, but importing it still counts.
 
-- `web-no-server-code`: nothing under `apps/web/src` may reach the API, `packages/db`, Drizzle, libSQL, Elysia, or
+Every app except `apps/web` is a backend. The backend rules below match `apps/<any app but web>/`, so a new backend
+is covered without editing them.
+
+- `web-no-server-code`: nothing under `apps/web/src` may reach a backend app, `packages/db`, Drizzle, libSQL, Elysia, or
   `bun:*` through any chain of imports. The `App` type import from `@hackmidwest/api/contract` is erased, so it passes.
 - `db-driver-only-in-client`: in every workspace, only `packages/db/src/client.ts` opens connections: `@libsql/*`,
   Drizzle's `libsql` and `bun-sqlite` adapters (which build their own client from a URL), `bun:sqlite`, or
   `node:sqlite`. Drizzle's migrators are allowed.
-- `node-compatible-source`: API and database source also runs on Node under Vitest, so only the Bun entry point
-  `apps/api/src/index.ts` may load `bun` or `bun:*` modules.
-- `api-only-entry-points-open-resources`: in `apps/api/src`, only `index.ts` and tests may reach `config.ts` or the
+- `node-compatible-source`: backend and database source also runs on Node under Vitest, so only a backend's Bun entry
+  point, `apps/<backend>/src/index.ts`, may load `bun` or `bun:*` modules.
+- `api-only-entry-points-open-resources`: in a backend's `src`, only `index.ts` and tests may reach `config.ts` or the
   database connection (`@hackmidwest/db/connection`), however the import is written and even through another module.
-- `api-db-fixture-only-in-tests`: in `apps/api/src`, only `*.test.ts` files may reach the `@hackmidwest/db/testing`
+- `apps-are-independent`: no app may load another app's code at runtime, even through a helper package. `App` type
+  imports from `@hackmidwest/api/contract` (web and agent API) are erased, so they pass. Apps talk over HTTP.
+- `agent-api-reads-tasks-over-http`: nothing under `apps/agent-api` may load `packages/db`, even through a helper
+  package. Its features yield the `TasksApi` service instead.
+- `api-db-fixture-only-in-tests`: in a backend's `src`, only `*.test.ts` files may reach the `@hackmidwest/db/testing`
   fixture, even through another module. That includes `index.ts`.
 
 Biome adds the checks dependency-cruiser cannot see:
 
-- Its `noRestrictedImports` overrides govern which specifiers apps may write, including type imports. Neither app
-  may import `packages/db` by relative path or anything through a `node_modules` path, so the package's exports are
-  the only way in. Web also may not import any `@hackmidwest/db` export or API source.
-- `noProcessEnv` limits `process.env` to `apps/api/src/index.ts` and `packages/db/scripts/`.
+- Its `noRestrictedImports` overrides govern which specifiers apps may write, including type imports. No app may
+  import `packages/db` by relative path or anything through a `node_modules` path, so the package's exports are the
+  only way in. No app may import another app's source by relative path, even for types; the contract export is the
+  only way in. Web also may not import any `@hackmidwest/db` export.
+- `noProcessEnv` limits `process.env` to app entry points (`apps/*/src/index.ts`) and `packages/db/scripts/`.
 - `noRestrictedGlobals` bans the `Bun` global, including `Bun.env`, in the same files as `node-compatible-source`.
 
 `test/module-boundaries.test.ts` runs small probe files through dependency-cruiser and Biome with the real
@@ -95,6 +110,12 @@ API tests call `app.handle(new Request(...))` — real validation and serializat
 - One generic 500 for every storage failure and defect, in exchange for no invented availability policy.
 - Promise-backed Drizzle queries under `Effect.tryPromise`. Interruption cannot cancel a libSQL write, so request
   abort signals are not forwarded and inserts are never retried.
+- The agent API copies the API's runtime and shutdown code (about 80 lines) instead of sharing a server package. Extract it
+  once a third backend appears or the two copies need to change together.
+- The agent API reads tasks over HTTP, not from SQLite, in exchange for one writer and one owner of task rules. Each
+  agent read costs a network hop, and the agent API's task features fail when `apps/api` is down.
+- Agent API tests stub `apps/api` with a real `node:http` server rather than passing Eden a `fetcher`, because Bun's
+  `typeof fetch` requires a `preconnect` property and a stub would need a cast.
 - Moving to Postgres changes table builders, the driver/client, migrations, and the test fixture — no dialect
   abstraction is built ahead of time.
 
@@ -114,3 +135,11 @@ design. A gpt-6.1-sol cross-judge scored them. The minimal candidate (feature pr
 won 27/30, with the `Database` service and `ManagedRuntime` grafted from the Elysia-handlers candidate. The HttpApi
 and lifecycle candidates were rejected for scope: a third workspace, a 422→400 change, and an `@effect/platform-bun`
 override, because `effect@4.0.3` is not published.
+
+The agent API was chosen from two candidates (gpt-6-astra, gpt-6.1-sol): a self-contained app that copies the API's
+runtime, and a shared `packages/http-server` that owns the runtime, port parsing, and shutdown for both backends. Both
+converged on no storage, no CORS, and a health route. The self-contained app won because the shared package rewrote
+the working API's 500 handling to save about 80 lines, against the "share once two APIs duplicate it" rule above.
+Grafted from the shared-package candidate: backend lint rules that match every non-web app. Reading tasks over HTTP
+from `apps/api`, rather than opening a second SQLite connection, was the owner's call after the first cut. Rejected from both: a
+test that parses `verify.sh` and the root scripts to prove every app is listed, as more machinery than three apps need.

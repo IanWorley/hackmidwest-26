@@ -35,7 +35,7 @@
       "includes": [
         "apps/**",
         "packages/**",
-        "!apps/api/src/index.ts",
+        "!apps/*/src/index.ts",
         "!packages/db/scripts/**"
       ],
       "linter": {
@@ -48,9 +48,10 @@
     },
     {
       "includes": [
-        "apps/api/src/**",
+        "apps/*/src/**",
         "packages/db/src/**",
-        "!apps/api/src/index.ts"
+        "!apps/web/**",
+        "!apps/*/src/index.ts"
       ],
       "linter": {
         "rules": {
@@ -68,7 +69,7 @@
       }
     },
     {
-      "includes": ["apps/api/**"],
+      "includes": ["apps/**", "!apps/web/**"],
       "linter": {
         "rules": {
           "style": {
@@ -79,6 +80,10 @@
                   {
                     "group": ["**/packages/db", "**/packages/db/**"],
                     "message": "Import from @hackmidwest/db, @hackmidwest/db/connection, or @hackmidwest/db/testing, never from its source files."
+                  },
+                  {
+                    "group": ["**/src/**"],
+                    "message": "Never import another app's source, not even its types. Use its package export, such as @hackmidwest/api/contract."
                   },
                   {
                     "group": ["**/node_modules/**"],
@@ -104,8 +109,8 @@
                 },
                 "patterns": [
                   {
-                    "group": ["**/api/src/**"],
-                    "message": "The web app may import only the API type-only package export."
+                    "group": ["**/*api/src/**"],
+                    "message": "The web app may import only the API type-only package export, never any backend's source."
                   },
                   {
                     "group": [

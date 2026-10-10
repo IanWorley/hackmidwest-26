@@ -1,12 +1,14 @@
 # Contributing
 
-Use the Bun and Node versions recorded in `.bun-version` and `.node-version`. Install at the repository root with `bun install --frozen-lockfile`, copy `.env.example` to `.env`, then run `bun run db:migrate`, `bun run db:seed`, and `bun run dev`. Stop both processes with Ctrl+C. The root dev command supervises both; do not run a second API against the same SQLite file.
+Use the Bun and Node versions recorded in `.bun-version` and `.node-version`. Install at the repository root with `bun install --frozen-lockfile`, copy `.env.example` to `.env`, then run `bun run db:migrate`, `bun run db:seed`, and `bun run dev`. Stop all three processes with Ctrl+C. The root dev command supervises them, and stops all of them if one exits, so an `.env` copied before `AGENT_API_PORT` and `TASKS_API_URL` existed needs those lines added. Do not run a second API against the same SQLite file; the agent API reads tasks from the API over HTTP for this reason.
 
 Edit a TypeScript file under `apps/web/src/routes` to add a page. Start generates the route tree during dev and build. `bun run check:web` generates it before typechecking, so a fresh clone needs no prior dev session. `routeTree.gen.ts` is ignored and never edited by hand. Route identifiers inside `createFileRoute` must match the filename and stay literals for the generator.
 
 Edit `packages/db/src/schema.ts` to change persistence; it is the only place tables live. Run `bun run db:generate`, inspect the SQL, commit its migration and metadata, then run `bun run db:migrate`. Schema edits and generated migrations go in the same PR. Migrations have one operator at a time; app startup never migrates. Never use `drizzle-kit push` against shared data. Tests use committed migrations, so a stale schema change fails its focused behavior test.
 
 The seed (`packages/db/src/seed.ts`) inserts one row at a reserved development fixture key and ignores conflicts. A second run preserves any existing row. It does not clear tables. Seed only your local development database. `DB_PATH` resolves against the root; the directory is created on first open. `.env` and `.data/` are ignored.
+
+Agent and AI endpoints go in `apps/agent-api/src/features`, built exactly like the API's features below, with services added in `apps/agent-api/src/runtime.ts`. They reach tasks by yielding the `TasksApi` service (an Eden client for `apps/api`), never through `@hackmidwest/db`. The backends never import each other's code; the agent API imports only the `App` type from `@hackmidwest/api/contract`.
 
 Write request work in `apps/api/src/features` as Effect programs: yield services such as `Database`, wrap each Drizzle call in `Effect.tryPromise` with a tagged error, and run the program once in the route with `runRequest`. Declare `internalServerErrorResponse` beside each route's success response. Add a service by extending the layer in `apps/api/src/runtime.ts`; nowhere else provides services or runs programs. Scripts and config stay plain async TypeScript.
 
