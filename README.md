@@ -2,12 +2,13 @@
 
 # HackMidwest-26
 
-A Bun monorepo with two apps and a shared database package:
+A Bun monorepo with three apps and a shared database package:
 
 | App | Stack | Port |
 |-----|-------|------|
 | `apps/web` | TanStack Start (React + React Compiler, file-based TanStack Router) | 3000 |
 | `apps/api` | ElysiaJS on Bun | 3001 |
+| `apps/agent-api` | ElysiaJS on Bun, for agent and AI endpoints | 3002 |
 | `packages/db` | Drizzle ORM + SQLite (libSQL): tables, migrations, seed | — |
 
 Types flow end to end with no hand-written DTOs:
@@ -25,19 +26,19 @@ bun run db:seed
 bun run dev
 ```
 
-Open <http://localhost:3000/tasks>. The API serves `GET/POST /api/tasks` on <http://localhost:3001>.
+Open <http://localhost:3000/tasks>. The API serves `GET/POST /api/tasks` on <http://localhost:3001>. The agent API serves `GET /health` and `GET /tasks/summary` on <http://localhost:3002>, reading tasks from the API over HTTP.
 
 ## Commands
 
 | Command | What it does |
 |---------|--------------|
-| `bun run dev` | Run API and web together; Ctrl+C stops both |
-| `bun run test` / `test:watch` | Vitest unit tests (`--project api` or `--project web` to narrow) |
+| `bun run dev` | Run the API, agent API, and web together; Ctrl+C stops all three |
+| `bun run test` / `test:watch` | Vitest unit tests (`--project api`, `--project agent-api`, or `--project web` to narrow) |
 | `bun run format` / `format:check` | Biome formatter |
 | `bun run lint` | Biome linter and import order |
 | `bun run fix` | Apply all safe Biome fixes (format, lint, import order) |
 | `bun run check` | TypeScript for every workspace (generates the route tree first) |
-| `bun run build` | Production builds of both apps |
+| `bun run build` | Production builds of all three apps |
 | `bun run db:generate` | Generate a migration after editing `packages/db/src/schema.ts` |
 | `bun run db:migrate` / `db:seed` | Apply migrations / insert demo data (safe to re-run) |
 
@@ -48,6 +49,7 @@ CI runs format, lint, typecheck, build, and tests on every PR. [autofix.ci](http
 - `packages/db/src/schema.ts` — tables and their shared limits.
 - `apps/api/src/features/` — one Elysia module per feature; validators derived from tables, plus queries.
 - `apps/api/src/contract.ts` — the type-only `App` export the web app consumes.
+- `apps/agent-api/src/features/` — agent and AI endpoints, built the same way as the API's features.
 - `apps/web/src/routes/` — file-based routes; loaders call the API through Eden.
 - `apps/web/src/lib/api.ts` — the single Eden client.
 

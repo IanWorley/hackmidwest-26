@@ -1,0 +1,22 @@
+{
+  "name": "@hackmidwest/agent-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --env-file=../../.env --watch src/index.ts",
+    "start": "bun --env-file=../../.env dist/index.js",
+    "typecheck": "tsc --project tsconfig.json",
+    "build": "bun build src/index.ts --target=bun --packages=external --outdir dist"
+  },
+  "dependencies": {
+    "@elysiajs/eden": "1.4.9",
+    "@hackmidwest/api": "workspace:*",
+    "@sinclair/typebox": "0.34.52",
+    "effect": "4.0.2",
+    "elysia": "1.4.30"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.14",
+    "vitest": "5.0.3"
+  }
+}

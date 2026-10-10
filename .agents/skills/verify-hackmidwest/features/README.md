@@ -45,4 +45,5 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [Home page](./home-navigation.md) covers the landing link and client-side navigation to the task list.
 - [Task list](./tasks-list.md) covers the server-rendered `/tasks` page, its ordering, and completion state.
 - [Create a task](./create-task.md) covers `POST /api/tasks`, its validation, and seeing the new task on `/tasks`.
+- [Agent API](./agent-api.md) covers the separate agent API: its `GET /health` liveness and its `GET /tasks/summary` read of the tasks API over HTTP.
 - [Task list load failure](./tasks-load-error.md) covers the error alert shown when the API is unreachable or its storage fails, and the API's generic 500.

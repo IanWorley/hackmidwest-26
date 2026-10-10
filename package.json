@@ -6,6 +6,7 @@
   "workspaces": [
     "packages/db",
     "apps/api",
+    "apps/agent-api",
     "apps/web"
   ],
   "engines": {
@@ -13,7 +14,7 @@
     "node": ">=24.20.0 <25"
   },
   "scripts": {
-    "dev": "concurrently --kill-others --names api,web \"bun run --cwd apps/api dev\" \"bun run --cwd apps/web dev\"",
+    "dev": "concurrently --kill-others --names api,agent-api,web \"bun run --cwd apps/api dev\" \"bun run --cwd apps/agent-api dev\" \"bun run --cwd apps/web dev\"",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "biome check --formatter-enabled=false . && bun run lint:boundaries",
@@ -22,11 +23,13 @@
     "routes:generate": "bun run --cwd apps/web routes:generate",
     "check:db": "bun run --cwd packages/db typecheck",
     "check:api": "tsc --project tsconfig.json && bun run --cwd apps/api typecheck",
+    "check:agent-api": "bun run --cwd apps/agent-api typecheck",
     "check:web": "bun run --cwd apps/web typecheck",
-    "check": "concurrently --kill-others-on-fail \"bun run check:db\" \"bun run check:api\" \"bun run check:web\"",
+    "check": "concurrently --kill-others-on-fail \"bun run check:db\" \"bun run check:api\" \"bun run check:agent-api\" \"bun run check:web\"",
     "build:api": "bun run --cwd apps/api build",
+    "build:agent-api": "bun run --cwd apps/agent-api build",
     "build:web": "bun run --cwd apps/web build",
-    "build": "concurrently --kill-others-on-fail \"bun run build:api\" \"bun run build:web\"",
+    "build": "concurrently --kill-others-on-fail \"bun run build:api\" \"bun run build:agent-api\" \"bun run build:web\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "bun run --cwd packages/db db:generate",

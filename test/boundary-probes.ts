@@ -1,10 +1,16 @@
+import {
+  AGENT_API_CRUISE_PROBES,
+  AGENT_API_LINT_PROBES,
+} from "./agent-api-boundary-probes";
+import {
+  type BoundaryProbe,
+  DB_CONNECTION_STUB,
+  DB_SCHEMA_STUB,
+  IMPORT_PROCESS,
+} from "./probe-fixtures";
+
 const API_CONFIG_STUB = {
   "apps/api/src/config.ts": "export function readApiConfig() {}\n",
-};
-// Relative imports keep the fixture inside the sandbox; the workspace symlink points at the real repository.
-const DB_CONNECTION_STUB = {
-  "packages/db/src/client.ts":
-    "export type Database = object;\nexport function openDatabase() {}\n",
 };
 const DB_TEST_FIXTURE_STUB = {
   ...DB_CONNECTION_STUB,
@@ -14,19 +20,9 @@ const DB_TEST_FIXTURE_STUB = {
 const IMPORT_DB_TEST_FIXTURE =
   'import { createTestDatabase } from "../../../../packages/db/src/testing";\nexport const probe = createTestDatabase;\n';
 
-const DB_SCHEMA_STUB = {
-  "packages/db/src/schema.ts": "export const tasks = {};\n",
-};
 const API_APP_STUB = {
   "apps/api/src/app.ts": "export type App = object;\n",
 };
-const IMPORT_PROCESS = 'import process from "node:process";\n';
-
-export interface BoundaryProbe {
-  readonly behavior: string;
-  readonly files: Readonly<Record<string, string>>;
-  readonly violatedRules: readonly string[];
-}
 
 export const CRUISE_PROBES: readonly BoundaryProbe[] = [
   {
@@ -166,13 +162,14 @@ export const CRUISE_PROBES: readonly BoundaryProbe[] = [
       "apps/api/dist/index.js": 'import "@libsql/client";\n',
       "apps/web/src/probe.ts": 'import "../../api/dist/index.js";\n',
     },
-    violatedRules: ["web-no-server-code"],
+    violatedRules: ["apps-are-independent", "web-no-server-code"],
   },
   {
     behavior: "build output is not checked",
     files: { "apps/api/dist/index.js": 'import "@libsql/client";\n' },
     violatedRules: [],
   },
+  ...AGENT_API_CRUISE_PROBES,
 ];
 
 /** Each lint probe lists Biome rule names such as "style/noProcessEnv". */
@@ -265,4 +262,5 @@ export const LINT_PROBES: readonly BoundaryProbe[] = [
     },
     violatedRules: ["style/noRestrictedGlobals"],
   },
+  ...AGENT_API_LINT_PROBES,
 ];

@@ -15,6 +15,7 @@ HOST="localhost"
 APP_TITLE="Hack Midwest tasks"
 TASKS_API_PATH="/api/tasks"
 TASKS_PAGE_PATH="/tasks"
+AGENT_HEALTH_PATH="/health"
 EVIDENCE_BRANCH="verification-evidence"
 EVIDENCE_PATTERNS=("*.png" "*.aria.yml" "*.http.txt" "*.db.txt" "browser.log" "run.env")
 GIT_FILE_MODE="100644"
@@ -59,7 +60,7 @@ cmd_setup() {
 
 cmd_up() {
   RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-  local dir art api_port web_port
+  local dir art api_port web_port agent_port
   dir="$(run_dir "$RUN_ID")"
   art="$(artifact_dir "$RUN_ID")"
   [[ ! -e "$dir" ]] || die "run '$RUN_ID' already exists"
@@ -73,9 +74,13 @@ cmd_up() {
   api_port="$(free_port)"
   web_port="$(free_port)"
   [[ "$api_port" != "$web_port" ]] || web_port="$(free_port)"
+  agent_port="$(free_port)"
+  while [[ "$agent_port" == "$api_port" || "$agent_port" == "$web_port" ]]; do agent_port="$(free_port)"; done
 
   # Shell env overrides the root .env that the package scripts load, so no repo file is written.
   export API_PORT="$api_port"
+  export AGENT_API_PORT="$agent_port"
+  export TASKS_API_URL="http://$HOST:$api_port"
   export WEB_ORIGIN="http://$HOST:$web_port"
   export DB_PATH="$dir/db.sqlite"
   export VITE_API_BASE_URL="http://$HOST:$api_port"
@@ -98,8 +103,10 @@ RUN_ID=$RUN_ID
 PGID=$pgid
 API_PORT=$api_port
 WEB_PORT=$web_port
+AGENT_API_PORT=$agent_port
 API_URL=http://$HOST:$api_port
 WEB_URL=http://$HOST:$web_port
+AGENT_API_URL=http://$HOST:$agent_port
 DB_PATH=$dir/db.sqlite
 STORAGE=$storage
 EXPECTED_STATUS=$expected_status
@@ -110,7 +117,8 @@ EOF
 
   local deadline=$((SECONDS + READY_TIMEOUT_SECONDS))
   until [[ "$(curl -s -o /dev/null -w '%{http_code}' "http://$HOST:$api_port$TASKS_API_PATH")" == "$expected_status" ]] \
-     && serves_app "http://$HOST:$web_port$TASKS_PAGE_PATH" "$expected_status"; do
+     && serves_app "http://$HOST:$web_port$TASKS_PAGE_PATH" "$expected_status" \
+     && [[ "$(curl -s -o /dev/null -w '%{http_code}' "http://$HOST:$agent_port$AGENT_HEALTH_PATH")" == "$HTTP_STATUS_OK" ]]; do
     if ! kill -0 "$pgid" 2> /dev/null || (( SECONDS > deadline )); then
       tail -"$LOG_TAIL_LINES" "$dir/dev.log" >&2
       RUN_ID="$RUN_ID" cmd_down > /dev/null 2>&1 || true
@@ -134,6 +142,7 @@ cmd_doctor() {
   check "process group $PGID alive" "kill -0 -- -$PGID 2> /dev/null"
   check "API port $API_PORT owned by this run" "owns_port $API_PORT"
   check "web port $WEB_PORT owned by this run" "owns_port $WEB_PORT"
+  check "agent API port $AGENT_API_PORT owned by this run" "owns_port $AGENT_API_PORT"
   if [[ "$STORAGE" == "$STORAGE_BROKEN" ]]; then
     check "GET $API_URL$TASKS_API_PATH answers $EXPECTED_STATUS (storage=$STORAGE)" \
       "[[ \"\$(curl -s -o /dev/null -w '%{http_code}' '$API_URL$TASKS_API_PATH')\" == '$EXPECTED_STATUS' ]]"
@@ -143,6 +152,8 @@ cmd_doctor() {
   fi
   check "GET $WEB_URL$TASKS_PAGE_PATH answers $EXPECTED_STATUS and serves '$APP_TITLE'" \
     "serves_app '$WEB_URL$TASKS_PAGE_PATH' '$EXPECTED_STATUS'"
+  check "GET $AGENT_API_URL$AGENT_HEALTH_PATH answers $HTTP_STATUS_OK" \
+    "[[ \"\$(curl -s -o /dev/null -w '%{http_code}' '$AGENT_API_URL$AGENT_HEALTH_PATH')\" == '$HTTP_STATUS_OK' ]]"
   check "database file exists at $DB_PATH" "[[ -f '$DB_PATH' ]]"
   local head
   head="$(git -C "$REPO_ROOT" rev-parse --short HEAD)"
@@ -151,15 +162,13 @@ cmd_doctor() {
   (( ok )) || exit 1
 }
 
-cmd_api() {
-  (( $# >= 3 )) || die "usage: RUN_ID=<id> verify.sh api <name> <METHOD> <path> [json-body]"
-  require_run
-  local name="$1" method="$2" path="$3" body="${4:-}"
+send_request() {
+  local base="$1" name="$2" method="$3" path="$4" body="${5:-}"
   local out="$ARTIFACTS/$name.http.txt"
-  local args=(-s -i -X "$method" "$API_URL$path")
+  local args=(-s -i -X "$method" "$base$path")
   [[ -z "$body" ]] || args+=(-H "content-type: application/json" --data "$body")
   {
-    echo "> $method $API_URL$path"
+    echo "> $method $base$path"
     [[ -z "$body" ]] || echo "> $body"
     echo
     curl "${args[@]}"
@@ -167,6 +176,18 @@ cmd_api() {
   } > "$out"
   cat "$out"
   echo "saved $out"
+}
+
+cmd_api() {
+  (( $# >= 3 )) || die "usage: RUN_ID=<id> verify.sh api <name> <METHOD> <path> [json-body]"
+  require_run
+  send_request "$API_URL" "$@"
+}
+
+cmd_agent() {
+  (( $# >= 3 )) || die "usage: RUN_ID=<id> verify.sh agent <name> <METHOD> <path> [json-body]"
+  require_run
+  send_request "$AGENT_API_URL" "$@"
 }
 
 cmd_db() {
@@ -271,10 +292,11 @@ case "${1:-}" in
   up) cmd_up ;;
   doctor) cmd_doctor ;;
   api) shift; cmd_api "$@" ;;
+  agent) shift; cmd_agent "$@" ;;
   db) shift; cmd_db "$@" ;;
   browser) shift; cmd_browser "$@" ;;
   down) cmd_down ;;
   publish) shift; cmd_publish "$@" ;;
   list) cmd_list ;;
-  *) die "usage: verify.sh setup | up | doctor | api | db | browser | down | publish | list (see SKILL.md)" ;;
+  *) die "usage: verify.sh setup | up | doctor | api | agent | db | browser | down | publish | list (see SKILL.md)" ;;
 esac

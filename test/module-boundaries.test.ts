@@ -18,11 +18,8 @@ import { fileURLToPath } from "node:url";
 import { cruise } from "dependency-cruiser";
 import { expect, it } from "vitest";
 import config from "../.dependency-cruiser";
-import {
-  type BoundaryProbe,
-  CRUISE_PROBES,
-  LINT_PROBES,
-} from "./boundary-probes";
+import { CRUISE_PROBES, LINT_PROBES } from "./boundary-probes";
+import type { BoundaryProbe } from "./probe-fixtures";
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const ROOT_BIOME_CONFIG = /^biome(?:\..+)?\.jsonc$/u;
@@ -40,6 +37,7 @@ const ROOT_INSTALL_DIRECTORY = "node_modules";
 const INSTALL_DIRECTORIES = [
   ROOT_INSTALL_DIRECTORY,
   "apps/api/node_modules",
+  "apps/agent-api/node_modules",
   "apps/web/node_modules",
 ];
 

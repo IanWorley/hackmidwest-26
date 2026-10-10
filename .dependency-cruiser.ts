@@ -14,16 +14,18 @@ function inPackage(name: string): string {
 
 const WORKSPACES = "^(apps|packages)/";
 const WEB_SRC = "^apps/web/src/";
-const API_WORKSPACE = "^apps/api/";
-const API_SRC = "^apps/api/src/";
-const API_CONFIG = "^apps/api/src/config\\.ts$";
+const BACKEND_APP = "apps/(?!web/)[^/]+";
+const BACKEND_WORKSPACE = `^${BACKEND_APP}/`;
+const BACKEND_SRC = `^${BACKEND_APP}/src/`;
+const BACKEND_CONFIG = `^${BACKEND_APP}/src/config\\.ts$`;
 const DB_WORKSPACE = "^packages/db/";
+const AGENT_API_WORKSPACE = "^apps/agent-api/";
 const DB_CLIENT = "^packages/db/src/client\\.ts$";
 const DB_TEST_FIXTURE = "^packages/db/src/testing\\.ts$";
 const LIBSQL_DRIVER = inPackage("@libsql/[^/]+");
 // The bare "bun" module resolves to its type package.
 const BUN_MODULES = ["^bun(:|$)", inPackage("@types/bun")];
-const NODE_COMPATIBLE_SOURCE = "^(apps/api|packages/db)/src/";
+const NODE_COMPATIBLE_SOURCE = `^(${BACKEND_APP}|packages/db)/src/`;
 const BUILD_OUTPUT = "^(apps|packages)/[^/]+/dist/";
 
 // Drizzle's adapters create their own client from a URL.
@@ -36,9 +38,9 @@ const DATABASE_DRIVERS = [
 const DRIZZLE_MIGRATOR = "(^|node_modules/)drizzle-orm/[^/]+/migrator(\\.js)?$";
 
 const SERVER_ONLY = [
-  API_WORKSPACE,
+  BACKEND_WORKSPACE,
   DB_WORKSPACE,
-  inPackage("@hackmidwest/(api|db)"),
+  inPackage("@hackmidwest/(?!web(/|$))[^/]+"),
   inPackage("drizzle-orm"),
   inPackage("drizzle-typebox"),
   inPackage("drizzle-kit"),
@@ -49,7 +51,8 @@ const SERVER_ONLY = [
 
 const HTTP_FRAMEWORKS = [inPackage("elysia"), inPackage("@elysiajs/[^/]+")];
 
-const API_ENTRY_POINT = "^apps/api/src/index\\.ts$";
+const WORKSPACE_APP_PACKAGE = inPackage("@hackmidwest/(?!db(/|$))[^/]+");
+const BACKEND_ENTRY_POINT = `^${BACKEND_APP}/src/index\\.ts$`;
 const TEST_FILE = "\\.test\\.ts$";
 
 export default {
@@ -82,20 +85,47 @@ export default {
     {
       name: "node-compatible-source",
       comment:
-        "API and database source also runs on Node under Vitest. Only the Bun entry point, apps/api/src/index.ts, " +
-        "may load Bun modules.",
+        "Backend and database source also runs on Node under Vitest. Only a backend's Bun entry point, " +
+        "apps/<backend>/src/index.ts, may load Bun modules.",
       severity: "error",
-      from: { path: NODE_COMPATIBLE_SOURCE, pathNot: API_ENTRY_POINT },
+      from: { path: NODE_COMPATIBLE_SOURCE, pathNot: BACKEND_ENTRY_POINT },
       to: { path: BUN_MODULES },
     },
     {
       name: "api-only-entry-points-open-resources",
       comment:
-        "Only src/index.ts (and tests) read config or open a database connection, directly or through another " +
-        "module. App and feature code receive config and `db` as parameters.",
+        "In a backend, only src/index.ts (and tests) read config or open a database connection, directly or " +
+        "through another module. App and feature code receive config and `db` as parameters.",
       severity: "error",
-      from: { path: API_SRC, pathNot: [API_ENTRY_POINT, TEST_FILE] },
-      to: { path: [API_CONFIG, DB_CLIENT], reachable: true },
+      from: { path: BACKEND_SRC, pathNot: [BACKEND_ENTRY_POINT, TEST_FILE] },
+      to: { path: [BACKEND_CONFIG, DB_CLIENT], reachable: true },
+    },
+    {
+      name: "apps-are-independent",
+      comment:
+        "Each app is a separate deployable. It must not load another app's code at runtime, directly or through " +
+        "any chain of imports. Import only an app's erased contract type, such as App from " +
+        "@hackmidwest/api/contract, and call it over HTTP.",
+      severity: "error",
+      from: { path: "^apps/([^/]+)/" },
+      to: {
+        path: ["^apps/", WORKSPACE_APP_PACKAGE],
+        pathNot: "^apps/$1/",
+        reachable: true,
+      },
+    },
+    {
+      name: "agent-api-reads-tasks-over-http",
+      comment:
+        "The agent API never loads the database, directly or through any chain of imports, so apps/api stays the " +
+        "only SQLite writer and owns every task rule. Yield the TasksApi service (apps/agent-api/src/runtime.ts) " +
+        "and call apps/api over HTTP.",
+      severity: "error",
+      from: { path: AGENT_API_WORKSPACE },
+      to: {
+        path: [DB_WORKSPACE, inPackage("@hackmidwest/db")],
+        reachable: true,
+      },
     },
     {
       name: "api-db-fixture-only-in-tests",
@@ -103,7 +133,7 @@ export default {
         "Only *.test.ts files use @hackmidwest/db/testing, directly or through another module. Production " +
         "code, including src/index.ts, opens the database with openDatabase() from @hackmidwest/db/connection.",
       severity: "error",
-      from: { path: API_SRC, pathNot: TEST_FILE },
+      from: { path: BACKEND_SRC, pathNot: TEST_FILE },
       to: { path: DB_TEST_FIXTURE, reachable: true },
     },
   ],
