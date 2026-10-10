@@ -85,6 +85,22 @@ const PROBES: readonly BoundaryProbe[] = [
     violatedRules: ["db-driver-only-in-client"],
   },
   {
+    behavior: "database code cannot open a connection with node:sqlite",
+    files: {
+      "packages/db/src/probe.ts":
+        'import { DatabaseSync } from "node:sqlite";\nexport const probe = DatabaseSync;\n',
+    },
+    violatedRules: ["db-driver-only-in-client"],
+  },
+  {
+    behavior: "API code cannot load Bun modules",
+    files: {
+      "apps/api/src/features/probe.ts":
+        'import { file } from "bun";\nexport const probe = file;\n',
+    },
+    violatedRules: ["node-compatible-source"],
+  },
+  {
     behavior: "API feature code cannot read config",
     files: {
       ...API_CONFIG_STUB,
@@ -119,6 +135,14 @@ const PROBES: readonly BoundaryProbe[] = [
       "apps/api/src/features/probe.test.ts": IMPORT_DB_TEST_FIXTURE,
     },
     violatedRules: [],
+  },
+  {
+    behavior: "web cannot load the API build output",
+    files: {
+      "apps/api/dist/index.js": 'import "@libsql/client";\n',
+      "apps/web/src/probe.ts": 'import "../../api/dist/index.js";\n',
+    },
+    violatedRules: ["web-no-server-code"],
   },
   {
     behavior: "build output is not checked",

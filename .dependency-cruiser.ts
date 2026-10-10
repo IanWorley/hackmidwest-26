@@ -19,14 +19,17 @@ const DB_WORKSPACE = "^packages/db/";
 const DB_CLIENT = "^packages/db/src/client\\.ts$";
 const DB_TEST_FIXTURE = "^packages/db/src/testing\\.ts$";
 const LIBSQL_DRIVER = inPackage("@libsql/[^/]+");
-const BUN_BUILTINS = "^bun:";
+// The bare "bun" module resolves to its type package.
+const BUN_MODULES = ["^bun(:|$)", inPackage("@types/bun")];
+const NODE_COMPATIBLE_SOURCE = "^(apps/api|packages/db)/src/";
 const BUILD_OUTPUT = "^(apps|packages)/[^/]+/dist/";
 
 // Drizzle's adapters create their own client from a URL.
 const DATABASE_DRIVERS = [
   LIBSQL_DRIVER,
   inPackage("drizzle-orm/(libsql|bun-sqlite)"),
-  `${BUN_BUILTINS}sqlite$`,
+  "^bun:sqlite$",
+  "^node:sqlite$",
 ];
 const DRIZZLE_MIGRATOR = "(^|node_modules/)drizzle-orm/[^/]+/migrator(\\.js)?$";
 
@@ -39,7 +42,7 @@ const SERVER_ONLY = [
   inPackage("drizzle-kit"),
   LIBSQL_DRIVER,
   inPackage("elysia"),
-  BUN_BUILTINS,
+  ...BUN_MODULES,
 ];
 
 const API_ENTRY_POINT = "^apps/api/src/index\\.ts$";
@@ -65,6 +68,15 @@ export default {
       to: { path: DATABASE_DRIVERS, pathNot: DRIZZLE_MIGRATOR },
     },
     {
+      name: "node-compatible-source",
+      comment:
+        "API and database source also runs on Node under Vitest. Only the Bun entry point, apps/api/src/index.ts, " +
+        "may load Bun modules.",
+      severity: "error",
+      from: { path: NODE_COMPATIBLE_SOURCE, pathNot: API_ENTRY_POINT },
+      to: { path: BUN_MODULES },
+    },
+    {
       name: "api-config-only-in-entry-point",
       comment:
         "Only src/index.ts (and tests) read config, directly or through another module. App and feature code " +
@@ -85,8 +97,7 @@ export default {
   ],
   options: {
     tsPreCompilationDeps: false,
-    exclude: { path: BUILD_OUTPUT },
-    doNotFollow: { path: "node_modules" },
+    doNotFollow: { path: ["node_modules", BUILD_OUTPUT] },
     enhancedResolveOptions: {
       exportsFields: ["exports"],
       conditionNames: ["import", "require", "node", "default"],
