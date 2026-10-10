@@ -8,13 +8,14 @@ Three Bun workspaces:
   migrations, the seed, and the `createTestDatabase()` fixture (`@hackmidwest/db/testing`). It has no HTTP
   dependency. It ships TypeScript source; Bun and Vitest load it directly, with no build step.
 - `apps/api` owns HTTP: Elysia features and the TypeBox validators derived from `@hackmidwest/db` tables.
+  Feature work runs as [Effect](https://effect.website) programs; Elysia stays the HTTP layer.
 - `apps/web` is TanStack Start. It imports one thing from the API: the `App` **type**, via the
   `@hackmidwest/api/contract` export (types-only condition, so a runtime import cannot resolve).
   Biome also rejects relative imports into API source and any import of `@hackmidwest/db`.
 
 ```
 packages/db/src/schema.ts (Drizzle table + TASK_TITLE_LENGTH)
-  └─ apps/api features/tasks.ts: createSchemaFactory({ typeboxInstance: t }) → validators, Elysia routes → App = ReturnType<typeof createApp>
+  └─ apps/api features/tasks.ts: createSchemaFactory({ typeboxInstance: t }) → validators, Elysia routes running Effect programs → App = ReturnType<typeof createApp>
        └─ treaty<App>() in web/lib/api.ts
             └─ route loader → Route.useLoaderData() → component props
 ```
@@ -51,6 +52,28 @@ Biome adds the checks dependency-cruiser cannot see:
 `test/module-boundaries.test.ts` cruises small probe files against the real rule set, so a rule that silently stops
 matching fails a test instead of passing lint.
 
+## Effect in the API
+
+Request features are Effect programs. A program states the services it needs in its type, yields them, and
+turns driver rejections into tagged errors:
+
+```
+listTasks(): Effect<Task[], TaskStorageError, Database>
+```
+
+- `Database` (`apps/api/src/runtime.ts`) is a `Context.Service` key for the `@hackmidwest/db` connection. It is a
+  token, not a repository: SQL stays in the feature that owns it.
+- `runtime.ts` is the one place services are provided and programs are run. `createApiRuntime(db)` builds a
+  `ManagedRuntime` from `Layer.succeed(Database, db)`. `ApiServices` is derived from that layer, so a new service is
+  added in one place. `runRequest` runs one complete program per request. Any failure or defect is logged and becomes
+  a declared `500 { message: "Internal server error" }`, so Eden types it and no driver detail reaches a client.
+- Routes declare the 500 response next to their success response. Feature-specific errors (a future 404 or 409)
+  are recovered inside the program before `runRequest`'s fallback.
+- The process and each test own the connection. The runtime borrows it: shutdown drains Elysia, disposes the
+  runtime, then closes the connection.
+- `@hackmidwest/db`, its `migrate` and `seed` scripts, and `config.ts` stay plain async TypeScript. They are tooling
+  and shared storage, not request features, so `packages/db` has no Effect dependency.
+
 ## Testing
 
 Vitest runs on Node, so the API uses `@libsql/client/sqlite3` (works on Bun and Node) rather than `bun:sqlite`.
@@ -64,6 +87,11 @@ API tests call `app.handle(new Request(...))` — real validation and serializat
   the package only once two APIs duplicate them.
 - libSQL's native dependency, in exchange for one SQLite driver across Bun runtime and Node tests.
 - `VITE_API_BASE_URL` is baked in at build time and must be reachable from both browser and SSR.
+- Effect inside Elysia, not Effect's own HTTP stack, in exchange for keeping the Eden contract and Drizzle-derived
+  validators. `effect/http-api` would replace both and ship Effect in the web bundle.
+- One generic 500 for every storage failure and defect, in exchange for no invented availability policy.
+- Promise-backed Drizzle queries under `Effect.tryPromise`. Interruption cannot cancel a libSQL write, so request
+  abort signals are not forwarded and inserts are never retried.
 - Moving to Postgres changes table builders, the driver/client, migrations, and the test fixture — no dialect
   abstraction is built ahead of time.
 
@@ -76,3 +104,10 @@ a rejection test proving nothing is stored (candidate 2), and a seed idempotency
 
 The database moved to `packages/db` once a second backend (the agent API) was planned, the extraction trigger
 the original design named. Storage-only was chosen over exporting shared validators to keep HTTP rules per API.
+
+Effect was chosen the same way as the original design: four candidates (2× gpt-6-astra, 2× gpt-6.1-sol) covering Effect inside Elysia
+handlers, Effect HttpApi replacing Elysia and Eden, Effect owning config and process lifecycle, and an unconstrained
+design. A gpt-6.1-sol cross-judge scored them. The minimal candidate (feature programs plus one sanitized `runRequest`)
+won 27/30, with the `Database` service and `ManagedRuntime` grafted from the Elysia-handlers candidate. The HttpApi
+and lifecycle candidates were rejected for scope: a third workspace, a 422→400 change, and an `@effect/platform-bun`
+override, because `effect@4.0.3` is not published.

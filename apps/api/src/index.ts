@@ -1,13 +1,26 @@
 import { openDatabase } from "@hackmidwest/db";
 import { createApp } from "./app";
 import { readApiConfig } from "./config";
+import { createApiRuntime } from "./runtime";
 
 const config = readApiConfig(process.env);
 const store = openDatabase(config.database);
-const app = createApp({ db: store.db, webOrigin: config.webOrigin });
+const runtime = createApiRuntime(store.db);
+const app = createApp({
+  runRequest: runtime.runRequest,
+  webOrigin: config.webOrigin,
+});
 const EXIT_FAILURE = 1;
 const SHUTDOWN_SIGNALS = ["SIGINT", "SIGTERM"] satisfies NodeJS.Signals[];
 let shutdown: Promise<void> | undefined;
+
+async function release() {
+  try {
+    await runtime.dispose();
+  } finally {
+    store.close();
+  }
+}
 
 // Both signals converge on the same shutdown operation.
 function stop() {
@@ -15,7 +28,7 @@ function stop() {
     try {
       await app.stop();
     } finally {
-      store.close();
+      await release();
     }
   })();
   return shutdown;
@@ -24,7 +37,7 @@ function stop() {
 try {
   app.listen(config.port);
 } catch (error) {
-  store.close();
+  await release();
   throw error;
 }
 for (const signal of SHUTDOWN_SIGNALS) {

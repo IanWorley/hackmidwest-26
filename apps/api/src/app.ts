@@ -1,18 +1,18 @@
 import { cors } from "@elysiajs/cors";
-import type { Database } from "@hackmidwest/db";
 import { Elysia } from "elysia";
 import { createTasksModule } from "./features/tasks";
+import type { RunRequest } from "./runtime";
 
 type AppDependencies = {
-  readonly db: Database;
+  readonly runRequest: RunRequest;
   readonly webOrigin: string;
 };
 
 /** Construct an app without opening a database, reading env, or starting a listener. */
-export function createApp({ db, webOrigin }: AppDependencies) {
+export function createApp({ runRequest, webOrigin }: AppDependencies) {
   return new Elysia()
     .use(cors({ origin: webOrigin }))
-    .use(createTasksModule(db));
+    .use(createTasksModule(runRequest));
 }
 
 export type App = ReturnType<typeof createApp>;
