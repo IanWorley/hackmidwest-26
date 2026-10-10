@@ -4,7 +4,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 
 ## Baseline preconditions
 
-- `V="$(git rev-parse --show-toplevel)/.claude/skills/verify-hackmidwest/scripts/verify.sh"` in every shell command.
+- `V="$(git rev-parse --show-toplevel)/.agents/skills/verify-hackmidwest/scripts/verify.sh"` in every shell command.
 - `$V setup` has run once on this machine.
 - `$V up` printed `ready RUN_ID=<id>`, and every later command is prefixed with `RUN_ID=<id>`.
 - `RUN_ID=<id> $V doctor` exits `0`.

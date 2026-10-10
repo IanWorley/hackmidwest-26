@@ -10,7 +10,7 @@ The repo is a Bun monorepo: `apps/web` (TanStack Start, React, SSR) and `apps/ap
 Everything goes through one helper. Set `V` in each shell command; it works from anywhere inside the repo:
 
 ```sh
-V="$(git rev-parse --show-toplevel)/.claude/skills/verify-hackmidwest/scripts/verify.sh"
+V="$(git rev-parse --show-toplevel)/.agents/skills/verify-hackmidwest/scripts/verify.sh"
 ```
 
 | Command | What it does |
@@ -22,6 +22,7 @@ V="$(git rev-parse --show-toplevel)/.claude/skills/verify-hackmidwest/scripts/ve
 | `RUN_ID=… $V api <name> <METHOD> <path> [json]` | Send one HTTP request to the API and save request + full response. |
 | `RUN_ID=… $V db <name> "<sql>"` | Read-only SQL against the instance's database, saved as evidence. |
 | `RUN_ID=… $V down` | Stop the instance's process group, delete scratch state, keep evidence. |
+| `RUN_ID=… $V publish <pr> [summary.md]` | Push this run's evidence to the `verification-evidence` branch and comment on the PR with the screenshots embedded. Works after `down`. |
 | `$V list` | Show live run IDs. |
 
 Shell state does not persist between your tool calls, so pass `RUN_ID=<id>` on every command after `up`.
@@ -97,6 +98,20 @@ RUN_ID=<id> $V down
 ```
 
 `down` sends SIGTERM to the run's process group, waits up to 10 s, then SIGKILLs it. The API under `bun --watch` releases its port on SIGTERM but its watcher does not exit, so expect `down` to take ~10 s. It copies the logs into the artifacts dir and deletes `/tmp/verify-hackmidwest/runs/<RUN_ID>/` (database, state). It never kills by process name and never touches other runs. Run it after every attempt, including failed ones. `$V list` shows strays. Evidence directories are only removed by hand, and only when the user asks.
+
+## Attach proof to the PR
+
+Every PR in this repo carries proof that the change works (see `AGENTS.md`). After `down`, publish the run.
+
+```sh
+RUN_ID=<id> $V publish <pr-number> /tmp/proof-summary.md
+```
+
+- Write the summary file first. One short paragraph per screenshot or transcript, saying which feature-map entry it proves and what the reader should see in it.
+- `publish` commits the evidence files (`*.png`, `*.aria.yml`, `*.http.txt`, `*.db.txt`, `browser.log`, `run.env`) under `pr-<n>/<RUN_ID>/` on the `verification-evidence` branch. It uses a private git index, so it never changes any checkout or the PR branch.
+- It then posts one PR comment with each screenshot embedded and links to the transcripts. The comment text is also saved as `proof-comment.md` in the artifacts dir.
+- `verification-evidence` never merges and CI ignores it. If the push fails because another publish raced it, rerun `publish`.
+- Publish one run per PR update that changes behavior. Do not publish a run whose doctor failed or whose recipe step failed, unless the comment says so.
 
 ## Feature map
 

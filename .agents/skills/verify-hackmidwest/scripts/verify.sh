@@ -15,6 +15,9 @@ HOST="localhost"
 APP_TITLE="Hack Midwest tasks"
 TASKS_API_PATH="/api/tasks"
 TASKS_PAGE_PATH="/tasks"
+EVIDENCE_BRANCH="verification-evidence"
+EVIDENCE_PATTERNS=("*.png" "*.aria.yml" "*.http.txt" "*.db.txt" "browser.log" "run.env")
+GIT_FILE_MODE="100644"
 
 die() { echo "verify: $*" >&2; exit 1; }
 
@@ -77,6 +80,7 @@ DB_PATH=$dir/db.sqlite
 ARTIFACTS=$art
 GIT_REV=$(git -C "$REPO_ROOT" rev-parse --short HEAD)
 EOF
+  cp "$dir/state.env" "$art/run.env"
 
   local deadline=$((SECONDS + READY_TIMEOUT_SECONDS))
   until curl -sf "http://$HOST:$api_port$TASKS_API_PATH" > /dev/null \
@@ -165,6 +169,68 @@ cmd_down() {
   echo "stopped RUN_ID=$RUN_ID; evidence kept in $ARTIFACTS"
 }
 
+cmd_publish() {
+  (( $# >= 1 && $# <= 2 )) || die "usage: RUN_ID=<id> verify.sh publish <pr-number> [summary.md]"
+  [[ -n "${RUN_ID:-}" ]] || die "RUN_ID is required"
+  local pr="$1" summary="${2:-}" art
+  art="$(artifact_dir "$RUN_ID")"
+  [[ -d "$art" ]] || die "no evidence at $art"
+  [[ -z "$summary" || -f "$summary" ]] || die "summary file '$summary' not found"
+
+  local files=() pattern
+  shopt -s nullglob
+  for pattern in "${EVIDENCE_PATTERNS[@]}"; do files+=("$art"/$pattern); done
+  shopt -u nullglob
+  (( ${#files[@]} )) || die "no evidence files in $art"
+
+  # A private index commits straight to the evidence branch without touching any checkout,
+  # which matters because other agents may share this working tree.
+  local scratch parent="" prefix="pr-$pr/$RUN_ID" file blob tree commit repo
+  scratch="$(mktemp -d)"
+  export GIT_INDEX_FILE="$scratch/index"
+  if git -C "$REPO_ROOT" fetch -q origin "$EVIDENCE_BRANCH" 2> /dev/null; then
+    parent="$(git -C "$REPO_ROOT" rev-parse FETCH_HEAD)"
+    git -C "$REPO_ROOT" read-tree "$parent"
+  fi
+  for file in "${files[@]}"; do
+    blob="$(git -C "$REPO_ROOT" hash-object -w "$file")"
+    git -C "$REPO_ROOT" update-index --add --cacheinfo "$GIT_FILE_MODE,$blob,$prefix/$(basename "$file")"
+  done
+  tree="$(git -C "$REPO_ROOT" write-tree)"
+  unset GIT_INDEX_FILE
+  rm -rf "$scratch"
+  commit="$(git -C "$REPO_ROOT" commit-tree "$tree" ${parent:+-p "$parent"} -m "evidence: PR #$pr run $RUN_ID")"
+  git -C "$REPO_ROOT" push -q origin "$commit:refs/heads/$EVIDENCE_BRANCH" \
+    || die "push to $EVIDENCE_BRANCH failed (another publish may have raced; rerun)"
+
+  repo="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
+  local raw="https://raw.githubusercontent.com/$repo/$commit/$prefix"
+  local blob_url="https://github.com/$repo/blob/$commit/$prefix"
+  local body="$art/proof-comment.md" name
+  {
+    echo "## Verification proof"
+    echo
+    [[ -z "$summary" ]] || { cat "$summary"; echo; }
+    echo "Run \`$RUN_ID\` from the \`verify-hackmidwest\` skill."
+    echo
+    for file in "${files[@]}"; do
+      name="$(basename "$file")"
+      if [[ "$name" == *.png ]]; then
+        printf '### %s\n\n![%s](%s/%s)\n\n' "${name%.png}" "$name" "$raw" "$name"
+      fi
+    done
+    echo "### Transcripts"
+    echo
+    for file in "${files[@]}"; do
+      name="$(basename "$file")"
+      if [[ "$name" != *.png ]]; then
+        echo "- [$name]($blob_url/$name)"
+      fi
+    done
+  } > "$body"
+  gh pr comment "$pr" --body-file "$body"
+}
+
 cmd_list() {
   ls -1 "$VERIFY_ROOT/runs" 2> /dev/null || true
 }
@@ -177,6 +243,7 @@ case "${1:-}" in
   db) shift; cmd_db "$@" ;;
   browser) shift; cmd_browser "$@" ;;
   down) cmd_down ;;
+  publish) shift; cmd_publish "$@" ;;
   list) cmd_list ;;
-  *) die "usage: verify.sh setup | up | doctor | api | db | browser | down | list (see SKILL.md)" ;;
+  *) die "usage: verify.sh setup | up | doctor | api | db | browser | down | publish | list (see SKILL.md)" ;;
 esac
