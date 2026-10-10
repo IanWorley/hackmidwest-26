@@ -33,13 +33,14 @@ rule means "at runtime, X must not load Y":
 - `db-driver-only-in-client`: in every workspace, only `packages/db/src/client.ts` opens connections: `@libsql/*`,
   Drizzle's `libsql` and `bun-sqlite` adapters (which build their own client from a URL), or `bun:sqlite`. Drizzle's
   migrators are allowed.
-- `api-only-entry-points-open-resources`: in `apps/api/src`, only `index.ts` reaches `config.ts`, and only tests reach
-  the `@hackmidwest/db/testing` fixture, directly or through another module.
+- `api-only-entry-points-open-resources`: in `apps/api/src`, no module except `index.ts` may reach `config.ts`, and no
+  module except a `*.test.ts` file may reach the `@hackmidwest/db/testing` fixture, even through another module.
 
 Biome adds the checks dependency-cruiser cannot see:
 
 - Its `noRestrictedImports` overrides govern which specifiers web may write, including type imports, and stop API
-  code other than `src/index.ts` from importing `openDatabase`. Features import tables and the `Database` type from
+  code other than `src/index.ts` from importing `openDatabase`. Apps may not import `packages/db` source files by
+  relative path, so the package's exports are the only way in. Features import tables and the `Database` type from
   the same package, so this is a name check, not a module check.
 - `noProcessEnv` limits `process.env` to `apps/api/src/index.ts` and `packages/db/scripts/`.
 - `noRestrictedGlobals` bans `Bun`, including `Bun.env`, in API and database source, which also run under Vitest on

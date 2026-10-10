@@ -80,7 +80,13 @@
                     "importNames": ["openDatabase"],
                     "message": "Only src/index.ts opens the database. Accept `db: Database` as a parameter."
                   }
-                }
+                },
+                "patterns": [
+                  {
+                    "group": ["**/packages/db/**"],
+                    "message": "Import from @hackmidwest/db or @hackmidwest/db/testing, never from its source files."
+                  }
+                ]
               }
             }
           }
@@ -104,6 +110,10 @@
                   {
                     "group": ["**/api/src/**"],
                     "message": "The web app may import only the API type-only package export."
+                  },
+                  {
+                    "group": ["**/packages/db/**"],
+                    "message": "The web app reaches data only through the API."
                   }
                 ]
               }
