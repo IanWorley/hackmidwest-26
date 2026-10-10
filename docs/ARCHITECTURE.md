@@ -23,6 +23,37 @@ packages/db/src/schema.ts (Drizzle table + TASK_TITLE_LENGTH)
 Router loaders own data fetching and caching. TanStack Query is deliberately omitted until a feature needs
 polling, optimistic updates, or shared client cache.
 
+## Module boundaries
+
+`bun run lint` runs dependency-cruiser with `.dependency-cruiser.ts` after Biome. It checks the graph of source
+imports that survive compilation, so `import type` never counts and every rule means "at runtime, X must not load
+Y". Build output under `dist/` is not scanned, but importing it still counts.
+
+- `web-no-server-code`: nothing under `apps/web/src` may reach the API, `packages/db`, Drizzle, libSQL, Elysia, or
+  `bun:*` through any chain of imports. The `App` type import from `@hackmidwest/api/contract` is erased, so it passes.
+- `db-driver-only-in-client`: in every workspace, only `packages/db/src/client.ts` opens connections: `@libsql/*`,
+  Drizzle's `libsql` and `bun-sqlite` adapters (which build their own client from a URL), `bun:sqlite`, or
+  `node:sqlite`. Drizzle's migrators are allowed.
+- `node-compatible-source`: API and database source also runs on Node under Vitest, so only the Bun entry point
+  `apps/api/src/index.ts` may load `bun` or `bun:*` modules.
+- `api-config-only-in-entry-point`: in `apps/api/src`, only `index.ts` and tests may reach `config.ts`, even through
+  another module.
+- `api-db-fixture-only-in-tests`: in `apps/api/src`, only `*.test.ts` files may reach the `@hackmidwest/db/testing`
+  fixture, even through another module. That includes `index.ts`.
+
+Biome adds the checks dependency-cruiser cannot see:
+
+- Its `noRestrictedImports` overrides govern which specifiers web may write, including type imports, and stop API
+  code other than `src/index.ts` from importing `openDatabase`. Apps may not import `packages/db` by relative path or
+  any package through a `node_modules` path, so the package's exports are the only way in. Features import tables and the `Database` type from
+  the same package, so this is a name check, not a module check.
+- `noProcessEnv` limits `process.env` to `apps/api/src/index.ts` and `packages/db/scripts/`.
+- `noRestrictedGlobals` bans the `Bun` global, including `Bun.env`, in the same files as `node-compatible-source`.
+
+`test/module-boundaries.test.ts` runs small probe files through dependency-cruiser and Biome with the real
+configuration, so a rule that silently stops matching, including a Biome override that replaces another, fails a test
+instead of passing lint.
+
 ## Effect in the API
 
 Request features are Effect programs. A program states the services it needs in its type, yields them, and
