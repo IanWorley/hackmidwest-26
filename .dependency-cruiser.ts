@@ -62,7 +62,7 @@ export default {
     {
       name: "db-driver-only-in-client",
       comment:
-        "Only packages/db/src/client.ts opens database connections. Use openDatabase() from @hackmidwest/db.",
+        "Only packages/db/src/client.ts opens database connections. Use openDatabase() from @hackmidwest/db/connection.",
       severity: "error",
       from: { path: WORKSPACES, pathNot: DB_CLIENT },
       to: { path: DATABASE_DRIVERS, pathNot: DRIZZLE_MIGRATOR },
@@ -77,19 +77,19 @@ export default {
       to: { path: BUN_MODULES },
     },
     {
-      name: "api-config-only-in-entry-point",
+      name: "api-only-entry-points-open-resources",
       comment:
-        "Only src/index.ts (and tests) read config, directly or through another module. App and feature code " +
-        "receive config as parameters.",
+        "Only src/index.ts (and tests) read config or open a database connection, directly or through another " +
+        "module. App and feature code receive config and `db` as parameters.",
       severity: "error",
       from: { path: API_SRC, pathNot: [API_ENTRY_POINT, TEST_FILE] },
-      to: { path: API_CONFIG, reachable: true },
+      to: { path: [API_CONFIG, DB_CLIENT], reachable: true },
     },
     {
       name: "api-db-fixture-only-in-tests",
       comment:
         "Only *.test.ts files use @hackmidwest/db/testing, directly or through another module. Production " +
-        "code, including src/index.ts, opens the database with openDatabase().",
+        "code, including src/index.ts, opens the database with openDatabase() from @hackmidwest/db/connection.",
       severity: "error",
       from: { path: API_SRC, pathNot: TEST_FILE },
       to: { path: DB_TEST_FIXTURE, reachable: true },

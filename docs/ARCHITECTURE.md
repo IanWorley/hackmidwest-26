@@ -4,8 +4,10 @@
 
 Three Bun workspaces:
 
-- `packages/db` (`@hackmidwest/db`) owns persistence: Drizzle tables, the libSQL connection, committed
-  migrations, the seed, and the `createTestDatabase()` fixture (`@hackmidwest/db/testing`). It has no HTTP
+- `packages/db` (`@hackmidwest/db`) owns persistence: Drizzle tables, the libSQL connection
+  (`@hackmidwest/db/connection`), committed migrations, the seed, and the `createTestDatabase()` fixture
+  (`@hackmidwest/db/testing`). The main export carries only tables and types, so importing a table never loads the
+  connection. It has no HTTP
   dependency. It ships TypeScript source; Bun and Vitest load it directly, with no build step.
 - `apps/api` owns HTTP: Elysia features and the TypeBox validators derived from `@hackmidwest/db` tables.
   Feature work runs as [Effect](https://effect.website) programs; Elysia stays the HTTP layer.
@@ -36,17 +38,16 @@ Y". Build output under `dist/` is not scanned, but importing it still counts.
   `node:sqlite`. Drizzle's migrators are allowed.
 - `node-compatible-source`: API and database source also runs on Node under Vitest, so only the Bun entry point
   `apps/api/src/index.ts` may load `bun` or `bun:*` modules.
-- `api-config-only-in-entry-point`: in `apps/api/src`, only `index.ts` and tests may reach `config.ts`, even through
-  another module.
+- `api-only-entry-points-open-resources`: in `apps/api/src`, only `index.ts` and tests may reach `config.ts` or the
+  database connection (`@hackmidwest/db/connection`), however the import is written and even through another module.
 - `api-db-fixture-only-in-tests`: in `apps/api/src`, only `*.test.ts` files may reach the `@hackmidwest/db/testing`
   fixture, even through another module. That includes `index.ts`.
 
 Biome adds the checks dependency-cruiser cannot see:
 
-- Its `noRestrictedImports` overrides govern which specifiers web may write, including type imports, and stop API
-  code other than `src/index.ts` from importing `openDatabase`. Apps may not import `packages/db` by relative path or
-  any package through a `node_modules` path, so the package's exports are the only way in. Features import tables and the `Database` type from
-  the same package, so this is a name check, not a module check.
+- Its `noRestrictedImports` overrides govern which specifiers apps may write, including type imports. Neither app
+  may import `packages/db` by relative path or anything through a `node_modules` path, so the package's exports are
+  the only way in. Web also may not import any `@hackmidwest/db` export or API source.
 - `noProcessEnv` limits `process.env` to `apps/api/src/index.ts` and `packages/db/scripts/`.
 - `noRestrictedGlobals` bans the `Bun` global, including `Bun.env`, in the same files as `node-compatible-source`.
 
