@@ -83,7 +83,7 @@
                 },
                 "patterns": [
                   {
-                    "group": ["**/packages/db/**"],
+                    "group": ["**/packages/db", "**/packages/db/**"],
                     "message": "Import from @hackmidwest/db or @hackmidwest/db/testing, never from its source files."
                   }
                 ]
@@ -112,7 +112,7 @@
                     "message": "The web app may import only the API type-only package export."
                   },
                   {
-                    "group": ["**/packages/db/**"],
+                    "group": ["**/packages/db", "**/packages/db/**"],
                     "message": "The web app reaches data only through the API."
                   }
                 ]
