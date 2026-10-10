@@ -1,7 +1,15 @@
-import { type Database, TASK_TITLE_LENGTH, tasks } from "@hackmidwest/db";
+import { TASK_TITLE_LENGTH, tasks } from "@hackmidwest/db";
 import { asc } from "drizzle-orm";
 import { createSchemaFactory } from "drizzle-typebox";
+import { Data, Effect } from "effect";
 import { Elysia, t } from "elysia";
+import {
+  Database,
+  HTTP_INTERNAL_SERVER_ERROR,
+  HTTP_OK,
+  internalServerErrorResponse,
+  type RunRequest,
+} from "../runtime";
 
 export const TASKS_PATH = "/api/tasks";
 export const HTTP_CREATED = 201;
@@ -22,28 +30,55 @@ const createTaskBody = t.Object(
   { additionalProperties: false },
 );
 
-/** The feature owns endpoint behavior; database rows and validators come from one table. */
-export function createTasksModule(db: Database) {
+type NewTask = Pick<typeof tasks.$inferInsert, "title">;
+
+class TaskStorageError extends Data.TaggedError("TaskStorageError")<{
+  readonly operation: "list" | "create";
+  readonly cause: unknown;
+}> {}
+
+const listTasks = Effect.fn("listTasks")(function* () {
+  const db = yield* Database;
+  return yield* Effect.tryPromise({
+    try: () => db.select().from(tasks).orderBy(asc(tasks.id)),
+    catch: (cause) => new TaskStorageError({ operation: "list", cause }),
+  });
+});
+
+const createTask = Effect.fn("createTask")(function* (input: NewTask) {
+  const db = yield* Database;
+  const [task] = yield* Effect.tryPromise({
+    try: () => db.insert(tasks).values({ title: input.title }).returning(),
+    catch: (cause) => new TaskStorageError({ operation: "create", cause }),
+  });
+  if (task === undefined) {
+    return yield* Effect.die(new Error("Task insert did not return its row"));
+  }
+  return task;
+});
+
+export function createTasksModule(runRequest: RunRequest) {
   return new Elysia({ name: "tasks" })
-    .get(
-      TASKS_PATH,
-      async () => db.select().from(tasks).orderBy(asc(tasks.id)),
-      {
-        response: t.Array(taskResponse),
+    .get(TASKS_PATH, () => runRequest(listTasks()), {
+      response: {
+        [HTTP_OK]: t.Array(taskResponse),
+        [HTTP_INTERNAL_SERVER_ERROR]: internalServerErrorResponse,
       },
-    )
+    })
     .post(
       TASKS_PATH,
-      async ({ body, status }) => {
-        const [task] = await db.insert(tasks).values(body).returning();
-        if (task === undefined) {
-          throw new Error("Task insert did not return its row");
-        }
-        return status(HTTP_CREATED, task);
-      },
+      ({ body, status }) =>
+        runRequest(
+          createTask(body).pipe(
+            Effect.map((task) => status(HTTP_CREATED, task)),
+          ),
+        ),
       {
         body: createTaskBody,
-        response: { [HTTP_CREATED]: taskResponse },
+        response: {
+          [HTTP_CREATED]: taskResponse,
+          [HTTP_INTERNAL_SERVER_ERROR]: internalServerErrorResponse,
+        },
       },
     );
 }

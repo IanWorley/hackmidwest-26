@@ -1,20 +1,35 @@
 import { createTestDatabase } from "@hackmidwest/db/testing";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app";
+import {
+  createApiRuntime,
+  HTTP_INTERNAL_SERVER_ERROR,
+  INTERNAL_ERROR_MESSAGE,
+} from "../runtime";
 import { HTTP_CREATED, TASKS_PATH } from "./tasks";
 
 const REQUEST_ORIGIN = "http://api.test";
 const WEB_ORIGIN = "http://web.test";
 const HTTP_UNPROCESSABLE = 422;
 
+type TestStore = Awaited<ReturnType<typeof createTestDatabase>>;
+
 async function withApp(
-  run: (app: ReturnType<typeof createApp>) => Promise<void>,
+  run: (app: ReturnType<typeof createApp>, store: TestStore) => Promise<void>,
 ): Promise<void> {
   const store = await createTestDatabase();
+  const runtime = createApiRuntime(store.db);
   try {
-    await run(createApp({ db: store.db, webOrigin: WEB_ORIGIN }));
+    await run(
+      createApp({ runRequest: runtime.runRequest, webOrigin: WEB_ORIGIN }),
+      store,
+    );
   } finally {
-    store.close();
+    try {
+      await runtime.dispose();
+    } finally {
+      store.close();
+    }
   }
 }
 
@@ -50,5 +65,19 @@ describe(`POST ${TASKS_PATH}`, () => {
       expect(response.status).toBe(HTTP_UNPROCESSABLE);
       const list = await app.handle(listTasks());
       expect(await list.json()).toEqual([]);
+    }));
+});
+
+describe(`GET ${TASKS_PATH}`, () => {
+  it("returns a generic 500 without driver details when storage fails", () =>
+    withApp(async (app, store) => {
+      store.close();
+
+      const response = await app.handle(listTasks());
+
+      expect(response.status).toBe(HTTP_INTERNAL_SERVER_ERROR);
+      expect(await response.json()).toEqual({
+        message: INTERNAL_ERROR_MESSAGE,
+      });
     }));
 });

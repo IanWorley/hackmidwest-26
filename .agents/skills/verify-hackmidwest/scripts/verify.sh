@@ -18,6 +18,11 @@ TASKS_PAGE_PATH="/tasks"
 EVIDENCE_BRANCH="verification-evidence"
 EVIDENCE_PATTERNS=("*.png" "*.aria.yml" "*.http.txt" "*.db.txt" "browser.log" "run.env")
 GIT_FILE_MODE="100644"
+STORAGE_HEALTHY="healthy"
+STORAGE_BROKEN="broken"
+BROKEN_DB_CONTENT="verify-hackmidwest: not a SQLite database"
+HTTP_STATUS_OK="200"
+HTTP_STATUS_INTERNAL_ERROR="500"
 
 die() { echo "verify: $*" >&2; exit 1; }
 
@@ -29,6 +34,13 @@ require_run() {
   [[ -f "$(run_dir "$RUN_ID")/state.env" ]] || die "no live run '$RUN_ID' under $VERIFY_ROOT/runs"
   # shellcheck disable=SC1091
   source "$(run_dir "$RUN_ID")/state.env"
+}
+
+# Matching the exact status keeps a healthy run from accepting an SSR error page that still has the title.
+serves_app() {
+  local response
+  response="$(curl -s -w '\n%{http_code}' "$1")"
+  [[ "${response##*$'\n'}" == "$2" ]] && grep -q "<title>$APP_TITLE</title>" <<< "$response"
 }
 
 free_port() {
@@ -51,6 +63,12 @@ cmd_up() {
   dir="$(run_dir "$RUN_ID")"
   art="$(artifact_dir "$RUN_ID")"
   [[ ! -e "$dir" ]] || die "run '$RUN_ID' already exists"
+  local storage="${STORAGE:-$STORAGE_HEALTHY}" expected_status
+  case "$storage" in
+    "$STORAGE_HEALTHY") expected_status="$HTTP_STATUS_OK" ;;
+    "$STORAGE_BROKEN") expected_status="$HTTP_STATUS_INTERNAL_ERROR" ;;
+    *) die "STORAGE must be '$STORAGE_HEALTHY' or '$STORAGE_BROKEN'" ;;
+  esac
   mkdir -p "$dir" "$art"
   api_port="$(free_port)"
   web_port="$(free_port)"
@@ -62,8 +80,14 @@ cmd_up() {
   export DB_PATH="$dir/db.sqlite"
   export VITE_API_BASE_URL="http://$HOST:$api_port"
 
-  (cd "$REPO_ROOT" && bun run db:migrate && bun run db:seed) > "$dir/setup.log" 2>&1 \
-    || { cat "$dir/setup.log" >&2; die "migrate/seed failed"; }
+  if [[ "$storage" == "$STORAGE_BROKEN" ]]; then
+    # The API opens a file the harness wrote, so every query fails without editing a real database.
+    echo "$BROKEN_DB_CONTENT" > "$DB_PATH"
+    echo "storage=$STORAGE_BROKEN: skipped migrate/seed" > "$dir/setup.log"
+  else
+    (cd "$REPO_ROOT" && bun run db:migrate && bun run db:seed) > "$dir/setup.log" 2>&1 \
+      || { cat "$dir/setup.log" >&2; die "migrate/seed failed"; }
+  fi
 
   # Backgrounding setsid directly (no subshell) makes $! the new group's leader, so PID == PGID.
   setsid bun run --cwd "$REPO_ROOT" dev > "$dir/dev.log" 2>&1 < /dev/null &
@@ -77,14 +101,16 @@ WEB_PORT=$web_port
 API_URL=http://$HOST:$api_port
 WEB_URL=http://$HOST:$web_port
 DB_PATH=$dir/db.sqlite
+STORAGE=$storage
+EXPECTED_STATUS=$expected_status
 ARTIFACTS=$art
 GIT_REV=$(git -C "$REPO_ROOT" rev-parse --short HEAD)
 EOF
   cp "$dir/state.env" "$art/run.env"
 
   local deadline=$((SECONDS + READY_TIMEOUT_SECONDS))
-  until curl -sf "http://$HOST:$api_port$TASKS_API_PATH" > /dev/null \
-     && curl -sf "http://$HOST:$web_port$TASKS_PAGE_PATH" | grep -q "<title>$APP_TITLE</title>"; do
+  until [[ "$(curl -s -o /dev/null -w '%{http_code}' "http://$HOST:$api_port$TASKS_API_PATH")" == "$expected_status" ]] \
+     && serves_app "http://$HOST:$web_port$TASKS_PAGE_PATH" "$expected_status"; do
     if ! kill -0 "$pgid" 2> /dev/null || (( SECONDS > deadline )); then
       tail -"$LOG_TAIL_LINES" "$dir/dev.log" >&2
       RUN_ID="$RUN_ID" cmd_down > /dev/null 2>&1 || true
@@ -108,10 +134,15 @@ cmd_doctor() {
   check "process group $PGID alive" "kill -0 -- -$PGID 2> /dev/null"
   check "API port $API_PORT owned by this run" "owns_port $API_PORT"
   check "web port $WEB_PORT owned by this run" "owns_port $WEB_PORT"
-  check "GET $API_URL$TASKS_API_PATH returns a JSON array" \
-    "curl -sf '$API_URL$TASKS_API_PATH' | jq -e 'type == \"array\"' > /dev/null"
-  check "GET $WEB_URL$TASKS_PAGE_PATH serves '$APP_TITLE'" \
-    "curl -sf '$WEB_URL$TASKS_PAGE_PATH' | grep -q '<title>$APP_TITLE</title>'"
+  if [[ "$STORAGE" == "$STORAGE_BROKEN" ]]; then
+    check "GET $API_URL$TASKS_API_PATH answers $EXPECTED_STATUS (storage=$STORAGE)" \
+      "[[ \"\$(curl -s -o /dev/null -w '%{http_code}' '$API_URL$TASKS_API_PATH')\" == '$EXPECTED_STATUS' ]]"
+  else
+    check "GET $API_URL$TASKS_API_PATH returns a JSON array" \
+      "curl -sf '$API_URL$TASKS_API_PATH' | jq -e 'type == \"array\"' > /dev/null"
+  fi
+  check "GET $WEB_URL$TASKS_PAGE_PATH answers $EXPECTED_STATUS and serves '$APP_TITLE'" \
+    "serves_app '$WEB_URL$TASKS_PAGE_PATH' '$EXPECTED_STATUS'"
   check "database file exists at $DB_PATH" "[[ -f '$DB_PATH' ]]"
   local head
   head="$(git -C "$REPO_ROOT" rev-parse --short HEAD)"

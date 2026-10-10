@@ -16,7 +16,7 @@ V="$(git rev-parse --show-toplevel)/.agents/skills/verify-hackmidwest/scripts/ve
 | Command | What it does |
 |---|---|
 | `$V setup` | One-time: `bun install --frozen-lockfile`, plus Playwright 1.64.0 + Chromium in `~/.cache/verify-hackmidwest/tools` (outside the repo; `bun.lock` is untouched). |
-| `$V up` | Migrate + seed a fresh SQLite file, start `bun run dev` on two free ports, wait until ready, print `RUN_ID` and the state. |
+| `$V up` | Migrate + seed a fresh SQLite file, start `bun run dev` on two free ports, wait until ready, print `RUN_ID` and the state. `STORAGE=broken $V up` starts the same app on a file that is not a database, so every API query fails. |
 | `RUN_ID=… $V doctor` | Read-only health check of that instance. |
 | `RUN_ID=… $V browser <steps…>` | Drive the web UI headlessly (step language below). |
 | `RUN_ID=… $V api <name> <METHOD> <path> [json]` | Send one HTTP request to the API and save request + full response. |
@@ -38,9 +38,10 @@ $V up                         # or RUN_ID=my-check $V up to choose the id
 
 - `API_PORT`, `WEB_ORIGIN=http://localhost:<web>`, `VITE_API_BASE_URL=http://localhost:<api>` use OS-assigned free ports. Shell env takes precedence over the root `.env` for both Bun's `--env-file` and Vite's `loadEnv`, so a developer's `.env` and their own `bun run dev` on 3000/3001 are never touched.
 - `DB_PATH=/tmp/verify-hackmidwest/runs/<RUN_ID>/db.sqlite`, a fresh file seeded with exactly one task: id `1`, `Build the Hack Midwest demo`, not completed.
+- With `STORAGE=broken`, `up` skips migrate and seed and writes a one-line text file at `DB_PATH` instead. The API starts, and every query fails with `SQLITE_NOTADB`. Use it only for recipes that need a storage failure. No real database is edited.
 - The dev supervisor runs under `setsid`, so its PID is the process group `down` kills.
 
-**Ready** means `up` printed `ready RUN_ID=…` followed by the state (`API_URL`, `WEB_URL`, `DB_PATH`, `ARTIFACTS`, `PGID`, `GIT_REV`). It waits for `GET $API_URL/api/tasks` to answer and `GET $WEB_URL/tasks` to serve `<title>Hack Midwest tasks</title>`, up to 90 s. On timeout it prints the dev log tail and tears itself down. The first `up` on a machine takes ~10 s; Vite's first SSR compile is the slow part.
+**Ready** means `up` printed `ready RUN_ID=…` followed by the state (`API_URL`, `WEB_URL`, `DB_PATH`, `STORAGE`, `EXPECTED_STATUS`, `ARTIFACTS`, `PGID`, `GIT_REV`). It waits until `GET $API_URL/api/tasks` and `GET $WEB_URL/tasks` both answer with `EXPECTED_STATUS` (`200`, or `500` with `STORAGE=broken`) and the page serves `<title>Hack Midwest tasks</title>`, up to 90 s. On timeout it prints the dev log tail and tears itself down. The first `up` on a machine takes ~10 s; Vite's first SSR compile is the slow part.
 
 Instances are isolated by port, database file, and process group, so several runs can live side by side. Do not point the helper at an instance it did not start (for example the developer's `bun run dev`); it only knows runs under `/tmp/verify-hackmidwest/runs/`.
 
