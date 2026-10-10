@@ -45,8 +45,9 @@ Y". Build output under `dist/` is not scanned, but importing it still counts.
 
 Biome adds the checks dependency-cruiser cannot see:
 
-- Its `noRestrictedImports` override governs which specifiers web may write, including type imports: no
-  `@hackmidwest/db` export, no relative path into `packages/db` or API source, and no `node_modules` path.
+- Its `noRestrictedImports` overrides govern which specifiers apps may write, including type imports. Neither app
+  may import `packages/db` by relative path or anything through a `node_modules` path, so the package's exports are
+  the only way in. Web also may not import any `@hackmidwest/db` export or API source.
 - `noProcessEnv` limits `process.env` to `apps/api/src/index.ts` and `packages/db/scripts/`.
 - `noRestrictedGlobals` bans the `Bun` global, including `Bun.env`, in the same files as `node-compatible-source`.
 

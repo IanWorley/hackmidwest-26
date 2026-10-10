@@ -210,6 +210,14 @@ const LINT_PROBES: readonly BoundaryProbe[] = [
     violatedRules: ["style/noRestrictedImports"],
   },
   {
+    behavior: "API code cannot import database source by relative path",
+    files: {
+      "apps/api/src/features/probe.ts":
+        'import { tasks } from "../../../../packages/db/src/schema";\nexport const probe = tasks;\n',
+    },
+    violatedRules: ["style/noRestrictedImports"],
+  },
+  {
     behavior: "API feature code cannot read process.env",
     files: {
       "apps/api/src/features/probe.ts":

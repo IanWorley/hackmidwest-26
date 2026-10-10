@@ -68,6 +68,30 @@
       }
     },
     {
+      "includes": ["apps/api/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/packages/db", "**/packages/db/**"],
+                    "message": "Import from @hackmidwest/db, @hackmidwest/db/connection, or @hackmidwest/db/testing, never from its source files."
+                  },
+                  {
+                    "group": ["**/node_modules/**"],
+                    "message": "Import packages by name, never through a node_modules path."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["apps/web/**"],
       "linter": {
         "rules": {
