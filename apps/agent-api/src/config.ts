@@ -32,8 +32,9 @@ export function readAgentApiConfig(
   if (!Value.Check(PortSchema, port)) {
     throw new Error("AGENT_API_PORT must be a valid TCP port");
   }
-  const tasksApi = new URL(input.tasksApiUrl);
+  const tasksApi = URL.parse(input.tasksApiUrl);
   if (
+    tasksApi === null ||
     (tasksApi.protocol !== HTTP_PROTOCOL &&
       tasksApi.protocol !== HTTPS_PROTOCOL) ||
     tasksApi.pathname !== ORIGIN_PATH ||

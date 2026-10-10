@@ -120,8 +120,8 @@ the root, so a missing workspace config cannot drop them:
   each `package.json` the one dependency graph.
 - `noUndeclaredDependencies` enforces that graph, and dev dependencies are importable only from tests, test
   setup, and `*.config.ts` files.
-- `noBunModules` keeps `bun` and `bun:*` modules out, so code runs under Vitest on Node. The API entry point is
-  the one exception.
+- `noBunModules` keeps `bun` and `bun:*` modules out, so code runs under Vitest on Node. Each backend's entry
+  point, `apps/<backend>/src/index.ts`, is the one exception in its workspace.
 
 A workspace config adds rules specific to its kind. Server and library configs ban the `Bun` global in `src`,
 and the web config bans `fetch`. Runtime bans that must follow subpaths and import chains, such as Elysia in web

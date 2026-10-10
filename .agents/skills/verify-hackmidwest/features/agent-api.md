@@ -23,7 +23,7 @@ Preconditions:
 - Baseline state from the index (seed task only).
 
 - **Health.** Ask the agent API whether it is up. Run `RUN_ID=<id> $V agent agent-health-ok GET /health`. Status `200 OK`; body is exactly `{"status":"ok"}`.
-- **Separate process.** Ask the tasks API for the same path. Run `RUN_ID=<id> $V api agent-health-not-on-api GET /health`. Status `404 Not Found`, which proves the route lives only on the agent API's port.
+- **Separate port.** Ask the tasks API for the same path. Run `RUN_ID=<id> $V api agent-health-not-on-api GET /health`. Status `404 Not Found`, which shows the route is served only on the agent API's port.
 - **Summary.** Read the summary. Run `RUN_ID=<id> $V agent agent-summary-ok GET /tasks/summary`. Status `200 OK`; body is exactly `{"total":1,"completed":0,"open":1}`.
 - **Follows the API.** Create a task, then read the summary again. Run `RUN_ID=<id> $V api agent-summary-create POST /api/tasks '{"title":"Ask the agent"}'` (`201`), then `RUN_ID=<id> $V agent agent-summary-after-create GET /tasks/summary`. Body is exactly `{"total":2,"completed":0,"open":2}`. Run `RUN_ID=<id> $V db agent-summary-rows "select id, title, completed from tasks order by id"` to show the two rows the counts came from.
 - **Storage failure.** This needs its own instance. Run `STORAGE=broken RUN_ID=<id> $V up`, then `RUN_ID=<id> $V api agent-broken-tasks GET /api/tasks` (`500`), `RUN_ID=<id> $V agent agent-health-broken-storage GET /health` (`200`, `{"status":"ok"}`), and `RUN_ID=<id> $V agent agent-summary-broken-storage GET /tasks/summary` (`500`, `{"message":"Internal server error"}`). `dev.log` shows the agent API's `TasksApiError`. `down` this instance afterwards.
