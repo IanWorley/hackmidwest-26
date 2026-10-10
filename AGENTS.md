@@ -4,7 +4,7 @@ Read [README.md](README.md) for commands, [CONTRIBUTING.md](CONTRIBUTING.md) for
 
 ## Skills
 
-Project skills live in `.agents/skills/`, which Codex, Cursor, OpenCode, and VS Code read. Claude Code reads only `.claude/skills/`, so each skill also has a symlink there, for example `.claude/skills/verify-hackmidwest -> ../../.agents/skills/verify-hackmidwest`. When you add a skill, add its symlink in the same PR.
+Project skills live in `.agents/skills/`, which Codex, Cursor, OpenCode, and VS Code read. Claude Code reads only `.claude/skills/`, which is a symlink to `../.agents/skills`, so a new skill needs no extra link. Add skills under `.agents/skills/` only.
 
 ## Prove every PR works
 
