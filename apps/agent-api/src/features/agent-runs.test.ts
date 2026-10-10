@@ -3,7 +3,7 @@ import { createTestDatabase } from "@hackmidwest/db/testing";
 import { describe, expect, it, vi } from "vitest";
 import { createApp } from "../app";
 import type { AgentProvider, AgentRunEnd } from "../providers/provider";
-import { AGENT_RUNS_PATH, failInterruptedRuns } from "./agent-runs";
+import { AGENT_RUNS_PATH, failOrphanedRuns } from "./agent-runs";
 
 const REQUEST_ORIGIN = "http://agent-api.test";
 const PROMPT = "Plan the demo";
@@ -65,7 +65,6 @@ async function getRun(app: TestContext["app"], id: number): Promise<unknown> {
   return response.json();
 }
 
-/** Reads the whole stream; the run's final row is written before the stream closes. */
 async function readEvents(response: Response): Promise<unknown[]> {
   const body = await response.text();
   return body
@@ -183,14 +182,14 @@ describe(`POST ${AGENT_RUNS_PATH}`, () => {
     ));
 });
 
-describe("failInterruptedRuns", () => {
+describe("failOrphanedRuns", () => {
   it("fails runs left running by a previous process", () =>
     withApp(providerYielding([], COMPLETED), async ({ app, db }) => {
       await db
         .insert(agentRuns)
         .values({ provider: "anthropic", prompt: PROMPT });
 
-      await failInterruptedRuns(db);
+      await failOrphanedRuns(db);
 
       expect(await getRun(app, 1)).toMatchObject({ status: "failed" });
     }));

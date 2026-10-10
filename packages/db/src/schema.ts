@@ -32,7 +32,6 @@ export type AgentRunStatus = (typeof AGENT_RUN_STATUSES)[number];
 
 export const AGENT_RUN_PROMPT_LENGTH = { min: 1, max: 100_000 } as const;
 
-/** One prompt sent to one provider. Output is written once, when the run ends. */
 export const agentRuns = sqliteTable(
   "agent_runs",
   {

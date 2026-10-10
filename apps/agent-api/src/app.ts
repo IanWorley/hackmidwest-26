@@ -8,7 +8,6 @@ type AppDependencies = {
   readonly providers: ProviderRegistry;
 };
 
-/** Construct an app without opening a database, reading env, or starting a listener. */
 export function createApp({ db, providers }: AppDependencies) {
   return new Elysia().use(createAgentRunsModule(db, providers));
 }

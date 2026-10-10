@@ -10,10 +10,6 @@ const EnvironmentSchema = t.Object({
 });
 const PortSchema = t.Integer({ minimum: MIN_TCP_PORT, maximum: MAX_TCP_PORT });
 
-/**
- * Fail startup before opening a connection or listener when configuration is invalid.
- * Provider credentials are resolved by each vendor SDK, not here.
- */
 export function readAgentApiConfig(environment: NodeJS.ProcessEnv) {
   const input = { AGENT_API_PORT: environment.AGENT_API_PORT };
   if (!Value.Check(EnvironmentSchema, input)) {

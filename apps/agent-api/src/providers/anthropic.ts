@@ -4,10 +4,9 @@ import type { AgentProvider } from "./provider";
 const MODEL = "claude-opus-5-5";
 const MAX_OUTPUT_TOKENS = 64_000;
 const EFFORT = "medium";
-// Re-runs a refused request on Anthropic's recommended model inside the same stream.
 const SERVER_SIDE_FALLBACK_BETA = "server-side-fallback-2026-07-01";
-// The whole fallback chain declined; any partial output is not an answer.
-const REFUSAL_STOP_REASON = "refusal";
+const REFUSAL_STOP_REASON =
+  "refusal" satisfies Anthropic.Beta.Messages.BetaStopReason;
 
 export function createAnthropicProvider(client: Anthropic): AgentProvider {
   return {

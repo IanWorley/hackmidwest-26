@@ -18,9 +18,8 @@ import {
 export const AGENT_RUNS_PATH = "/api/agent-runs";
 const HTTP_OK = 200;
 const HTTP_NOT_FOUND = 404;
-// Clients get a stable message; the cause is logged server-side.
 const RUN_FAILED_MESSAGE = "The agent run failed";
-// Thinking and refusal fallbacks can leave the stream silent past Bun's 30 s idle timeout.
+// Elysia starts Bun with a 30 s idle timeout; thinking and refusal fallbacks can stay silent longer.
 const NO_IDLE_TIMEOUT = 0;
 
 const SSE_HEADERS = {
@@ -35,7 +34,6 @@ type RunEnd = {
 const CANCELLED: RunEnd = { status: "cancelled", stopReason: null };
 const FAILED: RunEnd = { status: "failed", stopReason: null };
 
-/** Every SSE frame's event name is its `type`; the data is the whole event as JSON. */
 type AgentRunStreamEvent =
   | { readonly type: "started"; readonly runId: number }
   | { readonly type: "text"; readonly text: string }
@@ -56,15 +54,13 @@ const createAgentRunBody = t.Object(
   { additionalProperties: false },
 );
 
-/** This process is the only one that streams runs, so at startup every `running` row is orphaned. */
-export async function failInterruptedRuns(db: Database): Promise<void> {
+export async function failOrphanedRuns(db: Database): Promise<void> {
   await db
     .update(agentRuns)
     .set({ status: FAILED.status })
     .where(eq(agentRuns.status, "running"));
 }
 
-/** Streams provider output as SSE and records how each run ended, with whatever output arrived. */
 export function createAgentRunsModule(
   db: Database,
   providers: ProviderRegistry,
@@ -108,7 +104,6 @@ export function createAgentRunsModule(
     );
 }
 
-/** Ends as cancelled unless the provider finishes or fails first; a client disconnect is neither. */
 async function* streamRun(
   db: Database,
   runId: number,
@@ -117,7 +112,7 @@ async function* streamRun(
   signal: AbortSignal,
 ): AsyncGenerator<AgentRunStreamEvent> {
   let output = "";
-  let end = CANCELLED;
+  let end: RunEnd | undefined;
   try {
     yield { type: "started", runId };
     const chunks = provider.run(request, signal);
@@ -140,14 +135,14 @@ async function* streamRun(
   } finally {
     await db
       .update(agentRuns)
-      .set({ status: end.status, output, stopReason: end.stopReason })
+      .set({ ...(end ?? CANCELLED), output })
       .where(eq(agentRuns.id, runId));
   }
 }
 
 /**
  * Elysia's streaming path does not await generator cleanup on cancel, and its sse() enqueues
- * strings, which Node rejects. Here cancel resolves only after the run's row is written.
+ * strings, which Node rejects.
  */
 function toSseStream(
   events: AsyncGenerator<AgentRunStreamEvent>,
