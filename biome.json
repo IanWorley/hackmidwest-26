@@ -77,7 +77,7 @@
               "options": {
                 "paths": {
                   "@hackmidwest/db": {
-                    "importNames": ["openDatabase", "*"],
+                    "importNames": ["openDatabase", "*", "default"],
                     "message": "Only src/index.ts opens the database. Accept `db: Database` as a parameter."
                   }
                 },
