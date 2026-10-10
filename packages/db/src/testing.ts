@@ -1,5 +1,5 @@
-import { openDatabase } from "../src/db/client";
-import { applyMigrations } from "../src/db/migrations";
+import { openDatabase } from "./client";
+import { applyMigrations } from "./migrations";
 
 /** A fresh connection plus real migrations is the fixture; no SQL copy lives in tests. */
 export async function createTestDatabase() {

@@ -2,12 +2,13 @@
 
 # HackMidwest-26
 
-A Bun monorepo with two apps:
+A Bun monorepo with two apps and a shared database package:
 
 | App | Stack | Port |
 |-----|-------|------|
 | `apps/web` | TanStack Start (React + React Compiler, file-based TanStack Router) | 3000 |
-| `apps/api` | ElysiaJS on Bun, Drizzle ORM + SQLite | 3001 |
+| `apps/api` | ElysiaJS on Bun | 3001 |
+| `packages/db` | Drizzle ORM + SQLite (libSQL): tables, migrations, seed | — |
 
 Types flow end to end with no hand-written DTOs:
 Drizzle table → `drizzle-typebox` validators → Elysia routes → Eden Treaty → React loader data.
@@ -35,17 +36,17 @@ Open <http://localhost:3000/tasks>. The API serves `GET/POST /api/tasks` on <htt
 | `bun run format` / `format:check` | Biome formatter |
 | `bun run lint` | Biome linter and import order |
 | `bun run fix` | Apply all safe Biome fixes (format, lint, import order) |
-| `bun run check` | TypeScript for both apps (generates the route tree first) |
+| `bun run check` | TypeScript for every workspace (generates the route tree first) |
 | `bun run build` | Production builds of both apps |
-| `bun run db:generate` | Generate a migration after editing `apps/api/src/db/schema.ts` |
+| `bun run db:generate` | Generate a migration after editing `packages/db/src/schema.ts` |
 | `bun run db:migrate` / `db:seed` | Apply migrations / insert demo data (safe to re-run) |
 
 CI runs format, lint, typecheck, build, and tests on every PR. [autofix.ci](https://autofix.ci) runs `bun run fix` on PRs and pushes any changes back to the branch.
 
 ## Where things live
 
-- `apps/api/src/db/schema.ts` — tables and the TypeBox validators derived from them.
-- `apps/api/src/features/` — one Elysia module per feature; validation and queries together.
+- `packages/db/src/schema.ts` — tables and their shared limits.
+- `apps/api/src/features/` — one Elysia module per feature; validators derived from tables, plus queries.
 - `apps/api/src/contract.ts` — the type-only `App` export the web app consumes.
 - `apps/web/src/routes/` — file-based routes; loaders call the API through Eden.
 - `apps/web/src/lib/api.ts` — the single Eden client.

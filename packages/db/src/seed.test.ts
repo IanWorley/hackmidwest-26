@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { createTestDatabase } from "../../test/database";
 import { tasks } from "./schema";
 import { DEMO_TASK_ID, seedDemoTasks } from "./seed";
+import { createTestDatabase } from "./testing";
 
 const EDITED_TITLE = "Renamed by a collaborator";
 

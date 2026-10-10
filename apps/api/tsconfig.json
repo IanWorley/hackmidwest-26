@@ -3,12 +3,6 @@
   "compilerOptions": {
     "types": ["bun", "node"]
   },
-  "include": [
-    "src/**/*.ts",
-    "scripts/**/*.ts",
-    "drizzle.config.ts",
-    "vitest*.config.ts",
-    "test/**/*.ts"
-  ],
+  "include": ["src/**/*.ts", "vitest*.config.ts"],
   "exclude": ["dist", "node_modules"]
 }

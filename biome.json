@@ -40,7 +40,9 @@
               "level": "error",
               "options": {
                 "paths": {
-                  "@hackmidwest/api": "Import types from @hackmidwest/api/contract."
+                  "@hackmidwest/api": "Import types from @hackmidwest/api/contract.",
+                  "@hackmidwest/db": "The web app reaches data only through the API.",
+                  "@hackmidwest/db/testing": "The web app reaches data only through the API."
                 },
                 "patterns": [
                   {
