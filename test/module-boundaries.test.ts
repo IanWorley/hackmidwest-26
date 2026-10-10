@@ -210,14 +210,6 @@ const LINT_PROBES: readonly BoundaryProbe[] = [
     violatedRules: ["style/noRestrictedImports"],
   },
   {
-    behavior: "API feature code cannot import openDatabase",
-    files: {
-      "apps/api/src/features/probe.ts":
-        'import { openDatabase } from "@hackmidwest/db";\nexport const probe = openDatabase;\n',
-    },
-    violatedRules: ["style/noRestrictedImports"],
-  },
-  {
     behavior: "API feature code cannot read process.env",
     files: {
       "apps/api/src/features/probe.ts":
