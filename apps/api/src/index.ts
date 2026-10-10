@@ -1,4 +1,4 @@
-import { openDatabase } from "@hackmidwest/db";
+import { openDatabase } from "@hackmidwest/db/connection";
 import { createApp } from "./app";
 import { readApiConfig } from "./config";
 import { createApiRuntime } from "./runtime";
