@@ -1,15 +1,21 @@
-/** What every provider streams back, independent of its vendor SDK. */
-export type AgentEvent =
-  | { readonly type: "text"; readonly text: string }
-  | { readonly type: "done"; readonly stopReason: string };
+import type { AgentRunStatus } from "@hackmidwest/db";
 
 export type AgentRunRequest = {
   readonly prompt: string;
 };
 
-/** Implementations throw on failure; the caller owns persistence and error reporting. */
+/** How a provider's run ended. Failures throw instead. */
+export type AgentRunEnd = {
+  readonly status: Extract<AgentRunStatus, "completed" | "refused">;
+  readonly stopReason: string | null;
+};
+
+/** Yields output text as it arrives and returns how the run ended. */
 export interface AgentProvider {
-  run(request: AgentRunRequest, signal: AbortSignal): AsyncIterable<AgentEvent>;
+  run(
+    request: AgentRunRequest,
+    signal: AbortSignal,
+  ): AsyncGenerator<string, AgentRunEnd>;
 }
 
 /** Adding a provider means adding its id here; the compiler then demands an implementation. */

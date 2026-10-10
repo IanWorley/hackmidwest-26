@@ -6,6 +6,8 @@ import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
 const IN_MEMORY_SQLITE_URL = "file::memory:";
+// Both APIs write one SQLite file; a writer waits for the other's lock instead of failing with SQLITE_BUSY.
+const BUSY_TIMEOUT_MS = 5_000;
 
 export type DatabaseLocation =
   | { readonly kind: "file"; readonly path: string }
@@ -20,7 +22,7 @@ export function openDatabase(location: DatabaseLocation) {
   if (location.kind === "file") {
     mkdirSync(dirname(location.path), { recursive: true });
   }
-  const client = createClient({ url });
+  const client = createClient({ url, timeout: BUSY_TIMEOUT_MS });
   return {
     db: drizzle(client, { schema }),
     close: () => client.close(),

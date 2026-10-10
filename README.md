@@ -42,12 +42,12 @@ curl localhost:3002/api/agent-runs/1   # the recorded run
 | Command | What it does |
 |---------|--------------|
 | `bun run dev` | Run both APIs and web together; Ctrl+C stops all |
-| `bun run test` / `test:watch` | Vitest unit tests (`--project api` or `--project web` to narrow) |
+| `bun run test` / `test:watch` | Vitest unit tests (`--project db`, `api`, `agent-api`, or `web` to narrow) |
 | `bun run format` / `format:check` | Biome formatter |
 | `bun run lint` | Biome linter and import order |
 | `bun run fix` | Apply all safe Biome fixes (format, lint, import order) |
 | `bun run check` | TypeScript for every workspace (generates the route tree first) |
-| `bun run build` | Production builds of both apps |
+| `bun run build` | Production builds of all three apps |
 | `bun run db:generate` | Generate a migration after editing `packages/db/src/schema.ts` |
 | `bun run db:migrate` / `db:seed` | Apply migrations / insert demo data (safe to re-run) |
 

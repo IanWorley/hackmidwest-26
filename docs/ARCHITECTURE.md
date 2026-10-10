@@ -12,7 +12,10 @@ Four Bun workspaces:
   server-sent events, recording each run in `agent_runs`. Providers implement one `AgentProvider` interface
   (`src/providers/provider.ts`) with the vendor's official SDK; `ProviderRegistry` is a `Record` over
   `PROVIDER_IDS`, so adding an id without an implementation fails to compile. Claude (`claude-opus-5-5`) is
-  the first provider, with server-side refusal fallback enabled.
+  the first provider, with server-side refusal fallback enabled. A provider yields text and returns how the run
+  ended (`completed` or `refused`). The runner owns the other endings: `failed` when the provider throws,
+  `cancelled` when the client disconnects, and `failed` at startup for any run a crash left `running`.
+  The agent API listens on `localhost` only, because runs spend provider credits and there is no auth yet.
 - `apps/web` is TanStack Start. It imports one thing from the API: the `App` **type**, via the
   `@hackmidwest/api/contract` export (types-only condition, so a runtime import cannot resolve).
   Biome also rejects relative imports into API source and any import of `@hackmidwest/db`.
@@ -36,11 +39,16 @@ API tests call `app.handle(new Request(...))` — real validation and serializat
 ## Tradeoffs accepted
 
 - The agent API owns its provider abstraction instead of adopting a multi-vendor SDK, so each adapter keeps its
-  vendor's full types and features. The interface carries only text and a stop reason until a feature needs more
+  vendor's full types and features. The interface carries only text and an ending until a feature needs more
   (tool calls, thinking).
-- Agent-run SSE frames are encoded to bytes by hand. Elysia 1.4's `sse()` path enqueues strings, which Bun
-  accepts and Node — where Vitest runs — rejects. The cost is that Eden does not infer the stream's event types.
-
+- Agent-run SSE frames are encoded to bytes by a hand-written stream. Elysia 1.4's `sse()` enqueues strings,
+  which Node rejects, and its stream does not await generator cleanup on cancel. Ours resolves cancel only after
+  the run's row is written. The cost is that Eden does not infer the stream's event types.
+- Agent-run streams disable Bun's 30 s idle timeout per request. Thinking and refusal fallbacks can leave a
+  stream silent for longer, and the timeout would cut the run off. A proxy in front would need its own setting.
+- Both APIs write one SQLite file. libSQL's busy timeout (5 s) makes a writer wait for the other process's lock
+  instead of failing with `SQLITE_BUSY`. libSQL calls are synchronous, so a waiting writer blocks its event loop
+  for the length of the other write, which is milliseconds for this app's statements.
 - `packages/db` exports tables and limits, not request validators. Each API derives its own validators, so
   request shapes can differ per API while the CHECK constraint stays the shared floor. Move shared queries into
   the package only once two APIs duplicate them.

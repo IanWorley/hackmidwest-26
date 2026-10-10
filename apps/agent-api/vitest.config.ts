@@ -9,5 +9,6 @@ export default defineProject({
     environment: "node",
     pool: "forks",
     include: ["src/**/*.test.ts"],
+    restoreMocks: true,
   },
 });

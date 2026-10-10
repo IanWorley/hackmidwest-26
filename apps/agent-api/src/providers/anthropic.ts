@@ -6,7 +6,8 @@ const MAX_OUTPUT_TOKENS = 64_000;
 const EFFORT = "medium";
 // Re-runs a refused request on Anthropic's recommended model inside the same stream.
 const SERVER_SIDE_FALLBACK_BETA = "server-side-fallback-2026-07-01";
-const UNKNOWN_STOP_REASON = "unknown";
+// The whole fallback chain declined; any partial output is not an answer.
+const REFUSAL_STOP_REASON = "refusal";
 
 export function createAnthropicProvider(client: Anthropic): AgentProvider {
   return {
@@ -27,13 +28,13 @@ export function createAnthropicProvider(client: Anthropic): AgentProvider {
           event.type === "content_block_delta" &&
           event.delta.type === "text_delta"
         ) {
-          yield { type: "text", text: event.delta.text };
+          yield event.delta.text;
         }
       }
-      const message = await stream.finalMessage();
-      yield {
-        type: "done",
-        stopReason: message.stop_reason ?? UNKNOWN_STOP_REASON,
+      const { stop_reason: stopReason } = await stream.finalMessage();
+      return {
+        status: stopReason === REFUSAL_STOP_REASON ? "refused" : "completed",
+        stopReason,
       };
     },
   };

@@ -1,33 +1,45 @@
-import { agentRuns, type Database } from "@hackmidwest/db";
+import {
+  AGENT_RUN_PROMPT_LENGTH,
+  type AgentRunStatus,
+  agentRuns,
+  type Database,
+} from "@hackmidwest/db";
 import { eq } from "drizzle-orm";
 import { createSchemaFactory } from "drizzle-typebox";
 import { Elysia, t } from "elysia";
 import {
-  type AgentEvent,
   type AgentProvider,
+  type AgentRunEnd,
   type AgentRunRequest,
   PROVIDER_IDS,
   type ProviderRegistry,
 } from "../providers/provider";
 
 export const AGENT_RUNS_PATH = "/api/agent-runs";
-export const HTTP_OK = 200;
-export const HTTP_NOT_FOUND = 404;
-const PROMPT_LENGTH = { min: 1, max: 100_000 } as const;
+const HTTP_OK = 200;
+const HTTP_NOT_FOUND = 404;
 // Clients get a stable message; the cause is logged server-side.
 const RUN_FAILED_MESSAGE = "The agent run failed";
+// Thinking and refusal fallbacks can leave the stream silent past Bun's 30 s idle timeout.
+const NO_IDLE_TIMEOUT = 0;
 
 const SSE_HEADERS = {
   "content-type": "text/event-stream",
   "cache-control": "no-cache",
 } as const;
 
-type AgentRunStatus = (typeof agentRuns.$inferSelect)["status"];
+type RunEnd = {
+  readonly status: Exclude<AgentRunStatus, "running">;
+  readonly stopReason: string | null;
+};
+const CANCELLED: RunEnd = { status: "cancelled", stopReason: null };
+const FAILED: RunEnd = { status: "failed", stopReason: null };
 
 /** Every SSE frame's event name is its `type`; the data is the whole event as JSON. */
 type AgentRunStreamEvent =
   | { readonly type: "started"; readonly runId: number }
-  | AgentEvent
+  | { readonly type: "text"; readonly text: string }
+  | ({ readonly type: "done" } & AgentRunEnd)
   | { readonly type: "failed"; readonly message: string };
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
@@ -37,14 +49,22 @@ const createAgentRunBody = t.Object(
   {
     provider: t.UnionEnum(PROVIDER_IDS),
     prompt: t.String({
-      minLength: PROMPT_LENGTH.min,
-      maxLength: PROMPT_LENGTH.max,
+      minLength: AGENT_RUN_PROMPT_LENGTH.min,
+      maxLength: AGENT_RUN_PROMPT_LENGTH.max,
     }),
   },
   { additionalProperties: false },
 );
 
-/** Streams provider events as SSE and records the run, including partial output on failure. */
+/** This process is the only one that streams runs, so at startup every `running` row is orphaned. */
+export async function failInterruptedRuns(db: Database): Promise<void> {
+  await db
+    .update(agentRuns)
+    .set({ status: FAILED.status })
+    .where(eq(agentRuns.status, "running"));
+}
+
+/** Streams provider output as SSE and records how each run ended, with whatever output arrived. */
 export function createAgentRunsModule(
   db: Database,
   providers: ProviderRegistry,
@@ -52,7 +72,7 @@ export function createAgentRunsModule(
   return new Elysia({ name: "agent-runs" })
     .post(
       AGENT_RUNS_PATH,
-      async ({ body, request }) => {
+      async ({ body, request, server }) => {
         const [run] = await db
           .insert(agentRuns)
           .values(body)
@@ -60,6 +80,7 @@ export function createAgentRunsModule(
         if (run === undefined) {
           throw new Error("Agent run insert did not return its row");
         }
+        server?.timeout(request, NO_IDLE_TIMEOUT);
         const events = streamRun(
           db,
           run.id,
@@ -87,6 +108,7 @@ export function createAgentRunsModule(
     );
 }
 
+/** Ends as cancelled unless the provider finishes or fails first; a client disconnect is neither. */
 async function* streamRun(
   db: Database,
   runId: number,
@@ -95,34 +117,37 @@ async function* streamRun(
   signal: AbortSignal,
 ): AsyncGenerator<AgentRunStreamEvent> {
   let output = "";
-  let stopReason: string | null = null;
-  let status: AgentRunStatus = "failed";
+  let end = CANCELLED;
   try {
     yield { type: "started", runId };
-    for await (const event of provider.run(request, signal)) {
-      if (event.type === "text") {
-        output += event.text;
-      } else {
-        stopReason = event.stopReason;
-        status = "completed";
+    const chunks = provider.run(request, signal);
+    for (let step = await chunks.next(); ; step = await chunks.next()) {
+      if (step.done) {
+        end = step.value;
+        yield { type: "done", ...step.value };
+        return;
       }
-      yield event;
+      output += step.value;
+      yield { type: "text", text: step.value };
     }
   } catch (error) {
+    if (signal.aborted) {
+      return;
+    }
+    end = FAILED;
     console.error(`Agent run ${runId} failed`, error);
     yield { type: "failed", message: RUN_FAILED_MESSAGE };
   } finally {
-    // Also runs when the client disconnects and the stream is cancelled.
     await db
       .update(agentRuns)
-      .set({ status, output, stopReason })
+      .set({ status: end.status, output, stopReason: end.stopReason })
       .where(eq(agentRuns.id, runId));
   }
 }
 
 /**
- * Encodes to bytes here because Elysia's own SSE path enqueues strings,
- * which Bun accepts but Node (where Vitest runs) rejects.
+ * Elysia's streaming path does not await generator cleanup on cancel, and its sse() enqueues
+ * strings, which Node rejects. Here cancel resolves only after the run's row is written.
  */
 function toSseStream(
   events: AsyncGenerator<AgentRunStreamEvent>,
@@ -142,7 +167,6 @@ function toSseStream(
         ),
       );
     },
-    // A client disconnect cancels the stream; returning the generator runs its finally.
     async cancel() {
       await events.return(undefined);
     },

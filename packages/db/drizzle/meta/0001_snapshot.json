@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bac718e6-d731-4edb-9813-d947ea5c12d4",
+  "id": "36b3be7e-1a06-4e99-a5eb-922dcbc34c4d",
   "prevId": "24930990-4aa4-4235-a01c-5ce37ece7f71",
   "tables": {
     "agent_runs": {
@@ -56,7 +56,16 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "agent_runs_status": {
+          "name": "agent_runs_status",
+          "value": "\"agent_runs\".\"status\" in ('running', 'completed', 'refused', 'failed', 'cancelled')"
+        },
+        "agent_runs_prompt_length": {
+          "name": "agent_runs_prompt_length",
+          "value": "length(\"agent_runs\".\"prompt\") between 1 and 100000"
+        }
+      }
     },
     "tasks": {
       "name": "tasks",
