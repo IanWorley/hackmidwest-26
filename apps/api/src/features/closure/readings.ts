@@ -1,14 +1,16 @@
 import { type Static, t } from "elysia";
 import type { NwsObservation } from "../../clients/nws-model";
+import type { AirQualityObservation } from "../../clients/open-meteo";
 
-const READING_SOURCES = ["nws"] as const;
-const READING_METRICS = [
+const READING_SOURCES = ["nws", "open-meteo"] as const;
+const OBSERVATION_METRICS = [
   "temperature",
   "windSpeed",
   "windGust",
   "visibility",
 ] as const;
-const READING_UNITS = ["degC", "km/h", "m"] as const;
+const READING_METRICS = [...OBSERVATION_METRICS, "aqi"] as const;
+const READING_UNITS = ["degC", "km/h", "m", "AQI"] as const;
 
 type ReadingUnit = (typeof READING_UNITS)[number];
 
@@ -32,7 +34,7 @@ const ReadingSchema = t.Object({
 type Reading = Static<typeof ReadingSchema>;
 
 function observationReadings(observation: NwsObservation): Reading[] {
-  return READING_METRICS.flatMap((metric) => {
+  return OBSERVATION_METRICS.flatMap((metric) => {
     const { value, unitCode } = observation[metric];
     const unit = READING_UNIT_BY_NWS_CODE.get(unitCode);
     if (value === null || unit === undefined) {
@@ -51,5 +53,23 @@ function observationReadings(observation: NwsObservation): Reading[] {
   });
 }
 
+function airQualityReadings(
+  observation: AirQualityObservation | undefined,
+): Reading[] {
+  if (observation === undefined) {
+    return [];
+  }
+  return [
+    {
+      source: "open-meteo",
+      observedAt: observation.observedAt,
+      metric: "aqi",
+      value: observation.aqi,
+      unit: "AQI",
+      rawRef: observation.rawRef,
+    },
+  ];
+}
+
 export type { Reading };
-export { observationReadings, ReadingSchema };
+export { airQualityReadings, observationReadings, ReadingSchema };

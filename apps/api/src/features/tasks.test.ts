@@ -2,6 +2,7 @@ import { createTestDatabase } from "@hackmidwest/db/testing";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app";
 import { makeNwsClient } from "../clients/nws";
+import { makeOpenMeteoClient } from "../clients/open-meteo";
 import {
   createApiRuntime,
   HTTP_INTERNAL_SERVER_ERROR,
@@ -21,6 +22,7 @@ async function withApp(
   const store = await createTestDatabase();
   const runtime = createApiRuntime(store.db, {
     nws: makeNwsClient({ userAgent: "tasks test, never sent" }),
+    openMeteo: makeOpenMeteoClient(),
   });
   try {
     await run(
