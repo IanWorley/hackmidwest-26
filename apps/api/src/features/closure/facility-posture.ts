@@ -20,7 +20,7 @@ type DecidedPosture =
 interface PostureTimings {
   readonly status: Recommendation["status"];
   readonly findings: readonly {
-    readonly timing: Pick<TimingResult, "timingCase">;
+    readonly timing: Pick<TimingResult, "timingCase" | "status">;
   }[];
 }
 
@@ -44,30 +44,38 @@ function fromStatus(status: OpmStatus): FacilityPosture {
   }
 }
 
-function fromTimingCase(
-  posture: TimedPosture,
-  timingCase: TimingCase,
-): FacilityPosture | undefined {
+/** A delay capped into telework keeps its hours only in the timing case; delays are never clamped. */
+function cappedDelay(timingCase: TimingCase): FacilityPosture | undefined {
   if (
-    posture === "delayed_arrival" &&
-    (timingCase.kind === "delayWithinCap" ||
-      timingCase.kind === "outlastsDelayCap")
+    timingCase.kind === "delayWithinCap" ||
+    timingCase.kind === "outlastsDelayCap"
   ) {
-    return { posture, delayMinutes: timingCase.delayHours * MINUTES_PER_HOUR };
+    return {
+      posture: "delayed_arrival",
+      delayMinutes: timingCase.delayHours * MINUTES_PER_HOUR,
+    };
   }
-  if (
-    posture === "early_dismissal" &&
-    timingCase.kind === "startsDuringHours"
-  ) {
-    return { posture, releaseAt: timingCase.releaseAt };
+  return undefined;
+}
+
+/** A finding's own status, which the engine clamps so a release is never before evaluation. */
+function findingPosture(
+  posture: TimedPosture,
+  timing: PostureTimings["findings"][number]["timing"],
+): FacilityPosture | undefined {
+  if (timing.status.posture === posture) {
+    return fromStatus(timing.status);
+  }
+  if (posture === "delayed_arrival") {
+    return cappedDelay(timing.timingCase);
   }
   return undefined;
 }
 
 /**
  * The recommendation's own status supplies the timing when it names the chosen posture. Otherwise
- * the first finding whose timing case carries a delay or release supplies it, as when the engine capped
- * a long delay into telework and the decider overrode back to a delayed arrival.
+ * the first finding that times the chosen posture supplies it, as when the engine capped a long delay
+ * into telework and the decider overrode back to a delayed arrival.
  */
 function timedPosture(
   posture: TimedPosture,
@@ -77,7 +85,7 @@ function timedPosture(
     return { kind: "decided", posture: fromStatus(recommendation.status) };
   }
   const timed = recommendation.findings
-    .map((finding) => fromTimingCase(posture, finding.timing.timingCase))
+    .map((finding) => findingPosture(posture, finding.timing))
     .find((found) => found !== undefined);
   if (timed === undefined) {
     return { kind: "untimed", posture };
