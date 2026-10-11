@@ -4,6 +4,7 @@ import {
   type DirectiveScope,
   type DirectiveScopeKind,
   type employees,
+  type ReasonCategory,
 } from "@hackmidwest/db";
 
 type DirectiveRecipient = Pick<
@@ -17,7 +18,7 @@ interface Directive {
   readonly directive: DirectiveKind;
   /** A `dismissed` directive's own release time, which wins over the posture's. */
   readonly effectiveAt: string | null;
-  readonly reasonCategory: string;
+  readonly reasonCategory: ReasonCategory;
   readonly reasonText: string;
   readonly issuedById: number;
   readonly issuedAt: string;
