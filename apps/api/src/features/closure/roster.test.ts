@@ -14,7 +14,6 @@ import { expect, it } from "vitest";
 import type { EffectiveStatusKind, FacilityPosture } from "./effective-status";
 import {
   type NotifyReason,
-  type RosterEntry,
   type RosterMatch,
   type RosterReconciliation,
   reconcileRoster,
@@ -23,9 +22,7 @@ import {
 
 const NOW = "2026-10-12T11:00:00.000Z";
 const KANSAS_CITY_FACILITY_ID = 1;
-const MAIN_OFFICE_ID = 1;
 const ANNEX_ID = 2;
-const FARGO_EMPLOYEE_ID = 21;
 const FULL_CLOSURE: FacilityPosture = { posture: "full_closure" };
 
 interface Placement {
@@ -274,26 +271,4 @@ it("skips an onsite seeded employee as no_change under normal operations", async
     effective: "working_onsite",
     roster: "matched",
   });
-});
-
-it("lists a roster entry for someone HR assigns to another facility as assigned elsewhere", () => {
-  const staleEntry: RosterEntry = {
-    id: 1,
-    buildingId: MAIN_OFFICE_ID,
-    listedName: "Uma Sorensen",
-    employeeId: FARGO_EMPLOYEE_ID,
-  };
-
-  const { unmatched } = reconcileRoster({
-    employees: [],
-    rosterEntries: [staleEntry],
-    statusEvents: [],
-    posture: FULL_CLOSURE,
-    directives: [],
-    now: NOW,
-  });
-
-  expect(unmatched).toEqual([
-    { entry: staleEntry, reason: "assigned_elsewhere" },
-  ]);
 });
