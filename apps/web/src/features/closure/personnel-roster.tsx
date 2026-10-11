@@ -19,6 +19,7 @@ import {
   STATUS_LABELS,
   type StatusCount,
 } from "./roster-filter";
+import { formatFacilityDay } from "./status-reason";
 
 const FILTERS_NAME = "Filter people";
 const SUMMARY_NAME = "Status summary";
@@ -96,20 +97,25 @@ function summaryText(counts: readonly StatusCount[]): string {
     .join(SUMMARY_SEPARATOR);
 }
 
-/** An override with no recorded time cannot resolve anyone, so it replaces the counts. */
+/**
+ * An override with no recorded time cannot resolve anyone, so it replaces the counts.
+ * After closing time the decision is about tomorrow, so the alert names the facility day, not "today".
+ */
 function Summary({
   posture,
   counts,
+  facilityDate,
 }: {
   posture: Personnel["posture"];
   counts: readonly StatusCount[];
+  facilityDate: Personnel["facilityDate"];
 }): JSX.Element {
   if (posture.kind === "untimed") {
     return (
       <Alert>
         <AlertTitle>{UNTIMED_TITLE}</AlertTitle>
         <AlertDescription>
-          {`Today's posture is ${POSTURE_LABELS[posture.posture]}, but no time was recorded for it, so effective status can't be resolved.`}
+          {`The posture for ${formatFacilityDay(facilityDate)} is ${POSTURE_LABELS[posture.posture]}, but no time was recorded for it, so effective status can't be resolved.`}
         </AlertDescription>
       </Alert>
     );
@@ -194,7 +200,11 @@ export function PersonnelRoster({
           ))}
         </FilterSelect>
       </search>
-      <Summary counts={view.counts} posture={personnel.posture} />
+      <Summary
+        counts={view.counts}
+        facilityDate={personnel.facilityDate}
+        posture={personnel.posture}
+      />
       <PersonnelTable
         buildings={personnel.buildings}
         people={view.people}

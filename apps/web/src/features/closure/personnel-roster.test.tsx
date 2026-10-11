@@ -105,3 +105,20 @@ it("shows everyone when a reload turns untimed while a status filter is chosen",
 
   expect(shownNames()).toEqual(ENTRIES.map(([name]) => name));
 });
+
+it("names the facility day in the untimed alert", () => {
+  render(
+    roster({
+      ...ROSTER,
+      facilityDate: "2026-01-15",
+      posture: { kind: "untimed", posture: "early_dismissal" },
+      people: PEOPLE.map(({ effective: _effective, ...person }) => person),
+    }),
+  );
+
+  expect(
+    screen.getByText(
+      "The posture for Thu, Jan 15 is early dismissal, but no time was recorded for it, so effective status can't be resolved.",
+    ),
+  ).toBeDefined();
+});
