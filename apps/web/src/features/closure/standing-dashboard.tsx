@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/table";
 import type { MapFacility, Standing } from "@/features/map/load-map";
 import { needsDecision } from "./dashboard";
-import { POSTURE_LABELS } from "./posture";
 import { AsOfMarker, DecideByCountdown, PostureBadge } from "./posture-fields";
 
 const TABLE_NAME = "Facility standing";
@@ -18,14 +17,19 @@ const FACILITY_COLUMN = "Facility";
 const POSTURE_COLUMN = "Posture";
 const DECIDE_BY_COLUMN = "Decide by";
 const DECISION_COLUMN = "Decision";
-const NO_DEADLINE_TEXT = "—";
+const NOTHING_TO_SHOW_TEXT = "—";
 const DECISIONS_NEEDED_LABEL = "Decisions needed";
 const DECISION_NEEDED_TEXT = "Decision needed";
 const DECISION_RECORDED_TEXT = "Decision recorded";
 
-function decisionText(standing: Standing): string {
+type DecisionText =
+  | typeof NOTHING_TO_SHOW_TEXT
+  | typeof DECISION_NEEDED_TEXT
+  | typeof DECISION_RECORDED_TEXT;
+
+function decisionText(standing: Standing): DecisionText {
   if (standing.posture === "not_evaluated") {
-    return POSTURE_LABELS.not_evaluated;
+    return NOTHING_TO_SHOW_TEXT;
   }
   if (needsDecision(standing)) {
     return DECISION_NEEDED_TEXT;
@@ -36,7 +40,7 @@ function decisionText(standing: Standing): string {
 /** A recorded decision has no deadline left to count down to. */
 function DecideByCell({ standing }: { standing: Standing }): JSX.Element {
   if (!needsDecision(standing)) {
-    return <>{NO_DEADLINE_TEXT}</>;
+    return <>{NOTHING_TO_SHOW_TEXT}</>;
   }
   return <DecideByCountdown decideBy={standing.decideBy} />;
 }
