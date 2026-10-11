@@ -103,3 +103,31 @@ describe(`GET ${FACILITIES_PATH}/:id`, () => {
     expect(response.status).toBe(HTTP_UNPROCESSABLE);
   });
 });
+
+describe(`GET ${FACILITIES_PATH}/:id/buildings`, () => {
+  it("lists the facility's buildings with their employees by name", async () => {
+    const response = await getFromSeededApp(`${FACILITIES_PATH}/2/buildings`);
+
+    expect(response.status).toBe(HTTP_OK);
+    expect(await response.json()).toEqual([
+      {
+        id: 4,
+        name: "Main Office",
+        employees: [
+          { id: 21, name: "Uma Sorensen" },
+          { id: 22, name: "Walt Hagen" },
+          { id: 23, name: "Xenia Larsen" },
+        ],
+      },
+    ]);
+  });
+
+  it("returns 404 for an id no facility has", async () => {
+    const response = await getFromSeededApp(
+      `${FACILITIES_PATH}/${UNKNOWN_FACILITY_ID}/buildings`,
+    );
+
+    expect(response.status).toBe(HTTP_NOT_FOUND);
+    expect(await response.json()).toEqual({ message: "Facility not found" });
+  });
+});
