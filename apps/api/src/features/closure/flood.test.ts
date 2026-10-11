@@ -16,7 +16,12 @@ import {
 import type { NwsClientShape } from "../../clients/nws";
 import type { NwsAlert } from "../../clients/nws-model";
 import { NwpsClient, NwsClient } from "../../runtime";
-import { crossedFloodCutoffs, gaugeCrossing, pullFloodSignals } from "./flood";
+import {
+  crossedFloodCutoffs,
+  gaugeCrossing,
+  pullFloodSignals,
+  withCurrentStages,
+} from "./flood";
 
 const KANSAS_CITY = { lat: 39.0997, lon: -94.5786 };
 // Above KCDM7's 35 ft moderate stage, below its 49 ft major stage.
@@ -28,6 +33,11 @@ const MISSING_MODERATE_STAGE_BODY = MODERATE_FLOOD_BODY.replace(
   '"moderate":{"stage":35',
   '"moderate":{"stage":-9999',
 );
+
+// KCDM7_GAUGE_BODY's observed validTime.
+const OBSERVED_AT = "2026-10-11T00:30:00Z";
+const ONE_HOUR_MS = 3_600_000;
+const ONE_DAY_MS = 86_400_000;
 
 function alert(event: string, severity: NwsAlert["severity"]): NwsAlert {
   return {
@@ -67,6 +77,25 @@ describe("crossedFloodCutoffs", () => {
       missing: { warning: false, moderateFlood: false, majorFlood: false },
       present: { warning: false, moderateFlood: true, majorFlood: false },
     });
+  });
+});
+
+describe("withCurrentStages", () => {
+  it("stops a gauge that quit reporting above moderate stage from crossing it", async () => {
+    const gauge = await parsedGauge(MODERATE_FLOOD_BODY);
+    const stale = { ...gauge, forecast: [] };
+    const observedAtMs = Date.parse(OBSERVED_AT);
+
+    expect({
+      fresh: crossedFloodCutoffs({
+        alerts: [],
+        gauge: withCurrentStages(stale, observedAtMs + ONE_HOUR_MS),
+      }).moderateFlood,
+      stale: crossedFloodCutoffs({
+        alerts: [],
+        gauge: withCurrentStages(stale, observedAtMs + ONE_DAY_MS),
+      }).moderateFlood,
+    }).toEqual({ fresh: true, stale: false });
   });
 });
 
