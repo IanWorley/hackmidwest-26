@@ -63,8 +63,12 @@ export interface AgentApiRuntime {
   readonly dispose: () => Promise<void>;
 }
 
-export function createAgentApiRuntime(ports: AgentApiPorts): AgentApiRuntime {
-  const runtime = ManagedRuntime.make(agentApiLayer(ports));
+/** `clock` lets tests pass `TestClock.layer()` so the run log's timings are deterministic. */
+export function createAgentApiRuntime(
+  ports: AgentApiPorts,
+  clock: Layer.Layer<never> = Layer.empty,
+): AgentApiRuntime {
+  const runtime = ManagedRuntime.make(Layer.merge(agentApiLayer(ports), clock));
   return {
     runRequest: (program) =>
       runtime.runPromise(

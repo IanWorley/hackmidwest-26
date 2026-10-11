@@ -19,7 +19,8 @@ Four Bun workspaces:
   the contract. `ClosureApi` can evaluate, preview notifications, and read a recommendation, and nothing else, so an
   agent feature cannot record a decision or dispatch notifications. So `apps/api` stays the only SQLite writer and
   owns every rule. It has no CORS (no browser calls it) and no type contract (no client imports it yet). It serves
-  `GET /health`, a placeholder `GET /tasks/summary`, and `POST /recommendations/:id/narrate`.
+  `GET /health`, a placeholder `GET /tasks/summary`, `POST /recommendations/:id/narrate`, and
+  `POST /facilities/:id/run`.
 - `apps/web` is TanStack Start. It imports one thing from the API: the `App` **type**, via the
   `@hackmidwest/api/contract` export (types-only condition, so a runtime import cannot resolve).
   Biome rejects relative imports into any other workspace's source.

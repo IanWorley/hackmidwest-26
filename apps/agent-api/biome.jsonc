@@ -11,7 +11,8 @@
       "nursery": {
         // These builders keep inferred return types. The Elysia instances are
         // route contracts, AgentApiServices is derived from the Layer that
-        // agentApiLayer returns, and the Eden client type follows the API's App.
+        // agentApiLayer returns, and step and stepSchema carry each run step's
+        // tool literal into the run log's type.
         "useExplicitReturnType": {
           "level": "error",
           "options": {
@@ -20,7 +21,10 @@
               "createApp",
               "createHealthModule",
               "createNarrateModule",
-              "createTaskSummaryModule"
+              "createOrchestrateModule",
+              "createTaskSummaryModule",
+              "step",
+              "stepSchema"
             ]
           }
         }
