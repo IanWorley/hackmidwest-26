@@ -6,7 +6,7 @@ import {
   humanInputs,
   recommendations,
 } from "@hackmidwest/db";
-import { and, desc, eq, getTableColumns, max, or } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, or } from "drizzle-orm";
 import { Data, DateTime, Effect, Option } from "effect";
 import { Database } from "../../runtime";
 import type { DecisionBody } from "./decision-body";
@@ -23,7 +23,7 @@ import {
   toDecisionResponse,
 } from "./decision-view";
 import { parseDecimalId } from "./facilities";
-import { LIVE_RECOMMENDATION } from "./recommendation-mode";
+import { LIVE_RECOMMENDATION, NEWEST_FIRST } from "./recommendation-mode";
 import { contentHash } from "./records";
 
 type DecisionMakerRow = typeof decisionMakers.$inferSelect;
@@ -76,14 +76,16 @@ async function loadDecisionContext(
     return undefined;
   }
   const [latestRecommendation] = await tx
-    .select({ id: max(recommendations.id) })
+    .select({ id: recommendations.id })
     .from(recommendations)
     .where(
       and(
         eq(recommendations.facilityId, recommendation.facilityId),
         LIVE_RECOMMENDATION,
       ),
-    );
+    )
+    .orderBy(...NEWEST_FIRST)
+    .limit(1);
   const [newestDecision] = await tx
     .select({ id: decisions.id })
     .from(decisions)
@@ -93,7 +95,6 @@ async function loadDecisionContext(
   return {
     recommendation,
     decider: await eligibleDecider(tx, recommendation.facilityId, decidedById),
-    // Rows are add-only and ids only grow, so the highest live id is the current recommendation.
     latestRecommendationId: latestRecommendation?.id ?? null,
     latestDecisionId: newestDecision?.id ?? null,
   };

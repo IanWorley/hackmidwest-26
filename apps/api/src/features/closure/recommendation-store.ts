@@ -1,6 +1,6 @@
 import { HAZARDS, recommendations } from "@hackmidwest/db";
 import { Value } from "@sinclair/typebox/value";
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { createSchemaFactory } from "drizzle-typebox";
 import { Data, Effect, Option } from "effect";
 import { t } from "elysia";
@@ -12,6 +12,7 @@ import {
   EVALUATION_MODES,
   LIVE_RECOMMENDATION,
   modeOf,
+  NEWEST_FIRST,
 } from "./recommendation-mode";
 import { type Snapshot, SnapshotSchema } from "./recommendation-snapshot";
 import { type ContentHash, contentHash, type JsonValue } from "./records";
@@ -221,7 +222,7 @@ const findLatestRecommendation = Effect.fn("findLatestRecommendation")(
               LIVE_RECOMMENDATION,
             ),
           )
-          .orderBy(desc(recommendations.id))
+          .orderBy(...NEWEST_FIRST)
           .limit(1),
       catch: (cause) =>
         new RecommendationStorageError({ operation: "latest", cause }),

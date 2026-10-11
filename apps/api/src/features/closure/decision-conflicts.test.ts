@@ -18,12 +18,15 @@ import {
   NEWER_RECOMMENDATION_ID,
   OVERRIDE,
   RECOMMENDATION,
+  RECOMMENDATION_ID,
   storedDecisions,
   UNKNOWN_ID,
 } from "./decision-test-fixtures";
 import { contentHash } from "./records";
 
 const withApp = appRunner(createTestDatabaseWithDemoFacilities);
+const EARLIER_EVALUATED_AT = "2026-10-02T09:30:00.000Z";
+const STORED_LAST_ID = 2;
 
 it("refuses a decision on a recommendation the facility has since replaced", async () => {
   await withApp(async ({ db, request }) => {
@@ -44,6 +47,39 @@ it("refuses a decision on a recommendation the facility has since replaced", asy
         conflict: "newer_recommendation",
         latestRecommendationId: NEWER_RECOMMENDATION_ID,
       },
+    ]);
+  });
+});
+
+it("treats the evaluation with the newest evaluatedAt as current, even when an older one was stored after it", async () => {
+  await withApp(async ({ db, request }) => {
+    const older = {
+      ...RECOMMENDATION,
+      evaluatedAt: EARLIER_EVALUATED_AT,
+      asOf: EARLIER_EVALUATED_AT,
+    };
+    await db
+      .insert(recommendations)
+      .values({ ...older, contentHash: contentHash(older) });
+
+    const onOlder = await request(decide(STORED_LAST_ID), ACCEPT);
+    const onNewer = await request(decide(), ACCEPT);
+
+    expect([
+      onOlder.status,
+      await onOlder.json(),
+      onNewer.status,
+      (await storedDecisions(db)).map(
+        ({ recommendationId }) => recommendationId,
+      ),
+    ]).toEqual([
+      HTTP_CONFLICT,
+      {
+        conflict: "newer_recommendation",
+        latestRecommendationId: RECOMMENDATION_ID,
+      },
+      HTTP_CREATED,
+      [RECOMMENDATION_ID],
     ]);
   });
 });

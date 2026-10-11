@@ -148,7 +148,7 @@ function conflictFor(
   }
   if (
     context.latestRecommendationId !== null &&
-    context.latestRecommendationId > context.recommendation.id
+    context.latestRecommendationId !== context.recommendation.id
   ) {
     return {
       kind: "conflict",

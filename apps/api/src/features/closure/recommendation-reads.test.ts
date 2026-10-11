@@ -11,6 +11,7 @@ import { evaluatePosture } from "./engine";
 import { parseSnapshot } from "./recommendation-store";
 import {
   AS_OF,
+  CLOCK,
   EVALUATE_PATH,
   EXPECTED_INPUT,
   LATER_AS_OF,
@@ -24,6 +25,7 @@ import { RECOMMENDATIONS_PATH } from "./recommendations";
 const FACILITY_WITHOUT_RECOMMENDATIONS_ID = 4;
 const HEX_ID = "0x1";
 const NEWEST_LIVE_ID = 2;
+const FIRST_STORED_ID = 1;
 const { output: STORED_OUTPUT } = parseSnapshot({
   input: EXPECTED_INPUT,
   output: evaluatePosture(EXPECTED_INPUT),
@@ -46,6 +48,23 @@ it(`GET ${LATEST_PATH} returns the facility's newest live evaluation, skipping l
       HTTP_OK,
       NEWEST_LIVE_ID,
       "live",
+    ]);
+  });
+});
+
+it(`GET ${LATEST_PATH} returns the newest evaluation by evaluatedAt, even when an older one was stored last`, async () => {
+  await withApp(async ({ get, post, setClock }) => {
+    await post(EVALUATE_PATH);
+    setClock(AS_OF);
+    await post(EVALUATE_PATH);
+
+    const response = await get(LATEST_PATH);
+
+    const { id, evaluatedAt } = await response.json();
+    expect([response.status, id, evaluatedAt]).toEqual([
+      HTTP_OK,
+      FIRST_STORED_ID,
+      CLOCK,
     ]);
   });
 });

@@ -1,5 +1,5 @@
 import { recommendations } from "@hackmidwest/db";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 const EVALUATION_MODES = ["live", "as_of"] as const;
 
@@ -26,4 +26,14 @@ const LIVE_RECOMMENDATION = eq(
   recommendations.evaluatedAt,
 );
 
-export { EVALUATION_MODES, LIVE_RECOMMENDATION, modeOf };
+/**
+ * The facility's current recommendation is the first live row in this order. An evaluation that read
+ * the clock first can store after a later one whose pulls finished sooner, so insertion order
+ * cannot decide it. The id only breaks a tie between equal clock readings.
+ */
+const NEWEST_FIRST = [
+  desc(recommendations.evaluatedAt),
+  desc(recommendations.id),
+] as const;
+
+export { EVALUATION_MODES, LIVE_RECOMMENDATION, modeOf, NEWEST_FIRST };
