@@ -243,6 +243,26 @@ it("rejects a human input reported after the decision", async () => {
   });
 });
 
+it("rejects an extended-year instant as invalid input", async () => {
+  await withApp(async ({ request }) => {
+    const reportedAt = "-000001-01-01T00:00:00.000Z";
+    const response = await request(decide(), {
+      ...ACCEPT,
+      humanInputs: [{ reportedBy: "Road crew", reportedAt, text: "Clear." }],
+    });
+
+    expect([response.status, await response.json()]).toEqual([
+      HTTP_UNPROCESSABLE_ENTITY,
+      {
+        type: "validation",
+        on: "body",
+        property: "/humanInputs/0/reportedAt",
+        message: "Expected string to match 'utc-instant' format",
+      },
+    ]);
+  });
+});
+
 // Grace Lindqvist decides for Fargo, not Kansas City, the fixture recommendation's facility.
 const OTHER_FACILITY_DECIDER_ID = 5;
 

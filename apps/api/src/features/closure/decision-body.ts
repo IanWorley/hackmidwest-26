@@ -24,11 +24,18 @@ const BODY_ROOT = "";
 const INVALID_BODY_MESSAGE = "Invalid decision";
 const UNKNOWN_ACTION_MESSAGE = "Expected action accept, override, or defer";
 
-// Exactly `Date.prototype.toISOString()`, the only instant form the database CHECKs accept.
-// The round trip also rejects impossible dates such as Feb 30.
+// toISOString writes a year outside 0000-9999 as a signed six-digit year, which SQLite's julianday cannot read.
+const FOUR_DIGIT_YEAR = /^\d{4}-/u;
+
+// Exactly `Date.prototype.toISOString()` with a four-digit year, the only instant form the
+// database CHECKs accept. The round trip also rejects impossible dates such as Feb 30.
 FormatRegistry.Set(UTC_INSTANT_FORMAT, (value) => {
   const millis = Date.parse(value);
-  return Number.isFinite(millis) && new Date(millis).toISOString() === value;
+  return (
+    FOUR_DIGIT_YEAR.test(value) &&
+    Number.isFinite(millis) &&
+    new Date(millis).toISOString() === value
+  );
 });
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
