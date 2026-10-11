@@ -20,8 +20,7 @@
               "createApp",
               "createHealthModule",
               "createNarrateModule",
-              "createTaskSummaryModule",
-              "createTasksApiClient"
+              "createTaskSummaryModule"
             ]
           }
         }
@@ -30,12 +29,33 @@
   },
   "overrides": [
     {
-      // Effect service keys are classes, and runtime.ts is the one place
-      // every service key is declared and provided.
-      "includes": ["src/runtime.ts"],
+      // Effect service keys and tagged errors are classes. runtime.ts is the
+      // one place every service key is declared and provided, and
+      // api-client.ts declares the errors its ports fail with.
+      "includes": ["src/runtime.ts", "src/api-client.ts"],
       "linter": {
         "rules": {
           "style": { "noExcessiveClassesPerFile": "off" }
+        }
+      }
+    },
+    {
+      // Features reach apps/api only through the narrow ports in runtime.ts, so
+      // none can call a route the ports leave out, such as decisions or dispatch.
+      "includes": ["src/features/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@elysiajs/eden": "Yield ClosureApi or TasksApi from ../runtime. Only src/api-client.ts holds the Eden client.",
+                  "@hackmidwest/api/contract": "Yield ClosureApi or TasksApi from ../runtime. Only src/api-client.ts holds the Eden client."
+                }
+              }
+            }
+          }
         }
       }
     },

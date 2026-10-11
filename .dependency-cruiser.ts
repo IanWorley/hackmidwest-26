@@ -123,7 +123,7 @@ export default {
       name: "agent-api-reads-tasks-over-http",
       comment:
         "The agent API never loads the database, directly or through any chain of imports, so apps/api stays the " +
-        "only SQLite writer and owns every task rule. Yield the TasksApi service (apps/agent-api/src/runtime.ts) " +
+        "only SQLite writer and owns every rule. Yield the ClosureApi or TasksApi port (apps/agent-api/src/runtime.ts) " +
         "and call apps/api over HTTP.",
       severity: "error",
       from: { path: AGENT_API_WORKSPACE },

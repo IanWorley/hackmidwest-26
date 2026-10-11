@@ -1,4 +1,5 @@
 import process from "node:process";
+import { createApiClients } from "./api-client";
 import { createApp } from "./app";
 import { type LlmConfig, readAgentApiConfig } from "./config";
 import { type LlmClient, templateLlm } from "./llm";
@@ -8,7 +9,6 @@ import {
   OPENROUTER_TIMEOUT,
 } from "./openrouter";
 import { createAgentApiRuntime } from "./runtime";
-import { createTasksApiClient } from "./tasks-api";
 
 function createLlm(llm: LlmConfig): LlmClient {
   switch (llm.kind) {
@@ -26,10 +26,10 @@ function createLlm(llm: LlmConfig): LlmClient {
 }
 
 const config = readAgentApiConfig(process.env);
-const runtime = createAgentApiRuntime(
-  createTasksApiClient(config.tasksApiUrl),
-  createLlm(config.llm),
-);
+const runtime = createAgentApiRuntime({
+  ...createApiClients(config.tasksApiUrl),
+  llm: createLlm(config.llm),
+});
 const app = createApp({ runRequest: runtime.runRequest });
 const EXIT_FAILURE = 1;
 const SHUTDOWN_SIGNALS = ["SIGINT", "SIGTERM"] satisfies NodeJS.Signals[];
