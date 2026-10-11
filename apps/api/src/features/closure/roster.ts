@@ -12,7 +12,12 @@ type RosterEntry = typeof buildingRosterEntries.$inferSelect;
 
 /** How the building roster agrees with HR for one employee. */
 type RosterMatch =
-  | { readonly kind: "matched"; readonly entry: RosterEntry }
+  | {
+      readonly kind: "matched";
+      readonly entry: RosterEntry;
+      /** Other listings for the same employee, in buildings HR does not assign them to. */
+      readonly alsoListed: readonly RosterEntry[];
+    }
   | { readonly kind: "unrostered" }
   | {
       readonly kind: "misfiled";
@@ -93,7 +98,11 @@ function matchRoster(
   if (entry === undefined) {
     return { kind: "misfiled", entries: [first, ...rest] };
   }
-  return { kind: "matched", entry };
+  return {
+    kind: "matched",
+    entry,
+    alsoListed: entries.filter((other) => other !== entry),
+  };
 }
 
 function inclusionOf(
