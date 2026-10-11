@@ -3,10 +3,10 @@ import {
   REASON_CATEGORIES,
   recommendations,
 } from "@hackmidwest/db";
-import { FormatRegistry, type TObject } from "@sinclair/typebox";
+import { FormatRegistry, type TObject, type TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { createSchemaFactory } from "drizzle-typebox";
-import { t } from "elysia";
+import { t, ValidationError } from "elysia";
 
 const UTC_INSTANT_FORMAT = "utc-instant";
 const NON_BLANK_PATTERN = "\\S";
@@ -22,6 +22,7 @@ const BODY_FIELDS = {
 const BODY_ROOT = "";
 const INVALID_BODY_MESSAGE = "Invalid decision";
 const UNKNOWN_ACTION_MESSAGE = "Expected action accept, override, or defer";
+const CLOSED = { additionalProperties: false } as const;
 
 // Exactly `Date.prototype.toISOString()`, the only instant form the database CHECKs accept.
 // The round trip also rejects impossible dates such as Feb 30.
@@ -37,42 +38,57 @@ type RequestedAction = Exclude<DecisionAction, "no_decision">;
 
 const utcInstant = t.String({ format: UTC_INSTANT_FORMAT });
 const nonBlankText = t.String({ pattern: NON_BLANK_PATTERN });
-const reasonBody = t.Object({
-  category: t.UnionEnum(REASON_CATEGORIES),
-  text: nonBlankText,
-});
+const reasonBody = t.Object(
+  {
+    category: t.UnionEnum(REASON_CATEGORIES),
+    text: nonBlankText,
+  },
+  CLOSED,
+);
 const sharedDecisionFields = {
   decidedById: t.Integer(),
   supersedesDecisionId: t.Optional(t.Integer()),
   humanInputs: t.Optional(
     t.Array(
-      t.Object({
-        reportedBy: nonBlankText,
-        reportedAt: utcInstant,
-        text: nonBlankText,
-      }),
+      t.Object(
+        {
+          reportedBy: nonBlankText,
+          reportedAt: utcInstant,
+          text: nonBlankText,
+        },
+        CLOSED,
+      ),
     ),
   ),
 };
 
 const DECISION_BODY_VARIANTS = {
-  accept: t.Object({
-    action: t.Literal("accept"),
-    ...sharedDecisionFields,
-    reason: t.Optional(reasonBody),
-  }),
-  override: t.Object({
-    action: t.Literal("override"),
-    chosenPosture: createSelectSchema(recommendations).properties.posture,
-    ...sharedDecisionFields,
-    reason: reasonBody,
-  }),
-  defer: t.Object({
-    action: t.Literal("defer"),
-    recheckAt: utcInstant,
-    ...sharedDecisionFields,
-    reason: reasonBody,
-  }),
+  accept: t.Object(
+    {
+      action: t.Literal("accept"),
+      ...sharedDecisionFields,
+      reason: t.Optional(reasonBody),
+    },
+    CLOSED,
+  ),
+  override: t.Object(
+    {
+      action: t.Literal("override"),
+      chosenPosture: createSelectSchema(recommendations).properties.posture,
+      ...sharedDecisionFields,
+      reason: reasonBody,
+    },
+    CLOSED,
+  ),
+  defer: t.Object(
+    {
+      action: t.Literal("defer"),
+      recheckAt: utcInstant,
+      ...sharedDecisionFields,
+      reason: reasonBody,
+    },
+    CLOSED,
+  ),
 } as const satisfies Record<RequestedAction, TObject>;
 
 const variantsByAction = new Map<unknown, TObject>(
@@ -125,5 +141,24 @@ const decisionBody = t.Union(
 );
 type DecisionBody = typeof decisionBody.static;
 
+/**
+ * A route `transform` that refuses unknown keys at any depth of a closed schema. Elysia's default
+ * normalize strips them before it validates, so this checks the raw body. It raises Elysia's own
+ * validation error, so the 422 is whatever the schema's error formatter gives any invalid body.
+ */
+function rejectUnknownFields(schema: TSchema) {
+  return ({ body }: { readonly body: unknown }): void => {
+    if (!Value.Check(schema, body)) {
+      throw new ValidationError("body", schema, body);
+    }
+  };
+}
+
 export type { DecisionBody, ValidationErrorBody };
-export { BODY_FIELDS, decisionBody, invalidBody, validationErrorResponse };
+export {
+  BODY_FIELDS,
+  decisionBody,
+  invalidBody,
+  rejectUnknownFields,
+  validationErrorResponse,
+};
