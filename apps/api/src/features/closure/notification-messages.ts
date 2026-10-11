@@ -69,10 +69,6 @@ const WITHDRAWN: Instructions = {
     "The notice sent for the earlier decision no longer applies to you.",
   whatToDo: "Follow your usual schedule.",
 };
-const ALL_CLEAR: Instructions = {
-  appliesToYou: "Your earlier instructions no longer apply.",
-  whatToDo: "Follow your usual schedule.",
-};
 const STAY_OFF_WORK = "Stay off work as planned.";
 
 const DIRECTIVE_SCOPE_PHRASE: Readonly<Record<DirectiveScopeKind, string>> = {
@@ -112,10 +108,8 @@ const STATUS_TEMPLATES: {
     appliesToYou: "You are teleworking today.",
     whatToDo: `Work from home. Do not travel to ${facilityName}.`,
   }),
-  delayed_arrival: ({ delayMinutes }, context) => ({
-    appliesToYou: `Your arrival is delayed by ${delayMinutes} minutes.`,
-    whatToDo: `Arrive by ${localTime(toInstant(context.workStartsAt + delayMinutes * MS_PER_MINUTE), context)} instead of ${startTime(context)}.`,
-  }),
+  delayed_arrival: ({ delayMinutes }, context) =>
+    delayedArrival(delayMinutes, context),
   report_required: (_status, context) => ({
     appliesToYou: "You are required to report in person.",
     whatToDo: `Report to ${context.facilityName} at ${startTime(context)} as usual.`,
@@ -127,6 +121,26 @@ const STATUS_TEMPLATES: {
   }),
 };
 
+function delayedArrival(
+  delayMinutes: number,
+  context: PersonContext,
+): Instructions {
+  const arriveAt = toInstant(
+    context.workStartsAt + delayMinutes * MS_PER_MINUTE,
+  );
+  const appliesToYou = `Your arrival is delayed by ${delayMinutes} minutes.`;
+  if (context.workEndsAt !== null && arriveAt >= context.workEndsAt) {
+    return {
+      appliesToYou: `${appliesToYou} Your shift ends at ${localTime(context.workEndsAt, context)}, before the delayed arrival.`,
+      whatToDo: `Do not report to ${context.facilityName} today.`,
+    };
+  }
+  return {
+    appliesToYou,
+    whatToDo: `Arrive by ${localTime(arriveAt, context)} instead of ${startTime(context)}.`,
+  };
+}
+
 function dismissal(release: Release, context: PersonContext): Instructions {
   const copy = DISMISSAL_COPY[context.whereabouts];
   const timing = releaseTiming(
@@ -136,6 +150,12 @@ function dismissal(release: Release, context: PersonContext): Instructions {
   );
   switch (timing.kind) {
     case "all_day":
+      if (context.workStartsAt <= context.now) {
+        return {
+          appliesToYou: "You are dismissed for the rest of the day.",
+          whatToDo: copy.stopNow(context),
+        };
+      }
       return {
         appliesToYou: "You are dismissed for the day.",
         whatToDo: copy.stayHome(context),
@@ -233,7 +253,9 @@ function draftMessage(
       return {
         subject: `All clear: ${context.facilityName}`,
         whatsHappening: allClearHappening(context, intent.resumesOn),
-        ...ALL_CLEAR,
+        appliesToYou:
+          "Your earlier instructions end when normal operations resume.",
+        whatToDo: `Return to your usual schedule on ${intent.resumesOn}.`,
       };
     default:
       return intent satisfies never;

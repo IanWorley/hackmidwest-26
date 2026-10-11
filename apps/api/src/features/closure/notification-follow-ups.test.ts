@@ -114,6 +114,17 @@ it.each<[string, PackageFields, string]>([
   );
 });
 
+it("tells all-clear recipients which day to resume their schedule", () => {
+  const allClear = buildAllClear({
+    original: decidedPackage({}),
+    resumesOn: "2026-10-13",
+    now: NOW,
+  });
+  expect(allClear.notices.map(({ message }) => message.whatToDo)).toEqual([
+    "Return to your usual schedule on 2026-10-13.",
+  ]);
+});
+
 it("rejects an all-clear for a date that does not exist", () => {
   expect(() =>
     buildAllClear({

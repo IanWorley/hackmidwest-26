@@ -205,3 +205,32 @@ it.each<[string, PackageFields, string]>([
     `Winter weather expected ${window}. ${FACILITY_NAME} is closed.`,
   ]);
 });
+
+it("tells an onsite worker dismissed after their start to leave now", () => {
+  const pkg = decidedPackage({
+    employees: [employee({ id: 1, teleworkEligible: false })],
+    now: AT_WORK,
+  });
+  expect(pkg.recipients.map(({ message }) => message.whatToDo)).toEqual([
+    `Leave ${FACILITY_NAME} now.`,
+  ]);
+});
+
+it("describes a delayed arrival without moving the facility's opening", () => {
+  const pkg = decidedPackage({
+    posture: { posture: "delayed_arrival", delayMinutes: 120 },
+  });
+  expect(pkg.recipients.map(({ message }) => message.subject)).toEqual([
+    `${FACILITY_NAME} has a 120-minute delayed arrival`,
+  ]);
+});
+
+it("tells someone whose shift ends before the delayed arrival not to report", () => {
+  const pkg = decidedPackage({
+    posture: { posture: "delayed_arrival", delayMinutes: 240 },
+    employees: [employee({ id: 1, shiftStart: "07:00", shiftEnd: "08:00" })],
+  });
+  expect(pkg.recipients.map(({ message }) => message.whatToDo)).toEqual([
+    `Do not report to ${FACILITY_NAME} today.`,
+  ]);
+});
