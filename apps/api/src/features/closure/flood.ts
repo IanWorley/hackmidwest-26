@@ -9,11 +9,9 @@ import type {
 } from "../../clients/nwps";
 import type { GeoPoint, NwsAlert } from "../../clients/nws-model";
 import { NwpsClient, NwsClient } from "../../runtime";
-import {
-  NWPS_FORECAST_STEP_MINUTES,
-  NWS_SEVERITIES,
-  THRESHOLDS,
-} from "./thresholds";
+import { NWS_SEVERITIES, THRESHOLDS } from "./thresholds";
+import { TIMING_POLICY } from "./timing-policy";
+import { MS_PER_MINUTE } from "./zoned-time";
 
 type FloodCutoffs = typeof THRESHOLDS.flood.cutoffs;
 type FloodCutoffKey = keyof FloodCutoffs;
@@ -40,10 +38,8 @@ const FLOOD_ALERT_EVENTS: ReadonlySet<string> = new Set(
   }),
 );
 
-const MS_PER_MINUTE = 60_000;
-// A stage older than one NWPS forecast step predates the forecast meant to replace it,
-// so a gauge that stopped reporting no longer says where the river is.
-const MAX_STAGE_AGE_MS = NWPS_FORECAST_STEP_MINUTES * MS_PER_MINUTE;
+const MAX_STAGE_AGE_MS =
+  TIMING_POLICY.gaugeStageStaleMinutes.value * MS_PER_MINUTE;
 
 function isCurrent(point: StageAt, nowMs: number): boolean {
   return Date.parse(point.validTime) >= nowMs - MAX_STAGE_AGE_MS;

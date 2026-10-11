@@ -1,6 +1,26 @@
 import type { Hazard, RoadClass } from "@hackmidwest/db";
 import type { FloodCategory } from "../../clients/nwps";
 import type { Posture } from "./postures";
+import {
+  AIRNOW_AQI_SOURCE,
+  AIRNOW_AQI_URL,
+  CAP_V1_2_URL,
+  MNDOT_CLEAR_ROADS_SOURCE,
+  MNDOT_CLEAR_ROADS_URL,
+  NWPS_GAUGE_URL,
+  NWS_AFTER_FLOOD_URL,
+  NWSI_10_513_SOURCE,
+  NWSI_10_513_URL,
+  NWSI_10_515_SOURCE,
+  NWSI_10_515_URL,
+  NWSI_10_922_SOURCE,
+  NWSI_10_922_URL,
+  NWSM_10_950_SOURCE,
+  NWSM_10_950_URL,
+  OPEN_METEO_AIR_QUALITY_URL,
+  OPM_SOURCE,
+  OPM_URL,
+} from "./sources";
 
 const HIGH_WIND_SUSTAINED_MPH = 40;
 const HIGH_WIND_SUSTAINED_DURATION_MINUTES = 60;
@@ -18,37 +38,6 @@ const CAMS_GLOBAL_TIME_STEP_MINUTES = 180;
 const OPM_LONGEST_ILLUSTRATED_DELAY_HOURS = 4;
 const OPM_STANDARD_DELAY_HOURS = 2;
 const NWPS_FORECAST_STEP_MINUTES = 360;
-
-const NWSI_10_513_SOURCE =
-  "National Weather Service, NWSI 10-513 WFO Winter Weather Products Specification (November 6, 2024), with OASIS CAP v1.2 severity as served by api.weather.gov";
-const NWSI_10_513_URL =
-  "https://www.weather.gov/media/directives/010_pdfs/pd01005013curr.pdf";
-const NWSI_10_515_SOURCE =
-  "National Weather Service, NWSI 10-515 WFO Non-Precipitation Weather Products Specification (May 16, 2025)";
-const NWSI_10_515_URL =
-  "https://www.weather.gov/media/directives/010_pdfs/pd01005015curr.pdf";
-const NWSI_10_922_SOURCE =
-  "National Weather Service, NWSI 10-922 Weather Forecast Office Water Resources Products Specification (August 3, 2021), with OASIS CAP v1.2 severity as served by api.weather.gov";
-const NWSI_10_922_URL =
-  "https://www.weather.gov/media/directives/010_pdfs/pd01009022curr.pdf";
-const NWSM_10_950_SOURCE =
-  "National Weather Service, NWSM 10-950 Definitions and General Terminology (November 26, 2019), with each gauge's flood stages from the NWS National Water Prediction Service";
-const NWSM_10_950_URL =
-  "https://www.weather.gov/media/directives/010_pdfs/pd01009050curr.pdf";
-const NWPS_GAUGE_URL = "https://api.water.noaa.gov/nwps/v1/gauges/{lid}";
-const NWS_AFTER_FLOOD_URL = "https://www.weather.gov/safety/flood-after";
-const CAP_V1_2_URL =
-  "https://docs.oasis-open.org/emergency/cap/v1.2/CAP-v1.2-os.html";
-const MNDOT_CLEAR_ROADS_SOURCE =
-  "Minnesota Department of Transportation, Maintenance Manual Chapter 2: Clear Roads (November 15, 2023); Minnesota trunk-highway targets, applied as a proxy for commute roads in other states";
-const MNDOT_CLEAR_ROADS_URL =
-  "https://www.dot.state.mn.us/maintenance/pdf/manual/CHAPTER%202%2011-15-23.pdf";
-const AIRNOW_AQI_SOURCE = "U.S. EPA AirNow, AQI Basics";
-const AIRNOW_AQI_URL = "https://www.airnow.gov/aqi/aqi-basics/";
-const OPM_SOURCE =
-  "U.S. Office of Personnel Management, Governmentwide Dismissal and Closure Procedures (December 2025)";
-const OPM_URL =
-  "https://www.opm.gov/policy-data-oversight/pay-leave/reference-materials/handbooks/dcdismissal.pdf";
 
 // CAP v1.2 lists these most severe first; ascending order lets an index
 // comparison rank severity, with Unknown lowest.
@@ -227,8 +216,7 @@ export const THRESHOLDS = {
       unit: "minutes",
       source:
         "Open-Meteo Air Quality API, CAMS Global Atmospheric Composition Forecasts",
-      citation:
-        "US AQI comes from the CAMS global model at 3-hourly resolution, refreshed every 12 hours. The buffer waits one 3-hour model step to confirm AQI stays below the cutoff. https://open-meteo.com/en/docs/air-quality-api",
+      citation: `US AQI comes from the CAMS global model at 3-hourly resolution, refreshed every 12 hours. The buffer waits one 3-hour model step to confirm AQI stays below the cutoff. ${OPEN_METEO_AIR_QUALITY_URL}`,
     },
     maxDelayHours: {
       value: OPM_STANDARD_DELAY_HOURS,
@@ -289,5 +277,3 @@ export function postHazardBuffer(
   }
   return buffer[roadClass];
 }
-
-export { NWPS_FORECAST_STEP_MINUTES };

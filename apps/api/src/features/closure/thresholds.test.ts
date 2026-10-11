@@ -9,6 +9,7 @@ import {
   postHazardBuffer,
   THRESHOLDS,
 } from "./thresholds";
+import { TIMING_POLICY } from "./timing-policy";
 
 interface CitedEntry {
   readonly path: string;
@@ -50,15 +51,15 @@ function cutoffRank(cutoff: Cutoff): number {
   }
 }
 
-describe("THRESHOLDS", () => {
-  it.each(collectCitedEntries(THRESHOLDS, "THRESHOLDS"))(
-    "$path cites a source and citation",
-    ({ source, citation }) => {
-      expect(typeof source === "string" && source.trim()).toBeTruthy();
-      expect(typeof citation === "string" && citation.trim()).toBeTruthy();
-    },
-  );
+it.each([
+  ...collectCitedEntries(THRESHOLDS, "THRESHOLDS"),
+  ...collectCitedEntries(TIMING_POLICY, "TIMING_POLICY"),
+])("$path cites a source and citation", ({ source, citation }) => {
+  expect(typeof source === "string" && source.trim()).toBeTruthy();
+  expect(typeof citation === "string" && citation.trim()).toBeTruthy();
+});
 
+describe("THRESHOLDS", () => {
   it.each(HAZARDS)(
     "%s cutoffs escalate posture as the value rises",
     (hazard) => {
