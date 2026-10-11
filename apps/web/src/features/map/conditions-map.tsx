@@ -8,7 +8,7 @@ import {
   type LatLngTuple,
   latLngBounds,
 } from "leaflet";
-import { type JSX, useEffect } from "react";
+import { type JSX, useEffect, useState } from "react";
 import {
   GeoJSON,
   MapContainer,
@@ -42,7 +42,13 @@ import type {
   Standing,
   StandingPosture,
 } from "./load-map";
-import { AQI_ATTRIBUTION, BASE_TILES, RADAR_TILES } from "./tiles";
+import {
+  AQI_ATTRIBUTION,
+  BASE_TILES,
+  RADAR_FRAME_MS,
+  RADAR_TILES,
+  radarTileUrl,
+} from "./tiles";
 
 const MARKER_SIZE_PX = 18;
 const LABEL_OFFSET_PX = 12;
@@ -255,6 +261,26 @@ function AqiAttribution(): null {
   return null;
 }
 
+/** NEXRAD tiles that move to the next composite frame while the page stays open. */
+function RadarLayer({ onError }: { onError: () => void }): JSX.Element {
+  const [url, setUrl] = useState(() => radarTileUrl(Date.now()));
+  useEffect(() => {
+    const timer = setInterval(
+      (): void => setUrl(radarTileUrl(Date.now())),
+      RADAR_FRAME_MS,
+    );
+    return (): void => clearInterval(timer);
+  }, []);
+  return (
+    <TileLayer
+      attribution={RADAR_TILES.attribution}
+      eventHandlers={{ tileerror: onError }}
+      opacity={RADAR_OPACITY}
+      url={url}
+    />
+  );
+}
+
 /** Leaflet reads `window` on import, so routes load this module only in the browser. */
 export function ConditionsMap({
   facilities,
@@ -275,14 +301,7 @@ export function ConditionsMap({
       className="h-128 w-full rounded-lg border"
     >
       <TileLayer attribution={BASE_TILES.attribution} url={BASE_TILES.url} />
-      {layers.includes("radar") && (
-        <TileLayer
-          attribution={RADAR_TILES.attribution}
-          eventHandlers={{ tileerror: onRadarError }}
-          opacity={RADAR_OPACITY}
-          url={RADAR_TILES.url}
-        />
-      )}
+      {layers.includes("radar") && <RadarLayer onError={onRadarError} />}
       {showAqi && <AqiAttribution />}
       {layers.includes("alerts") &&
         alerts?.features.map((alert) => (

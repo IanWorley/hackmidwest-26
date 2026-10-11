@@ -7,6 +7,9 @@ const { WEB_URL, API_URL, ARTIFACTS, TOOLS_DIR } = process.env;
 const STEP_TIMEOUT_MS = 15_000;
 const MS_PER_SECOND = 1000;
 const EXIT_USAGE = 2;
+/** Radar tiles are logged too, so a recipe can show an open page reloading them. */
+const RADAR_TILE_PREFIX = "https://mesonet.agron.iastate.edu/cache/tile.py/";
+const LOGGED_URL_PREFIXES = [API_URL, RADAR_TILE_PREFIX];
 const STEP_ARGS = {
   goto: ["path"],
   click: ["role", "name"],
@@ -236,7 +239,9 @@ async function openTab(name) {
     }
   });
   tab.on("requestfinished", async (request) => {
-    if (!request.url().startsWith(API_URL)) {
+    if (
+      !LOGGED_URL_PREFIXES.some((prefix) => request.url().startsWith(prefix))
+    ) {
       return;
     }
     const response = await request.response();
