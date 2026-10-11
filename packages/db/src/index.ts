@@ -16,6 +16,8 @@ export {
   LONGITUDE_RANGE,
   NOTIFICATION_CHANNELS,
   type NotificationChannel,
+  ROAD_CLASSES,
+  type RoadClass,
   TASK_TITLE_LENGTH,
   tasks,
 } from "./schema";
