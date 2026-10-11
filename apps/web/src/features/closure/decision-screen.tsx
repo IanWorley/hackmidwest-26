@@ -234,15 +234,26 @@ function RecommendationDecision({
   );
 }
 
+function isDispatched(notices: NoticeScreen, decisionId: number): boolean {
+  const { current } = notices;
+  return (
+    current?.decisionId === decisionId &&
+    current.result.kind === "found" &&
+    current.result.view.dispatches.length > 0
+  );
+}
+
 function CurrentDirectives({
   screen,
   onReload,
+  notices,
   decision,
   posture,
-}: ScreenProps & {
-  readonly decision: Decision;
-  readonly posture: Posture;
-}): JSX.Element {
+}: ScreenProps &
+  NoticeProps & {
+    readonly decision: Decision;
+    readonly posture: Posture;
+  }): JSX.Element {
   const submitDirective = useCallback(
     (request: DirectiveRequest): ReturnType<typeof issueDirective> =>
       issueDirective(decision.id, request),
@@ -253,6 +264,7 @@ function CurrentDirectives({
     <DirectivesSection
       buildings={screen.buildings}
       decision={decision}
+      isDispatched={isDispatched(notices, decision.id)}
       isOnShownRecommendation={
         decision.recommendationId === screen.latestRecommendation?.id
       }
@@ -312,6 +324,7 @@ export function DecisionScreenView({
       {currentDecision !== null && currentDecision.chosenPosture !== null && (
         <CurrentDirectives
           decision={currentDecision}
+          notices={notices}
           onReload={onReload}
           posture={currentDecision.chosenPosture}
           screen={screen}

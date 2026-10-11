@@ -61,6 +61,8 @@ const ISSUED_TEXT = "Directive issued.";
 const SUPERSEDED_TITLE =
   "This decision was changed by someone else. Nothing was saved; the page is reloaded with the current decision.";
 const FAILED_TITLE = "The directive could not be issued. Try again.";
+const DISPATCHED_TEXT =
+  "This decision's notices were dispatched, and dispatch happens once, so a new directive would reach nobody. Record a new decision to change what staff are told.";
 const GROUPS_LABEL = "Groups";
 const BUILDINGS_LABEL = "Buildings";
 const EMPLOYEES_IN = "Employees in";
@@ -179,6 +181,8 @@ interface DirectivesSectionProps {
   readonly posture: Posture;
   /** False after a same-day re-evaluation nobody has decided on yet. */
   readonly isOnShownRecommendation: boolean;
+  /** True once the decision's notices went out; dispatch is once-only, so a later directive would reach nobody. */
+  readonly isDispatched: boolean;
   readonly directives: readonly Directive[];
   readonly buildings: readonly Building[];
   readonly recorders: readonly Recorder[];
@@ -257,6 +261,13 @@ function DirectiveForm(props: DirectivesSectionProps): JSX.Element {
   );
 }
 
+function DirectiveFormOrDispatched(props: DirectivesSectionProps): JSX.Element {
+  if (props.isDispatched) {
+    return <p role="status">{DISPATCHED_TEXT}</p>;
+  }
+  return <DirectiveForm {...props} />;
+}
+
 export function DirectivesSection(props: DirectivesSectionProps): JSX.Element {
   const headingId = useId();
   return (
@@ -276,7 +287,7 @@ export function DirectivesSection(props: DirectivesSectionProps): JSX.Element {
         directives={props.directives}
         timeZone={props.timeZone}
       />
-      <DirectiveForm {...props} />
+      <DirectiveFormOrDispatched {...props} />
     </section>
   );
 }

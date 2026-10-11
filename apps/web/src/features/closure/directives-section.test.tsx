@@ -50,6 +50,7 @@ const STANDING = {
   decision: KANSAS_CITY_ACCEPT,
   posture: "delayed_arrival",
   isOnShownRecommendation: true,
+  isDispatched: false,
 } as const;
 
 function sectionProps(
@@ -238,4 +239,16 @@ it("says a newer undecided recommendation leaves the standing decision in force"
       "The recommendation above is newer and nobody has decided on it, so this decision still stands.",
     ),
   ).toBeTruthy();
+});
+
+it("closes the directive form once the decision's notices were dispatched", () => {
+  render(<DirectivesSection {...sectionProps({ isDispatched: true })} />);
+
+  expect([
+    screen.queryByRole("form", { name: "Issue directive" }),
+    screen.getByRole("status").textContent,
+  ]).toEqual([
+    null,
+    "This decision's notices were dispatched, and dispatch happens once, so a new directive would reach nobody. Record a new decision to change what staff are told.",
+  ]);
 });
