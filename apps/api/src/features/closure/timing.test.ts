@@ -255,3 +255,29 @@ describe("DST transition days", () => {
     });
   });
 });
+
+it("releases staff now when the computed departure time has already passed", () => {
+  const result = evaluateTiming(
+    timing({
+      now: "2026-01-14T20:05:00Z",
+      hazard: "wind",
+      crossedPosture: "early_dismissal",
+      evidence: alert("2026-01-14T20:30:00Z", "2026-01-14T23:00:00Z"),
+    }),
+  );
+  expect(result.status).toEqual({
+    posture: "early_dismissal",
+    departAt: "2026-01-14T20:15:00.000Z",
+    departAtLocal: "14:15",
+  });
+});
+
+it("returns normal once the hazard has cleared, even after arrival opened", () => {
+  const result = evaluateTiming(
+    timing({
+      now: "2026-01-14T16:30:00Z",
+      evidence: alert("2026-01-14T06:00:00Z", "2026-01-14T11:00:00Z"),
+    }),
+  );
+  expect(result.status).toEqual({ posture: "normal" });
+});

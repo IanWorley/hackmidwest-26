@@ -88,6 +88,7 @@ interface FacilityDay {
   readonly closesAt: Instant;
   readonly arrivalStart: Instant;
   readonly arrivalEnd: Instant;
+  readonly commuteMinutes: number;
 }
 
 function evaluateTiming(input: TimingInput): TimingResult {
@@ -95,7 +96,7 @@ function evaluateTiming(input: TimingInput): TimingResult {
   const zone = input.facility.timezone;
   const day = facilityDay(input.facility, now);
   const hazard = hazardInterval(input.evidence, input.hazard);
-  const timingCase = classify(hazard, day, input.facility, input.hazard);
+  const timingCase = classify(hazard, day, input.hazard, now);
   return {
     facilityDate: formatDate(day.date),
     hazardWindow: {
@@ -113,10 +114,11 @@ function evaluateTiming(input: TimingInput): TimingResult {
 function classify(
   hazard: HazardInterval,
   day: FacilityDay,
-  facility: FacilitySchedule,
   hazardKind: Hazard,
+  now: Instant,
 ): TimingCase {
-  if (hazard.clearsAt <= day.arrivalStart) {
+  // A hazard that has already cleared asks nothing of anyone, even after arrival has opened.
+  if (hazard.clearsAt <= Math.max(day.arrivalStart, now)) {
     return { kind: "clearsBeforeArrival" };
   }
   if (hazard.start >= day.closesAt) {
@@ -141,12 +143,17 @@ function classify(
   }
   // Rounding epoch ms to the quarter hour is local-time rounding only in zones whose offset is a
   // whole quarter hour, which every US zone is.
-  const releaseAt = roundDown(
+  const releaseIncrement =
+    TIMING_POLICY.releaseIncrementMinutes.value * MS_PER_MINUTE;
+  const scheduledRelease = roundDown(
     hazard.start -
-      (facility.typicalCommuteMinutes +
-        TIMING_POLICY.dismissalMarginMinutes.value) *
+      (day.commuteMinutes + TIMING_POLICY.dismissalMarginMinutes.value) *
         MS_PER_MINUTE,
-    TIMING_POLICY.releaseIncrementMinutes.value * MS_PER_MINUTE,
+    releaseIncrement,
+  );
+  // A release time already past becomes the next announceable time from now.
+  const releaseAt = toInstant(
+    Math.max(scheduledRelease, roundUp(now, releaseIncrement)),
   );
   if (releaseAt > day.opensAt) {
     return { kind: "startsDuringHours", releaseAt: toIso(releaseAt) };
@@ -205,6 +212,7 @@ function facilityDay(facility: FacilitySchedule, now: Instant): FacilityDay {
     closesAt: localInstant(date, facility.closesAt, zone),
     arrivalStart: localInstant(date, facility.arrivalWindowStart, zone),
     arrivalEnd: localInstant(date, facility.arrivalWindowEnd, zone),
+    commuteMinutes: facility.typicalCommuteMinutes,
   };
 }
 
