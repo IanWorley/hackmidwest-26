@@ -10,6 +10,7 @@ import {
   forecastPeriod,
   gust,
   STORM_ALL_DAY,
+  WIND_40_AT_1300,
 } from "./engine-test-fixtures";
 import type { Reading } from "./readings";
 
@@ -48,6 +49,18 @@ it("ignores a reading stamped after the evaluation time", () => {
     .find(({ hazard }) => hazard === "wind")
     ?.checks.find(({ cutoff }) => cutoff === "gust");
   expect(gustCheck?.outcome).toMatchObject({ kind: "below", observed: 12.4 });
+});
+
+it("ignores a forecast issued after the evaluation time", () => {
+  const result = evaluatePosture(
+    engineInput({
+      forecast: { ...WIND_40_AT_1300, updateTime: "2026-01-14T09:30:00Z" },
+    }),
+  );
+  expect([result.status, result.caveats]).toEqual([
+    { posture: "normal" },
+    [{ kind: "missingReading", hazard: "wind", cutoff: "sustained" }],
+  ]);
 });
 
 it("times separate windy hours as separate windows instead of one long one", () => {
