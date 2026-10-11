@@ -61,7 +61,7 @@ function StandingRow({ facility }: { facility: MapFacility }): JSX.Element {
       <TableCell>
         <PostureBadge posture={standing.posture} />
         {standing.posture !== "not_evaluated" && (
-          <AsOfMarker asOf={standing.asOf} mode={standing.mode} />
+          <AsOfMarker asOf={standing.asOf} />
         )}
       </TableCell>
       <TableCell>

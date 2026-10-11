@@ -20,7 +20,6 @@ const UNDECIDED: MapFacility = {
     recommendationId: 7,
     decideBy: "2026-10-11T10:00:00.000Z",
     asOf: "2026-10-11T08:00:00.000Z",
-    mode: "live",
     decided: false,
   },
 };
@@ -36,7 +35,6 @@ const DECIDED: MapFacility = {
     recommendationId: 8,
     decideBy: "2026-10-11T10:00:00.000Z",
     asOf: "2026-10-11T08:00:00.000Z",
-    mode: "live",
     decided: true,
   },
 };
@@ -68,7 +66,7 @@ it("counts only evaluated facilities without a recorded decision", async () => {
   expect(screen.getByRole("status").textContent).toBe("Decisions needed: 1");
 });
 
-it("labels each row's posture and links its name to the facility page", async () => {
+it("labels each row's posture and evaluation time and links its name to the facility page", async () => {
   await renderDashboard();
   const rows = screen.getAllByRole("row").slice(1);
   expect(
@@ -81,8 +79,16 @@ it("labels each row's posture and links its name to the facility page", async ()
       ];
     }),
   ).toEqual([
-    ["Kansas City Area Service Center", "/facilities/1", "Full closure"],
-    ["Fargo Service Center", "/facilities/2", "Normal operations"],
+    [
+      "Kansas City Area Service Center",
+      "/facilities/1",
+      "Full closureAs of Oct 11, 2026, 8:00 AM UTC",
+    ],
+    [
+      "Fargo Service Center",
+      "/facilities/2",
+      "Normal operationsAs of Oct 11, 2026, 8:00 AM UTC",
+    ],
     ["Yakima Service Center", "/facilities/3", "Not evaluated"],
   ]);
 });
