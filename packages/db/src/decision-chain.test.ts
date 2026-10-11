@@ -199,3 +199,26 @@ it("rejects a decision that supersedes itself", async () => {
     store.close();
   }
 });
+
+it("rejects a decider snapshot that differs from the decision maker's row", async () => {
+  const store = await createTestDatabase();
+  try {
+    await seedDemoFacilities(store.db);
+    await store.db.insert(recommendations).values(RECOMMENDATION);
+
+    await expect(
+      store.db
+        .insert(decisions)
+        .values({ ...ROOT_DECISION, decidedByRole: "Facility Director" })
+        .execute(),
+    ).rejects.toMatchObject({
+      cause: {
+        message: expect.stringContaining(
+          "decisions must copy the deciding decision maker's current name and role",
+        ),
+      },
+    });
+  } finally {
+    store.close();
+  }
+});

@@ -138,11 +138,18 @@ BEGIN
 	SELECT RAISE(ABORT, 'decisions must supersede an earlier decision for the same facility');
 END;
 --> statement-breakpoint
+-- Triggers enforce add-only storage, the decision chain's shape, and that values a row copies from a parent row match it. Ordering, eligibility, and authorization rules belong to the write path.
 -- A decision records exactly what its decider saw, so it must agree with the recommendation it references.
 CREATE TRIGGER `decisions_match_recommendation` BEFORE INSERT ON `decisions`
 WHEN NOT EXISTS (SELECT 1 FROM `recommendations` WHERE `id` = NEW.`recommendation_id` AND `content_hash` = NEW.`recommendation_hash` AND `facility_id` = NEW.`facility_id`)
 BEGIN
 	SELECT RAISE(ABORT, 'decisions must copy the referenced recommendation''s facility and content hash');
+END;
+--> statement-breakpoint
+CREATE TRIGGER `decisions_match_decider` BEFORE INSERT ON `decisions`
+WHEN NOT EXISTS (SELECT 1 FROM `decision_makers` WHERE `id` = NEW.`decided_by_id` AND `name` = NEW.`decided_by_name` AND `role` = NEW.`decided_by_role`)
+BEGIN
+	SELECT RAISE(ABORT, 'decisions must copy the deciding decision maker''s current name and role');
 END;
 --> statement-breakpoint
 CREATE TRIGGER `decisions_posture_matches_action` BEFORE INSERT ON `decisions`
