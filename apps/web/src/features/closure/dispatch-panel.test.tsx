@@ -172,3 +172,31 @@ it("reloads the screen after a dispatch, so the record chain check covers the ne
 
   expect(onReload).toHaveBeenCalledTimes(1);
 });
+
+it("reloads to show what was recorded when a dispatch gets no clear answer", async () => {
+  const dispatch = vi.fn(
+    (_id: number): Promise<DispatchResult> =>
+      Promise.reject(new TypeError("Failed to fetch")),
+  );
+  const onReload = vi.fn(reloadNothing);
+  render(
+    <DispatchPanel
+      decisionId={DECISION_ID}
+      dispatch={dispatch}
+      initial={UNDISPATCHED}
+      onReload={onReload}
+      timezone={TIMEZONE}
+    />,
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Dispatch notifications" }),
+  );
+
+  await vi.waitFor(() =>
+    expect(screen.getByRole("alert").textContent).toBe(
+      "The dispatch got no clear answer. The screen is reloaded with what was recorded; if no dispatched notices are listed, try again.",
+    ),
+  );
+  expect(onReload).toHaveBeenCalledTimes(1);
+});

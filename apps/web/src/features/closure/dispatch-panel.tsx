@@ -22,11 +22,19 @@ type PanelState =
   | { readonly kind: "ready" }
   | { readonly kind: "dispatching" }
   | { readonly kind: "conflict"; readonly conflict: NotificationConflict }
+  /** No clear answer came back, so the dispatch may have landed; the screen reloads to find out. */
+  | { readonly kind: "checking" }
+  | { readonly kind: "unconfirmed" }
   | { readonly kind: "failed" };
 
 const DISPATCH_LABEL = "Dispatch notifications";
 const DISPATCHED_LABEL = "Dispatched notices";
-const FAILED_TEXT = "Dispatch failed. Try again.";
+const CHECKING_TEXT =
+  "The dispatch got no clear answer. Checking whether it was recorded…";
+const UNCONFIRMED_TEXT =
+  "The dispatch got no clear answer. The screen is reloaded with what was recorded; if no dispatched notices are listed, try again.";
+const FAILED_TEXT =
+  "The dispatch got no clear answer, and the screen could not be reloaded to check it. Reload the page before trying again.";
 const NAME_COLUMN = "Name";
 const CHANNEL_COLUMN = "Channel";
 const RECORDED_COLUMN = "Recorded at";
@@ -34,6 +42,8 @@ const LEAD_TIME_COLUMN = "Lead time";
 const AFTER_SEND_BY_TEXT = "After send-by";
 const UNKNOWN_RECIPIENT = "Unknown recipient";
 const READY: PanelState = { kind: "ready" };
+/** Kinds that wait on the server; another click now could dispatch twice. */
+const BUSY_KINDS: readonly PanelState["kind"][] = ["dispatching", "checking"];
 
 /** What this panel did itself, tied to the decision it did it for, so a reloaded decision starts fresh. */
 interface LocalOutcome {
@@ -112,6 +122,18 @@ function StateAlert({ state }: { state: PanelState }): JSX.Element | null {
           <AlertDescription>{state.conflict.message}</AlertDescription>
         </Alert>
       );
+    case "checking":
+      return (
+        <Alert role="alert">
+          <AlertDescription>{CHECKING_TEXT}</AlertDescription>
+        </Alert>
+      );
+    case "unconfirmed":
+      return (
+        <Alert role="alert">
+          <AlertDescription>{UNCONFIRMED_TEXT}</AlertDescription>
+        </Alert>
+      );
     case "failed":
       return (
         <Alert role="alert" variant="destructive">
@@ -162,25 +184,33 @@ export function DispatchPanel({
       setLocal({ decisionId, state: next, dispatched });
     }
     settle({ kind: "dispatching" });
+    let result: DispatchResult;
     try {
-      const result = await dispatch(decisionId);
-      if (result.kind === "conflict") {
-        settle({ kind: "conflict", conflict: result.conflict });
-        await onReload();
-        return;
-      }
-      settle(READY, result.view);
-      await onReload();
+      result = await dispatch(decisionId);
     } catch {
-      settle({ kind: "failed" });
+      // A lost response may hide a dispatch that committed, so read back what was recorded.
+      settle({ kind: "checking" });
+      try {
+        await onReload();
+        settle({ kind: "unconfirmed" });
+      } catch {
+        settle({ kind: "failed" });
+      }
+      return;
     }
+    if (result.kind === "conflict") {
+      settle({ kind: "conflict", conflict: result.conflict });
+    } else {
+      settle(READY, result.view);
+    }
+    await onReload();
   }, [dispatch, decisionId, onReload]);
 
   let content = (
     <>
       <NotificationRecipients pkg={view.package} timezone={timezone} />
       {view.package.recipients.length > 0 && (
-        <Button disabled={state.kind === "dispatching"} onClick={onDispatch}>
+        <Button disabled={BUSY_KINDS.includes(state.kind)} onClick={onDispatch}>
           {DISPATCH_LABEL}
         </Button>
       )}
