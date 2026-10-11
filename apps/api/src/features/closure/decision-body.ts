@@ -21,7 +21,7 @@ const BODY_FIELDS = {
   recheckAt: "/recheckAt",
 } as const;
 const BODY_ROOT = "";
-const INVALID_BODY_MESSAGE = "Invalid decision";
+const INVALID_BODY_MESSAGE = "Invalid request body";
 const UNKNOWN_ACTION_MESSAGE = "Expected action accept, override, or defer";
 
 // toISOString writes a year outside 0000-9999 as a signed six-digit year, which SQLite's julianday cannot read.
@@ -121,6 +121,18 @@ function requestedAction(found: unknown): unknown {
   return undefined;
 }
 
+/** The first field `found` gets wrong against `schema`, in the shape every body 422 uses. */
+function firstInvalidField(
+  schema: TSchema,
+  found: unknown,
+): ValidationErrorBody {
+  const error = Value.Errors(schema, found).First();
+  if (error === undefined) {
+    return invalidBody(BODY_ROOT, INVALID_BODY_MESSAGE);
+  }
+  return invalidBody(error.path, error.message);
+}
+
 /** A union failure only says "Expected union value", so report the first error of the variant `action` selects. */
 function describeInvalidBody({
   found,
@@ -131,11 +143,7 @@ function describeInvalidBody({
   if (variant === undefined) {
     return invalidBody(BODY_FIELDS.action, UNKNOWN_ACTION_MESSAGE);
   }
-  const error = Value.Errors(variant, found).First();
-  if (error === undefined) {
-    return invalidBody(BODY_ROOT, INVALID_BODY_MESSAGE);
-  }
-  return invalidBody(error.path, error.message);
+  return firstInvalidField(variant, found);
 }
 
 const decisionBody = t.Union(
@@ -165,7 +173,9 @@ export type { DecisionBody, ValidationErrorBody };
 export {
   BODY_FIELDS,
   decisionBody,
+  firstInvalidField,
   invalidBody,
+  reasonBody,
   rejectUnknownFields,
   utcInstant,
   validationErrorResponse,
