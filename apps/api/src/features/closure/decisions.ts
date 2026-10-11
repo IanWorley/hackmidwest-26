@@ -33,6 +33,7 @@ import {
   insertDecision,
   loadChain,
 } from "./decision-store";
+import { chainDirectives } from "./directive-store";
 import {
   FACILITIES_PATH,
   FACILITY_NOT_FOUND_MESSAGE,
@@ -141,7 +142,8 @@ const verifyRequest = Effect.fn("verifyRequest")(function* (decimalId: string) {
   if (Option.isNone(chain)) {
     return decisionNotFound();
   }
-  return verifyChain(id.value, chain.value);
+  const directives = yield* chainDirectives(chain.value.recommendation.id);
+  return verifyChain(id.value, { ...chain.value, directives });
 });
 
 export function createDecisionsModule(runRequest: RunRequest) {

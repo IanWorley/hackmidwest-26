@@ -1,4 +1,5 @@
 import type {
+  decisionDirectives,
   decisions,
   humanInputs,
   notificationDispatches,
@@ -6,11 +7,13 @@ import type {
 } from "@hackmidwest/db";
 import { t } from "elysia";
 import { decisionHash, dispatchHash } from "./decision-store";
+import { directiveHash } from "./directive-store";
 import { recommendationHash } from "./recommendation-store";
 
 const CHAIN_LINK_KINDS = [
   "recommendation",
   "decision",
+  "directive",
   "notification_dispatch",
 ] as const;
 
@@ -50,6 +53,7 @@ interface StoredChain {
     readonly row: typeof decisions.$inferSelect;
     readonly humanInputs: readonly (typeof humanInputs.$inferSelect)[];
   }[];
+  readonly directives: readonly (typeof decisionDirectives.$inferSelect)[];
   readonly dispatches: readonly (typeof notificationDispatches.$inferSelect)[];
 }
 
@@ -123,6 +127,18 @@ function verifyChain(
         missingPredecessor:
           row.supersedesDecisionId !== null &&
           !decisionHashes.has(row.supersedesDecisionId),
+      }),
+    ),
+    ...chain.directives.map((directive) =>
+      checkLink({
+        kind: "directive",
+        id: directive.id,
+        storedHash: directive.contentHash,
+        recomputedHash: directiveHash(directive),
+        parent: {
+          copiedHash: directive.decisionHash,
+          storedHash: decisionHashes.get(directive.decisionId),
+        },
       }),
     ),
     ...chain.dispatches.map((dispatch) =>
