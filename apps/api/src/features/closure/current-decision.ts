@@ -85,4 +85,4 @@ async function findCurrentDecision(
 }
 
 export type { CurrentDecision, CurrentDecisionRow };
-export { findCurrentDecision };
+export { findCurrentDecision, SNAPSHOT_FACILITY_DATE };
