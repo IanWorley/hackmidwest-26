@@ -47,8 +47,8 @@ const livePull = Effect.fn("livePull")(function* (point: GeoPoint) {
   return {
     point,
     alerts,
-    forecast,
-    hourlyForecast,
+    forecast: forecast.periods,
+    hourlyForecast: hourlyForecast.periods,
     readings: observationReadings(observation),
   };
 });

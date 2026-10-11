@@ -24,6 +24,7 @@
               "createFloodLiveModule",
               "createNwsLiveModule",
               "createPersonnelModule",
+              "createRecommendationsModule",
               "createTasksModule"
             ]
           }
@@ -96,6 +97,16 @@
               }
             }
           }
+        }
+      }
+    },
+    {
+      // Golden SHA-256 digests are test vectors, not credentials, and read as
+      // high-entropy strings to the secret scanner.
+      "includes": ["src/features/closure/recommendation-store.test.ts"],
+      "linter": {
+        "rules": {
+          "security": { "noSecrets": "off" }
         }
       }
     },
