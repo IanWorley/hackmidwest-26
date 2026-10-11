@@ -4,7 +4,7 @@ The `/facilities/<id>/personnel` page lists everyone assigned to a facility's bu
 
 ## Sub-features
 
-- `personnel-entry` follows `People and status` on `/facilities/<id>` to the personnel page.
+- `personnel-entry` follows `People and status` on the decision screen at `/facilities/<id>` to the personnel page.
 - `personnel-ssr` renders the page on a direct load, with the data fetched by the web server.
 - `personnel-summary` shows counts per effective status, such as `17 onsite · 1 teleworking · 2 not working`.
 - `personnel-reason` explains each effective status in text, such as `onsite, baseline` or `not working, <note>`. Status is never shown by color alone.
@@ -50,5 +50,5 @@ Preconditions:
 - Recording a status and recording a decision both mutate data. `down` and `up` before running a recipe that expects the baseline.
 - `Recorded by` lists only the facility's decision maker and backup, so the UI cannot send an ineligible recorder. The `/reportedById` `422` is reachable only through `POST /api/employees/:id/status` directly.
 - A status filter chosen before a reload that turns the posture untimed is ignored, so every row stays visible. Driving that transition needs the posture to change through another API call while the page stays open, and `$V browser` cannot interleave an API call into one session. `personnel-roster.test.tsx` covers it. Report it as not driven.
-- The `Who's notified and why` link opens the facility route, which shows the decision screen once #92 lands. Before that, the destination shows only facility details.
+- The `Who's notified and why` link opens the facility route, which is the decision screen.
 - `Identity is not verified.` is literal: nothing checks that the chosen recorder is the person using the browser.
