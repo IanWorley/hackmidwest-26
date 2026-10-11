@@ -12,6 +12,7 @@ A facility's decision maker or its backup records where an employee stands throu
 - `personnel-baseline` shows the latest event in effect as the baseline, and a scheduled event only as `latestEvent`.
 - `personnel-decided` resolves each person against the current decision's posture. Essential staff get `report_required`, telework-eligible staff get `teleworking`, and onsite-only staff get `dismissed` under a full closure. People already teleworking or not working keep their baseline.
 - `personnel-directive` applies the current decision's directives over the posture, with `cause.source` `directive`.
+- `personnel-facility-day` applies the newest decision only while its recommendation is about the current facility day. That day is today until closing, then tomorrow.
 - `personnel-untimed` returns people without `effective` when the current decision overrides to a delayed arrival or early dismissal that no recommendation timed.
 - `personnel-status-add-only` rejects `UPDATE` and `DELETE` on `employee_status_events` in storage.
 
@@ -19,7 +20,6 @@ A facility's decision maker or its backup records where an employee stands throu
 
 - `POST /api/employees/:id/status` with `{"status", "note"?, "reportedById", "effectiveFrom"?}`.
 - `GET /api/facilities/:id/personnel`.
-- The `/facilities/<id>/personnel` page reads the same route. Its recipe is [personnel page](./personnel.md).
 
 ## Driving it with verify.sh
 
@@ -49,7 +49,8 @@ Preconditions:
 
 ## Gotchas
 
-- `POST /api/facilities/1/recommendations` pulls live weather. Its posture is whatever the weather says. Override to `full_closure` only when the live posture is not `full_closure`. Otherwise override to `unscheduled_telework` and expect telework-eligible staff to telework and onsite-only staff to work onsite. If the live recommendation times an early dismissal, the untimed step returns `decided` instead. Report that, and don't count it as untimed proof.
+- `POST /api/facilities/1/recommendations` pulls live weather, and an override must choose a posture other than the recommended one. If the live posture is `full_closure`, override to `unscheduled_telework` instead, and expect telework-eligible staff to telework and onsite-only staff to work onsite. If it is `early_dismissal`, run the untimed step with `"chosenPosture":"delayed_arrival"` and expect `"posture":"delayed_arrival"`. If the live recommendation times the posture you chose, the untimed step returns `decided` instead. Report that, and don't count it as untimed proof.
+- A decision applies only while its recommendation is about the current facility day. That day is today until the facility's closing time, then tomorrow. A recommendation and the personnel read made minutes apart always agree, but a decision from an earlier run of the recipe on another day does not apply.
 - Directives belong to one decision. After the untimed override supersedes decision `1`, the Annex and early-release directives no longer apply, and a new directive on decision `1` answers `409`.
 - A person already teleworking or not working keeps that baseline under any facility-wide posture or building directive. Only an employee-scoped directive reaches them.
 - `reportedAt` is the API's clock, so assert `effective_now`, not the timestamp.
