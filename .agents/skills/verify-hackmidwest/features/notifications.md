@@ -20,6 +20,7 @@ A recommendation's notification preview shows who would be told what if it were 
 - `GET /api/recommendations/:id/notifications/preview`.
 - `GET /api/decisions/:id/notifications`.
 - `POST /api/decisions/:id/dispatch` with no body.
+- On `/facilities/<id>`, the decision screen's `Confirm and notify` step reads the preview, and its `Notifications` region reads the decided package and calls dispatch (see [Decision screen](./decision-screen.md)).
 
 ## Driving it with verify.sh
 
