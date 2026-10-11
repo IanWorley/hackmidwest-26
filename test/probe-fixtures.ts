@@ -5,7 +5,7 @@ export const DB_CONNECTION_STUB = {
 };
 
 export const DB_SCHEMA_STUB = {
-  "packages/db/src/schema.ts": "export const tasks = {};\n",
+  "packages/db/src/schema/index.ts": "export const tasks = {};\n",
 };
 
 export const IMPORT_PROCESS = 'import process from "node:process";\n';
