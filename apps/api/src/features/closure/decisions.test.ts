@@ -276,3 +276,17 @@ it(`POST ${DECIDE_PATH} dispatches no notification`, async () => {
     expect(await db.select().from(notificationDispatches)).toEqual([]);
   });
 });
+
+it("POST /api/recommendations/0x1/decisions reports a malformed id as the id field", async () => {
+  await withDecisionApp(async ({ post }) => {
+    const response = await post("/api/recommendations/0x1/decisions", {
+      action: "accept",
+      decidedById: DANA_WHITFIELD_ID,
+    });
+
+    expect([response.status, await response.json()]).toEqual([
+      HTTP_UNPROCESSABLE,
+      { message: "Invalid decision", field: "id" },
+    ]);
+  });
+});
