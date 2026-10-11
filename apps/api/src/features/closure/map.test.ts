@@ -1,0 +1,280 @@
+import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
+import { Effect } from "effect";
+import { expect, it } from "vitest";
+import { HTTP_OK } from "../../runtime";
+import { MAP_PATH } from "./map";
+import { ALERTS_DOWN, countingMapClients } from "./map-test-app";
+import {
+  CLOCK,
+  EVALUATE_PATH,
+  LATER_AS_OF,
+  type TestApp,
+  withAppOn,
+  withStormAppOn,
+} from "./recommendation-test-app";
+
+const DEMO_FACILITY_COUNT = 4;
+/** Between the test app's clock and the recommendation's 11:00 decideBy, as a deferral requires. */
+const RECHECK_AT = "2026-01-14T10:30:00.000Z";
+/** Earlier than the test app's clock, for an evaluation that read the clock first but stored second. */
+const EARLIER_CLOCK = "2026-01-14T09:00:00.000Z";
+const KANSAS_CITY_ID = 1;
+const KANSAS_CITY_DECIDER = 1;
+const DECISIONS_PATH = "/api/recommendations/1/decisions";
+/** 61 seconds after the test app's clock, just past the 60-second live-conditions TTL. */
+const PAST_TTL = "2026-01-14T09:31:01.000Z";
+const CLEAN_AIR = { value: 40, observedAt: "2026-01-14T08:00:00.000Z" };
+const NOT_EVALUATED = { posture: "not_evaluated" };
+/** Kansas City's 16:30 CST closing on the test app's day, when its facility day rolls over to 2026-01-15. */
+const KANSAS_CITY_ROLLOVER = "2026-01-14T22:30:00.000Z";
+
+function withCountingApp(
+  run: (
+    app: TestApp,
+    alertAreaCalls: () => number,
+    zoneCalls: () => readonly string[],
+  ) => Promise<void>,
+  areas?: Parameters<typeof countingMapClients>[0],
+): Promise<void> {
+  const { clients, alertAreaCalls, zoneCalls } = countingMapClients(areas);
+  return withAppOn(createTestDatabaseWithDemoFacilities, clients, (app) =>
+    run(app, alertAreaCalls, zoneCalls),
+  );
+}
+
+it(`GET ${MAP_PATH} reports each facility's newest live recommendation, not a later preview, or not_evaluated without one`, async () => {
+  await withStormAppOn(
+    createTestDatabaseWithDemoFacilities,
+    async ({ get, post }) => {
+      await post(EVALUATE_PATH);
+      await post(EVALUATE_PATH, { asOf: LATER_AS_OF });
+
+      const { facilities } = await (await get(MAP_PATH)).json();
+
+      expect(facilities).toEqual([
+        {
+          id: 2,
+          name: "Fargo Service Center",
+          lat: 46.8772,
+          lon: -96.7898,
+          aqi: CLEAN_AIR,
+          standing: NOT_EVALUATED,
+        },
+        {
+          id: 1,
+          name: "Kansas City Area Service Center",
+          lat: 39.0997,
+          lon: -94.5786,
+          aqi: CLEAN_AIR,
+          standing: {
+            posture: "full_closure",
+            recommendationId: 1,
+            decideBy: "2026-01-14T11:00:00.000Z",
+            asOf: CLOCK,
+            currentDecision: null,
+          },
+        },
+        {
+          id: 4,
+          name: "Lafayette Service Center",
+          lat: 30.2241,
+          lon: -92.0198,
+          aqi: CLEAN_AIR,
+          standing: NOT_EVALUATED,
+        },
+        {
+          id: 3,
+          name: "Yakima Service Center",
+          lat: 46.6021,
+          lon: -120.5059,
+          aqi: CLEAN_AIR,
+          standing: NOT_EVALUATED,
+        },
+      ]);
+    },
+  );
+});
+
+it(`GET ${MAP_PATH} reports a facility as not_evaluated once its latest recommendation's facility day rolls over`, async () => {
+  await withStormAppOn(
+    createTestDatabaseWithDemoFacilities,
+    async ({ get, post, setClock }) => {
+      await post(EVALUATE_PATH);
+      setClock(KANSAS_CITY_ROLLOVER);
+
+      const { facilities } = await (await get(MAP_PATH)).json();
+
+      expect(
+        facilities.find(({ id }: { id: number }) => id === KANSAS_CITY_ID)
+          .standing,
+      ).toEqual(NOT_EVALUATED);
+    },
+  );
+});
+
+it(`GET ${MAP_PATH} reuses live conditions within the TTL and pulls them again after it`, async () => {
+  await withCountingApp(async ({ get, setClock }, alertAreaCalls) => {
+    await get(MAP_PATH);
+    const afterFirst = alertAreaCalls();
+    await get(MAP_PATH);
+    const afterSecond = alertAreaCalls();
+    setClock(PAST_TTL);
+    await get(MAP_PATH);
+
+    expect([afterFirst, afterSecond, alertAreaCalls()]).toEqual([
+      DEMO_FACILITY_COUNT,
+      DEMO_FACILITY_COUNT,
+      DEMO_FACILITY_COUNT + DEMO_FACILITY_COUNT,
+    ]);
+  });
+});
+
+it(`GET ${MAP_PATH} reports the newest decision on a facility's recommendation as its current decision`, async () => {
+  await withStormAppOn(
+    createTestDatabaseWithDemoFacilities,
+    async ({ get, post }) => {
+      await post(EVALUATE_PATH);
+      await post(DECISIONS_PATH, {
+        action: "accept",
+        decidedById: KANSAS_CITY_DECIDER,
+      });
+      await post(DECISIONS_PATH, {
+        action: "override",
+        chosenPosture: "normal",
+        decidedById: KANSAS_CITY_DECIDER,
+        supersedesDecisionId: 1,
+        reason: {
+          category: "road_reports",
+          text: "County reports the roads clear.",
+        },
+      });
+
+      const { facilities } = await (await get(MAP_PATH)).json();
+
+      expect(
+        facilities.find(({ id }: { id: number }) => id === KANSAS_CITY_ID)
+          .standing.currentDecision,
+      ).toEqual({
+        recommendationId: 1,
+        action: "override",
+        chosenPosture: "normal",
+        decidedAt: CLOCK,
+        recheckAt: null,
+      });
+    },
+  );
+});
+
+it(`GET ${MAP_PATH} still reports standings when the live pull fails`, async () => {
+  await withCountingApp(async ({ get }) => {
+    const response = await get(MAP_PATH);
+    const { facilities, alerts } = await response.json();
+
+    expect([
+      response.status,
+      alerts,
+      facilities.map(
+        ({
+          name,
+          aqi,
+          standing,
+        }: {
+          name: string;
+          aqi: unknown;
+          standing: unknown;
+        }) => [name, aqi, standing],
+      ),
+    ]).toEqual([
+      HTTP_OK,
+      null,
+      [
+        ["Fargo Service Center", null, NOT_EVALUATED],
+        ["Kansas City Area Service Center", null, NOT_EVALUATED],
+        ["Lafayette Service Center", null, NOT_EVALUATED],
+        ["Yakima Service Center", null, NOT_EVALUATED],
+      ],
+    ]);
+  }, Effect.fail(ALERTS_DOWN));
+});
+
+it(`GET ${MAP_PATH} follows the newest evaluation time, not the newest row, when evaluations store out of order`, async () => {
+  await withStormAppOn(
+    createTestDatabaseWithDemoFacilities,
+    async ({ get, post, setClock }) => {
+      await post(EVALUATE_PATH);
+      setClock(EARLIER_CLOCK);
+      await post(EVALUATE_PATH);
+
+      const { facilities } = await (await get(MAP_PATH)).json();
+
+      const kansasCity = facilities.find(
+        ({ id }: { id: number }) => id === KANSAS_CITY_ID,
+      );
+      expect([
+        kansasCity.standing.recommendationId,
+        kansasCity.standing.asOf,
+      ]).toEqual([1, CLOCK]);
+    },
+  );
+});
+
+it(`GET ${MAP_PATH} reports a deferral's recheck time`, async () => {
+  await withStormAppOn(
+    createTestDatabaseWithDemoFacilities,
+    async ({ get, post }) => {
+      await post(EVALUATE_PATH);
+      await post(DECISIONS_PATH, {
+        action: "defer",
+        recheckAt: RECHECK_AT,
+        decidedById: KANSAS_CITY_DECIDER,
+        reason: {
+          category: "local_conditions",
+          text: "Waiting on the 10:00 road report.",
+        },
+      });
+
+      const { facilities } = await (await get(MAP_PATH)).json();
+
+      expect(
+        facilities.find(({ id }: { id: number }) => id === KANSAS_CITY_ID)
+          .standing.currentDecision,
+      ).toEqual({
+        recommendationId: 1,
+        action: "defer",
+        chosenPosture: null,
+        decidedAt: CLOCK,
+        recheckAt: RECHECK_AT,
+      });
+    },
+  );
+});
+
+it(`GET ${MAP_PATH} keeps an accepted decision current across an undecided same-day re-evaluation`, async () => {
+  await withStormAppOn(
+    createTestDatabaseWithDemoFacilities,
+    async ({ get, post }) => {
+      await post(EVALUATE_PATH);
+      await post(DECISIONS_PATH, {
+        action: "accept",
+        decidedById: KANSAS_CITY_DECIDER,
+      });
+      await post(EVALUATE_PATH);
+
+      const { facilities } = await (await get(MAP_PATH)).json();
+
+      const { standing } = facilities.find(
+        ({ id }: { id: number }) => id === KANSAS_CITY_ID,
+      );
+      expect([standing.recommendationId, standing.currentDecision]).toEqual([
+        2,
+        {
+          recommendationId: 1,
+          action: "accept",
+          chosenPosture: "full_closure",
+          decidedAt: CLOCK,
+          recheckAt: null,
+        },
+      ]);
+    },
+  );
+});

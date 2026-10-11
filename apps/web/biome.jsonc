@@ -110,6 +110,40 @@
       }
     },
     {
+      // Biome does not resolve React's namespace `const` exports such as
+      // `Suspense`; tsc checks the import.
+      "includes": ["src/routes/conditions.tsx"],
+      "linter": {
+        "rules": { "correctness": { "noUnresolvedImports": "off" } }
+      }
+    },
+    {
+      // Registries keyed by API enum values, which are snake_case postures and decision actions
+      // and PascalCase NWS severities, not names this code chose.
+      "includes": [
+        "src/features/closure/decision-status.ts",
+        "src/features/closure/posture.ts",
+        "src/features/map/alert-severity.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "selector": { "kind": "objectLiteralProperty" },
+                    "formats": ["camelCase", "snake_case", "PascalCase"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       // Tailwind's entry imports declare their own cascade layers and must stay
       // top level, and Biome does not see properties declared in `@theme`.
       "includes": ["src/styles.css"],
@@ -178,6 +212,7 @@
               "loadFacilityDate",
               "loadHistory",
               "loadLatestRecommendation",
+              "loadMap",
               "loadRecorders",
               "loadTasks"
             ]

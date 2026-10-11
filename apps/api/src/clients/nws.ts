@@ -2,12 +2,15 @@ import type { Static, TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { Cache, Data, Duration, Effect, Exit, Schedule } from "effect";
 import type {
+  AreaGeometry,
   GeoPoint,
   NwsAlert,
+  NwsAlertArea,
   NwsForecast,
   NwsObservation,
 } from "./nws-model";
 import {
+  AlertAreasResponse,
   AlertsResponse,
   ForecastResponse,
   type GridPoint,
@@ -16,6 +19,8 @@ import {
   StationsResponse,
   toForecastPeriod,
   toNwsAlert,
+  toNwsAlertArea,
+  ZoneResponse,
 } from "./nws-wire";
 
 const DEFAULT_BASE_URL = "https://api.weather.gov";
@@ -33,6 +38,8 @@ const HTTP_TOO_MANY_REQUESTS = 429;
 const GRID_POINT_TTL = Duration.hours(24);
 const GRID_POINT_CACHE_CAPACITY = 1000;
 const HTTP_SERVER_ERROR_MIN = 500;
+/** Leaves out Test, Exercise, System, and Draft notices, which are not hazards. */
+const ACTUAL_ALERTS_FILTER = "status=actual";
 
 type NwsErrorReason =
   | { readonly kind: "network"; readonly cause: unknown }
@@ -71,6 +78,13 @@ interface NwsClientShape {
   readonly latestObservation: (
     point: GeoPoint,
   ) => Effect.Effect<NwsObservation, NwsError>;
+  readonly activeAlertAreas: (
+    point: GeoPoint,
+  ) => Effect.Effect<NwsAlertArea[], NwsError>;
+  /** Fetches an alert's `affectedZones` URL as given. */
+  readonly zoneGeometry: (
+    zoneUrl: string,
+  ) => Effect.Effect<AreaGeometry | null, NwsError>;
 }
 
 /** The part of `fetch` the client uses; Bun's full `typeof fetch` cannot be stubbed without a cast. */
@@ -244,6 +258,10 @@ function makeNwsClient({
     return Cache.get(gridPoints, pointPath(point));
   }
 
+  function activeAlertsUrl(point: GeoPoint): string {
+    return `${baseUrl}/alerts/active?point=${pointPath(point)}`;
+  }
+
   return {
     forecast: (point) =>
       gridPoint(point).pipe(
@@ -254,10 +272,7 @@ function makeNwsClient({
         Effect.flatMap((grid) => forecastAt(getJson, grid.forecastHourly)),
       ),
     activeAlerts: (point) =>
-      getJson(
-        `${baseUrl}/alerts/active?point=${pointPath(point)}`,
-        AlertsResponse,
-      ).pipe(
+      getJson(activeAlertsUrl(point), AlertsResponse).pipe(
         Effect.map(({ features }) =>
           features.map(({ properties }) => toNwsAlert(properties)),
         ),
@@ -265,6 +280,15 @@ function makeNwsClient({
     latestObservation: (point) =>
       gridPoint(point).pipe(
         Effect.flatMap((grid) => latestObservation(getJson, baseUrl, grid)),
+      ),
+    activeAlertAreas: (point) =>
+      getJson(
+        `${activeAlertsUrl(point)}&${ACTUAL_ALERTS_FILTER}`,
+        AlertAreasResponse,
+      ).pipe(Effect.map(({ features }) => features.map(toNwsAlertArea))),
+    zoneGeometry: (zoneUrl) =>
+      getJson(zoneUrl, ZoneResponse).pipe(
+        Effect.map(({ geometry }) => geometry),
       ),
   };
 }
