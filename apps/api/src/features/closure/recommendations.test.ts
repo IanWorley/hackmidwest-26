@@ -25,11 +25,16 @@ import {
   UNKNOWN_ID,
   withStormAppOn,
 } from "./recommendation-test-app";
+import { AS_OF_HORIZON_HOURS } from "./recommendations";
 
 const KANSAS_CITY_ID = 1;
 const DECISION_MAKER_ID = 1;
 const BACKUP_ID = 2;
 const FIRST_RECOMMENDATION_ID = 1;
+const JUST_BEFORE_HORIZON = "2026-01-12T09:29:59.999Z";
+const JUST_PAST_HORIZON = "2026-01-16T09:30:00.001Z";
+const LAST_INSTANT_OF_YEAR_9999 = "9999-12-31T23:59:59.999Z";
+const IMPOSSIBLE_AS_OF = "2026-02-30T00:00:00.000Z";
 const ACCEPT = { action: "accept", decidedById: DECISION_MAKER_ID } as const;
 const NEXT_MORNING_AS_OF = "2026-01-15T10:30:00.000Z";
 const STORM_START = "2026-01-14T06:00:00.000Z";
@@ -202,6 +207,49 @@ it(`POST ${EVALUATE_PATH} after decideBy records that nobody decided the previou
         decidedById: BACKUP_ID,
         decidedAt: AFTER_DECIDE_BY,
       },
+    ]);
+  });
+});
+
+it(`POST ${EVALUATE_PATH} rejects an asOf more than ${AS_OF_HORIZON_HOURS} hours from the clock and stores nothing`, async () => {
+  await withApp(async ({ get, post }) => {
+    const responses = await Promise.all(
+      [JUST_BEFORE_HORIZON, JUST_PAST_HORIZON, LAST_INSTANT_OF_YEAR_9999].map(
+        (asOf) => post(EVALUATE_PATH, { asOf }),
+      ),
+    );
+    const bodies = await Promise.all(
+      responses.map(async (response) => [
+        response.status,
+        await response.json(),
+      ]),
+    );
+    const latest = await get(LATEST_PATH);
+
+    expect([bodies, latest.status]).toEqual([
+      Array.from({ length: 3 }, () => [
+        HTTP_UNPROCESSABLE_ENTITY,
+        {
+          type: "validation",
+          on: "body",
+          property: "/asOf",
+          message: `Expected asOf within ${AS_OF_HORIZON_HOURS} hours of the clock reading`,
+        },
+      ]),
+      HTTP_NOT_FOUND,
+    ]);
+  });
+});
+
+it(`POST ${EVALUATE_PATH} rejects an impossible date instead of rolling it over`, async () => {
+  await withApp(async ({ post }) => {
+    const response = await post(EVALUATE_PATH, { asOf: IMPOSSIBLE_AS_OF });
+
+    const { property, message } = await response.json();
+    expect([response.status, property, message]).toEqual([
+      HTTP_UNPROCESSABLE_ENTITY,
+      "/asOf",
+      "Expected string to match 'utc-instant' format",
     ]);
   });
 });

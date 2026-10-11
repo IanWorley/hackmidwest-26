@@ -1,15 +1,21 @@
-import { DateTime, Effect, Option } from "effect";
+import { DateTime, Duration, Effect, Option } from "effect";
 import { Elysia, type ElysiaCustomStatusResponse, status, t } from "elysia";
 import {
   HTTP_CREATED,
   HTTP_INTERNAL_SERVER_ERROR,
   HTTP_NOT_FOUND,
   HTTP_OK,
+  HTTP_UNPROCESSABLE_ENTITY,
   internalServerErrorResponse,
   type RunRequest,
 } from "../../runtime";
 import { CLOSED } from "../../schema-options";
-import { rejectUnknownFields } from "./decision-body";
+import {
+  invalidBody,
+  rejectUnknownFields,
+  utcInstant,
+  validationErrorResponse,
+} from "./decision-body";
 import { recordMissedDecision } from "./decisions";
 import { evaluatePosture } from "./engine";
 import type { EngineInput } from "./engine-input";
@@ -43,10 +49,21 @@ const RECOMMENDATIONS_PATH = "/api/recommendations";
 const RECOMMENDATION_PATH = `${RECOMMENDATIONS_PATH}/:id`;
 const REPLAY_PATH = `${RECOMMENDATION_PATH}/replay`;
 const RECOMMENDATION_NOT_FOUND_MESSAGE = "Recommendation not found";
+const AS_OF_FIELD = "/asOf";
+// A live call decides about today until closing, then tomorrow. Two days either way still previews
+// a call about a day the data pulled now describes, such as the alert day's 04:30 call or this
+// morning's, and stays well inside the NWS hourly forecast's 156 hours.
+const AS_OF_HORIZON_HOURS = 48;
+const AS_OF_HORIZON = Duration.hours(AS_OF_HORIZON_HOURS);
+const AS_OF_OUTSIDE_HORIZON = invalidBody(
+  AS_OF_FIELD,
+  `Expected asOf within ${AS_OF_HORIZON_HOURS} hours of the clock reading`,
+);
+
 const evaluateFields = t.Object(
   {
     /** Evaluate the data pulled now as of this instant instead of the clock reading, as a preview. A future instant previews a later call, such as tomorrow morning's. */
-    asOf: t.Optional(t.String({ format: "date-time" })),
+    asOf: t.Optional(utcInstant),
   },
   CLOSED,
 );
@@ -75,6 +92,7 @@ const evaluateRoute = {
   response: {
     [HTTP_CREATED]: RecommendationRecordSchema,
     [HTTP_NOT_FOUND]: facilityNotFoundResponse,
+    [HTTP_UNPROCESSABLE_ENTITY]: validationErrorResponse,
     [HTTP_INTERNAL_SERVER_ERROR]: internalServerErrorResponse,
   },
 };
@@ -113,6 +131,13 @@ function recommendationNotFound(): ElysiaCustomStatusResponse<
 
 function evaluateSnapshot(input: EngineInput): Snapshot {
   return parseSnapshot({ input, output: evaluatePosture(input) });
+}
+
+function outsideHorizon(asOf: string, clockReading: DateTime.Utc): boolean {
+  return (
+    Math.abs(Date.parse(asOf) - DateTime.toEpochMillis(clockReading)) >
+    Duration.toMillis(AS_OF_HORIZON)
+  );
 }
 
 /** A preview stores its recommendation and nothing else. Only a live call settles the previous recommendation's missed deadline. */
@@ -163,13 +188,16 @@ const evaluateRequest = Effect.fn("evaluateRequest")(function* (
     return status(HTTP_NOT_FOUND, { message: FACILITY_NOT_FOUND_MESSAGE });
   }
   const clockReading = yield* DateTime.now;
-  let instant = DateTime.formatIso(clockReading);
-  if (asOf !== undefined) {
-    instant = new Date(asOf).toISOString();
+  if (asOf !== undefined && outsideHorizon(asOf, clockReading)) {
+    return status(HTTP_UNPROCESSABLE_ENTITY, AS_OF_OUTSIDE_HORIZON);
   }
   return status(
     HTTP_CREATED,
-    yield* evaluateFacility(facility.value, clockReading, instant),
+    yield* evaluateFacility(
+      facility.value,
+      clockReading,
+      asOf ?? DateTime.formatIso(clockReading),
+    ),
   );
 });
 
@@ -226,4 +254,4 @@ export function createRecommendationsModule(runRequest: RunRequest) {
     );
 }
 
-export { RECOMMENDATIONS_PATH };
+export { AS_OF_HORIZON_HOURS, RECOMMENDATIONS_PATH };
