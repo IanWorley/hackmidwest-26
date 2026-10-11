@@ -55,8 +55,25 @@ class RecommendationStorageError extends Data.TaggedError(
   readonly cause: unknown;
 }> {}
 
-function recommendationHash(content: RecommendationContent): string {
-  return contentHash(content);
+/** Hashes only the content columns, so a stored row recomputes the hash its insert wrote. */
+function recommendationHash({
+  facilityId,
+  evaluatedAt,
+  asOf,
+  posture,
+  confidence,
+  decideBy,
+  snapshot,
+}: RecommendationContent): string {
+  return contentHash({
+    facilityId,
+    evaluatedAt,
+    asOf,
+    posture,
+    confidence,
+    decideBy,
+    snapshot,
+  } satisfies RecommendationContent);
 }
 
 function modeOf({ asOf, evaluatedAt }: RecommendationContent): EvaluationMode {

@@ -151,9 +151,8 @@ it(`POST ${EVALUATE_PATH} hashes every stored column, so the stored hash recompu
   await withApp(async ({ post }) => {
     const response = await post(EVALUATE_PATH, { asOf: AS_OF });
 
-    const { id, contentHash, mode, timeline, ...content } =
-      await response.json();
-    expect(contentHash).toBe(recommendationHash(content));
+    const record = await response.json();
+    expect(record.contentHash).toBe(recommendationHash(record));
   });
 });
 
