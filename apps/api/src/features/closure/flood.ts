@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Clock, Effect } from "effect";
 import type {
   FloodCategory,
   NwpsClientShape,
@@ -10,6 +10,8 @@ import type {
 import type { GeoPoint, NwsAlert } from "../../clients/nws-model";
 import { NwpsClient, NwsClient } from "../../runtime";
 import { NWS_SEVERITIES, THRESHOLDS } from "./thresholds";
+import { TIMING_POLICY } from "./timing-policy";
+import { MS_PER_MINUTE } from "./zoned-time";
 
 type FloodCutoffs = typeof THRESHOLDS.flood.cutoffs;
 type FloodCutoffKey = keyof FloodCutoffs;
@@ -35,6 +37,21 @@ const FLOOD_ALERT_EVENTS: ReadonlySet<string> = new Set(
     return [];
   }),
 );
+
+const MAX_STAGE_AGE_MS =
+  TIMING_POLICY.gaugeStageStaleMinutes.value * MS_PER_MINUTE;
+
+function isCurrent(point: StageAt, nowMs: number): boolean {
+  return Date.parse(point.validTime) >= nowMs - MAX_STAGE_AGE_MS;
+}
+
+function withCurrentStages(gauge: RiverGauge, nowMs: number): RiverGauge {
+  const forecast = gauge.forecast.filter((point) => isCurrent(point, nowMs));
+  if (gauge.observed === undefined || !isCurrent(gauge.observed, nowMs)) {
+    return { ...gauge, observed: undefined, forecast };
+  }
+  return { ...gauge, forecast };
+}
 
 // Forecast points at or before the observation are older than it, so the observation replaces them.
 function stageTimeline({ observed, forecast }: RiverGauge): readonly StageAt[] {
@@ -121,12 +138,18 @@ const pullFloodSignals = Effect.fn("pullFloodSignals")(function* (
     { alerts: nws.activeAlerts(point), gauge: maybeGauge(nwps, gaugeId) },
     { concurrency: "unbounded" },
   );
+  const nowMs = yield* Clock.currentTimeMillis;
   const signals: FloodSignals = {
     alerts: alerts.filter((alert) => FLOOD_ALERT_EVENTS.has(alert.event)),
-    gauge,
+    gauge: gauge && withCurrentStages(gauge, nowMs),
   };
   return signals;
 });
 
 export type { FloodCutoffKey, FloodSignals, GaugeCrossing };
-export { crossedFloodCutoffs, gaugeCrossing, pullFloodSignals };
+export {
+  crossedFloodCutoffs,
+  gaugeCrossing,
+  pullFloodSignals,
+  withCurrentStages,
+};
