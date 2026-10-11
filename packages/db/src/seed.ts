@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import type { Database } from "./client";
 import {
   DEMO_BUILDINGS,
@@ -42,7 +43,13 @@ export async function seedDemoFacilities(db: Database): Promise<void> {
     db
       .insert(facilities)
       .values(DEMO_FACILITIES)
-      .onConflictDoNothing({ target: facilities.id }),
+      .onConflictDoUpdate({
+        target: facilities.id,
+        // Migration 0004 adds the gauge column empty, so fill it on an upgraded database without replacing a chosen gauge.
+        set: {
+          nwpsGaugeId: sql`coalesce(${facilities.nwpsGaugeId}, excluded.${sql.identifier(facilities.nwpsGaugeId.name)})`,
+        },
+      }),
     db
       .insert(facilityHazards)
       .values(DEMO_FACILITY_HAZARDS)

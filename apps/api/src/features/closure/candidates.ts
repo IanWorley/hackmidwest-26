@@ -11,6 +11,7 @@ import {
 import {
   type AlertCutoff,
   type Cutoff,
+  type GaugeCutoff,
   NWS_SEVERITIES,
   type NwsSeverity,
 } from "./thresholds";
@@ -27,6 +28,9 @@ interface Measurement {
 
 type UntimedCrossing = { readonly evidence: HazardEvidence } & Measurement;
 
+/** This engine takes no NWPS gauge stages as input, so it checks every cutoff but the river-stage ones. */
+type EngineCutoff = Exclude<Cutoff, GaugeCutoff>;
+
 /** Each crossing is a separate hazard window; `peak` is reported when none crosses. */
 interface Candidates {
   readonly crossings: readonly UntimedCrossing[];
@@ -37,7 +41,10 @@ interface CandidateSources extends SampleSources {
   readonly alertsInForce: readonly NwsAlert[];
 }
 
-function candidates(threshold: Cutoff, context: CandidateSources): Candidates {
+function candidates(
+  threshold: EngineCutoff,
+  context: CandidateSources,
+): Candidates {
   switch (threshold.unit) {
     case "nws_severity":
       return severityCandidates(threshold, context.alertsInForce);
@@ -162,5 +169,5 @@ function durationMinutes(period: Period): number {
   );
 }
 
-export type { Measurement, UntimedCrossing };
+export type { EngineCutoff, Measurement, UntimedCrossing };
 export { byMargin, candidates };

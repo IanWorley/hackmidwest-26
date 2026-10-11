@@ -2,12 +2,14 @@ import { recommendations } from "@hackmidwest/db";
 import type { DatabaseStore } from "@hackmidwest/db/connection";
 import { Effect } from "effect";
 import { createApp } from "../../app";
+import { makeNwpsClient } from "../../clients/nwps";
 import type { NwsClientShape } from "../../clients/nws";
 import type { OpenMeteoClientShape } from "../../clients/open-meteo";
 import { createApiRuntime } from "../../runtime";
 import type { EngineInput } from "./engine";
 import { alert, forecastPeriod, STORM_ALL_DAY } from "./engine-test-fixtures";
 import { recommendationHash } from "./recommendation-store";
+import type { JsonValue } from "./records";
 
 const REQUEST_ORIGIN = "http://api.test";
 const WEB_ORIGIN = "http://web.test";
@@ -75,7 +77,7 @@ const EXPECTED_INPUT: EngineInput = {
     typicalCommuteMinutes: 35,
     roadClass: "superCommuter",
     decisionDeadline: "05:00",
-    hazardProfile: ["winter", "wind", "airQuality"],
+    hazardProfile: ["winter", "wind", "airQuality", "flood"],
   },
   readings: [
     {
@@ -119,6 +121,7 @@ async function withStormAppOn(
   const store = await openStore();
   const runtime = createApiRuntime(store.db, {
     nws: stormNws,
+    nwps: makeNwpsClient(),
     openMeteo: cleanAir,
   });
   const app = createApp({
@@ -137,6 +140,9 @@ async function withStormAppOn(
           }),
         ),
       insertRow: async (snapshot) => {
+        // Engine interfaces lack an index signature, so the JSON round trip
+        // is what lets an arbitrary snapshot be hashed as a JsonValue.
+        const storedSnapshot: JsonValue = JSON.parse(JSON.stringify(snapshot));
         const content = {
           facilityId: KANSAS_CITY_ID,
           evaluatedAt: CLOCK,
@@ -144,7 +150,7 @@ async function withStormAppOn(
           posture: "full_closure" as const,
           confidence: "high" as const,
           decideBy: "2026-01-14T11:00:00.000Z",
-          snapshot,
+          snapshot: storedSnapshot,
         };
         const [row] = await store.db
           .insert(recommendations)

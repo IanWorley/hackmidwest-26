@@ -1,11 +1,11 @@
 import type { ConfidenceLevel, Hazard } from "@hackmidwest/db";
+import type { EngineCutoff } from "./candidates";
 import type { Caveat } from "./confidence";
 import type { Crossing } from "./cutoff-checks";
 import type { CutoffName } from "./cutoff-names";
 import type { InputKind } from "./freshness";
 import type { EndBasis } from "./hazard-window";
 import type { InputRef } from "./samples";
-import type { Cutoff } from "./thresholds";
 import type { IsoInstant, OpmStatus } from "./timing";
 import { formatTimeOfDay, parseInstant } from "./zoned-time";
 
@@ -13,6 +13,7 @@ const HAZARD_LABELS: Readonly<Record<Hazard, string>> = {
   winter: "Winter weather",
   wind: "Wind",
   airQuality: "Air quality",
+  flood: "Flooding",
 };
 
 const CUTOFF_LABELS: Readonly<Record<CutoffName, string>> = {
@@ -22,6 +23,9 @@ const CUTOFF_LABELS: Readonly<Record<CutoffName, string>> = {
   gust: "wind gust",
   unhealthy: "unhealthy air quality",
   veryUnhealthy: "very unhealthy air quality",
+  warning: "flood warning",
+  moderateFlood: "moderate river flooding",
+  majorFlood: "major river flooding",
 };
 
 const REACHED_BY_INPUT: Readonly<Record<InputRef["kind"], string>> = {
@@ -134,7 +138,7 @@ function describeCaveat(caveat: Caveat): string {
   }
 }
 
-function unitLabel(unit: Cutoff["unit"]): string {
+function unitLabel(unit: EngineCutoff["unit"]): string {
   switch (unit) {
     case "nws_severity":
       return "severity";

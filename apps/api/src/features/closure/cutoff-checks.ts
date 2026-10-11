@@ -3,6 +3,7 @@ import type { NwsAlert } from "../../clients/nws-model";
 import {
   byMargin,
   candidates,
+  type EngineCutoff,
   type Measurement,
   type UntimedCrossing,
 } from "./candidates";
@@ -31,7 +32,7 @@ type CheckOutcome =
 
 interface CutoffCheck {
   readonly cutoff: CutoffName;
-  readonly threshold: Cutoff;
+  readonly threshold: EngineCutoff;
   readonly outcome: CheckOutcome;
   /** `YYYY-MM-DD` when any window of this cutoff starts after the facility day, even one `outcome` did not keep. */
   readonly nextDay: string | null;
@@ -51,7 +52,7 @@ interface CheckContext extends SampleSources {
 interface Crossing {
   readonly hazard: Hazard;
   readonly cutoff: CutoffName;
-  readonly threshold: Cutoff;
+  readonly threshold: EngineCutoff;
   readonly outcome: Crossed;
 }
 
@@ -59,7 +60,10 @@ function assessHazard(hazard: Hazard, context: CheckContext): HazardAssessment {
   const cutoffs: Readonly<Record<string, Cutoff>> = THRESHOLDS[hazard].cutoffs;
   const checks = Object.entries(cutoffs).flatMap(
     ([cutoff, threshold]): CutoffCheck[] => {
-      if (!isCutoffName(hazard, cutoff)) {
+      if (
+        !isCutoffName(hazard, cutoff) ||
+        threshold.unit === "nws_flood_category"
+      ) {
         return [];
       }
       return [
@@ -97,7 +101,7 @@ function crossingsOf(
 /** Times every crossing and keeps the strongest, so input order never decides the outcome. */
 function assessCutoff(
   hazard: Hazard,
-  threshold: Cutoff,
+  threshold: EngineCutoff,
   context: CheckContext,
 ): Pick<CutoffCheck, "outcome" | "nextDay"> {
   const { crossings: untimed, peak } = candidates(threshold, context);

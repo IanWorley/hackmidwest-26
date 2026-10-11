@@ -8,6 +8,7 @@ const HAZARD_LABELS: Record<Hazard, string> = {
   winter: "Winter storm",
   wind: "High wind",
   airQuality: "Air quality",
+  flood: "Flood",
 };
 
 export function FacilityHours({

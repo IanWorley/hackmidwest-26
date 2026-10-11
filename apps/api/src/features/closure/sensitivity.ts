@@ -2,13 +2,13 @@ import type { Crossing } from "./cutoff-checks";
 import { mostDisruptive, sameStatus } from "./disruption";
 import type { HazardEvidence, Period } from "./hazard-window";
 import { describeStatus } from "./rationale";
-import { TIMING_POLICY } from "./thresholds";
 import {
   evaluateTiming,
   type FacilitySchedule,
   type IsoInstant,
   type OpmStatus,
 } from "./timing";
+import { TIMING_POLICY } from "./timing-policy";
 import { shiftIso } from "./zoned-time";
 
 const MINUTES_PER_HOUR = 60;

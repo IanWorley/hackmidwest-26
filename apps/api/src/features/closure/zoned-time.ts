@@ -1,6 +1,7 @@
 const MS_PER_SECOND = 1000;
 const MS_PER_MINUTE = 60_000;
 const TIME_PART_WIDTH = 2;
+const CALENDAR_DATE_PATTERN = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/u;
 
 declare const instantBrand: unique symbol;
 /** UTC epoch milliseconds. Internal to the closure engine: its public surface speaks ISO strings. */
@@ -120,6 +121,21 @@ function formatDate({ year, month, day }: CalendarDate): string {
   return `${year}-${pad(month)}-${pad(day)}`;
 }
 
+/** The inverse of formatDate. */
+function parseCalendarDate(text: string): CalendarDate {
+  const parts = CALENDAR_DATE_PATTERN.exec(text)?.groups;
+  const date = {
+    year: Number(parts?.year),
+    month: Number(parts?.month),
+    day: Number(parts?.day),
+  };
+  // Date.UTC rolls 2026-02-30 over to March 2, so a real date survives the round trip unchanged.
+  if (parts === undefined || formatDate(addDays(date, 0)) !== text) {
+    throw new RangeError(`Not a YYYY-MM-DD calendar date: ${text}`);
+  }
+  return date;
+}
+
 /** `HH:MM` on `zone`'s wall clock. */
 function formatTimeOfDay(at: Instant, zone: string): string {
   const { hour, minute } = wallClock(at, zone);
@@ -138,6 +154,7 @@ export {
   formatTimeOfDay,
   localInstant,
   MS_PER_MINUTE,
+  parseCalendarDate,
   parseInstant,
   shiftIso,
   toInstant,

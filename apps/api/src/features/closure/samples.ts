@@ -3,8 +3,9 @@ import type { InputKind } from "./freshness";
 import type { Period } from "./hazard-window";
 import { byText, firstBy } from "./order";
 import type { Reading } from "./readings";
-import { TIMING_POLICY, type WindMetric } from "./thresholds";
+import type { WindMetric } from "./thresholds";
 import type { IsoInstant } from "./timing";
+import { TIMING_POLICY } from "./timing-policy";
 import { type Instant, parseInstant, shiftIso } from "./zoned-time";
 
 const KM_PER_MILE = 1.609_344;

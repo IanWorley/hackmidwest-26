@@ -11,7 +11,7 @@ import {
   type Snapshot,
   SnapshotSchema,
 } from "./recommendation-schema";
-import { contentHash } from "./records";
+import { type ContentHash, contentHash, type JsonValue } from "./records";
 import { parseInstant } from "./zoned-time";
 
 const EVALUATION_MODES = ["live", "as_of"] as const;
@@ -21,6 +21,9 @@ const HAZARD_EVENTS = ["hazardStart", "hazardEnd", "roadsClear"] as const;
 type EvaluationMode = (typeof EVALUATION_MODES)[number];
 type RecommendationRow = typeof recommendations.$inferSelect;
 type RecommendationContent = Omit<RecommendationRow, "id" | "contentHash">;
+type HashedContent = Omit<RecommendationContent, "snapshot"> & {
+  readonly snapshot: JsonValue;
+};
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 
@@ -64,7 +67,7 @@ function recommendationHash({
   confidence,
   decideBy,
   snapshot,
-}: RecommendationContent): string {
+}: HashedContent): ContentHash {
   return contentHash({
     facilityId,
     evaluatedAt,
@@ -73,7 +76,7 @@ function recommendationHash({
     confidence,
     decideBy,
     snapshot,
-  } satisfies RecommendationContent);
+  } satisfies HashedContent);
 }
 
 function modeOf({ asOf, evaluatedAt }: RecommendationContent): EvaluationMode {

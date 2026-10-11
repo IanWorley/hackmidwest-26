@@ -28,6 +28,9 @@ const CUTOFF_NAMES = [
   "gust",
   "unhealthy",
   "veryUnhealthy",
+  "warning",
+  "moderateFlood",
+  "majorFlood",
 ] as const satisfies readonly CutoffName[];
 
 /** Rejects unknown keys, so a field the schema lacks fails the insert instead of being hashed and then stripped from responses. */
