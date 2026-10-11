@@ -26,7 +26,7 @@ Preconditions:
 - **Follow the link.** In the same browser session, choose the link and wait for the list. Run `RUN_ID=<id> $V browser goto / click link "Open the project tasks" expect table "Tasks" snap home-after`. Exit code `0`; `home-after.aria.yml` has header `# url: …/tasks` and checkbox `Build the Hack Midwest demo`.
 - **Proof of client-side fetch.** Inspect the log. Run `grep -E 'step click|net GET' /tmp/verify-hackmidwest/artifacts/<id>/browser.log`. A `net GET <API_URL>/api/tasks -> 200` line follows the `step click` line, which proves the browser (not SSR) loaded the data and CORS allowed it.
 - **Follow the facilities link.** Run `RUN_ID=<id> $V browser goto / click link "Open the facilities" expect table "Facilities" snap home-to-facilities`. Exit code `0`; `home-to-facilities.aria.yml` has header `# url: …/facilities`, and `browser.log` has `net GET <API_URL>/api/facilities -> 200` after the `step click` line.
-- **Header link.** Start on the task list and choose the brand link. Run `RUN_ID=<id> $V browser goto /tasks click link "Hack Midwest" expect link "Open the project tasks" snap home-from-header`. Exit code `0`; `home-from-header.aria.yml` has header `# url: …/` and title `Hack Midwest tasks`.
+- **Header link.** Start on the task list and choose the brand link. Run `RUN_ID=<id> $V browser goto /tasks click link "Hack Midwest" expect link "Open the project tasks" snap home-from-header`. Exit code `0`; `home-from-header.aria.yml` has header `# url: …/` and title `Hack Midwest`.
 
 ## Gotchas
 

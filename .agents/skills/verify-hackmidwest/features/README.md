@@ -22,7 +22,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 ## Proof and skip reporting
 
 - Capture the user action and the resulting state, not only the final screen.
-- UI proof includes an ARIA snapshot and a screenshot (`snap`) with the page title in the snapshot header (`Hack Midwest tasks` on `/`, `Tasks · Hack Midwest` on `/tasks`, `Facilities · Hack Midwest` on `/facilities`).
+- UI proof includes an ARIA snapshot and a screenshot (`snap`) with the page title in the snapshot header (`Hack Midwest` on `/`, `Tasks · Hack Midwest` on `/tasks`, `Facilities · Hack Midwest` on `/facilities`).
 - API proof includes the saved request, status line, headers, and body (`*.http.txt`).
 - Mutation proof includes a read-only second view: a `db` row and the item rendered on `/tasks`.
 - Name artifacts `<feature>-<step>` so each one maps back to a feature and entry point.
