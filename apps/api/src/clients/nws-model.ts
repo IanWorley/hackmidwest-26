@@ -173,6 +173,7 @@ export type {
   NwsObservation,
 };
 export {
+  ALERT_URGENCIES,
   AlertCertaintySchema,
   AlertMessageTypeSchema,
   AlertSeveritySchema,

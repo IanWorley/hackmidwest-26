@@ -45,6 +45,8 @@ const HALF_MINUTE_LATE = "2026-10-02T11:00:30.000Z";
 const RECHECK_AT = "2026-10-02T10:45:00.000Z";
 const AFTER_DECIDE_BY = "2026-10-02T11:15:00.000Z";
 const SHA256_HEX = /^[0-9a-f]{64}$/u;
+/** Kansas City's facility day at DECIDED_AT. */
+const FACILITY_DATE = "2026-10-02";
 
 const RECOMMENDATION: RecommendationContent = {
   facilityId: FACILITY_ID,
@@ -53,7 +55,8 @@ const RECOMMENDATION: RecommendationContent = {
   posture: "delayed_arrival",
   confidence: "medium",
   decideBy: DECIDE_BY,
-  snapshot: { posture: "delayed_arrival" },
+  // Only the facility day: the decision routes never parse the rest of a snapshot.
+  snapshot: { output: { facilityDate: FACILITY_DATE } },
 };
 const RECOMMENDATION_HASH = contentHash(RECOMMENDATION);
 const ROAD_REPORT = {
@@ -167,6 +170,7 @@ export {
   DEFER,
   decide,
   EMPLOYEE_ID,
+  FACILITY_DATE,
   FACILITY_ID,
   FIRST_DECISION_ID,
   HALF_MINUTE_LATE,

@@ -77,7 +77,7 @@ it("notifies someone not working when a directive names them, even though they s
     scope: { kind: "employee", employeeId: EMPLOYEE.id },
     directive: "excused",
     effectiveAt: null,
-    reasonCategory: "weather",
+    reasonCategory: "local_conditions",
     reasonText: "Stay home; your detail office is closed too.",
     issuedById: MANAGER_ID,
     issuedAt: SEED_INSTANT,

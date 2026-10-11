@@ -1,15 +1,9 @@
 import type { JSX } from "react";
 import { Badge } from "@/components/ui/badge";
+import { HAZARD_LABELS } from "./labels";
 import type { Facility, Hazard } from "./load-facilities";
 
 const HOURS_SEPARATOR = "–";
-
-const HAZARD_LABELS: Record<Hazard, string> = {
-  winter: "Winter storm",
-  wind: "High wind",
-  airQuality: "Air quality",
-  flood: "Flood",
-};
 
 export function FacilityHours({
   facility,

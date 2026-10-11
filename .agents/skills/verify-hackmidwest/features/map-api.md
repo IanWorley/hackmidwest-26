@@ -36,6 +36,5 @@ Preconditions:
 
 - The data is live. Alerts and AQI change between runs, and on a calm day `alerts.features` is `[]`, so `map-api-alerts` and `map-api-alerts-unique` can only be shown on a day with an active alert at a facility. Report them as unverified rather than passing on an empty list.
 - Open-Meteo has no AQI for some points, so `aqi` can be `null` for a facility. That is not a failure.
-- Each cold load makes one NWS alerts request per facility, one zone request per zone of each zone-based alert, and one Open-Meteo request per facility. NWS rate-limits with `403` and the client retries, so a slow cold `200` is normal. An upstream that stays down after retries gives `200` with `alerts: null` and null AQI for 15 seconds, then the next load tries again; `dev.log` shows `Live conditions unavailable`.
-- A failed pull is not cached, so the next load retries it immediately.
-- `POST` stores a new row each call. Start from a fresh `up` so the single-row expectation holds.
+- Each cold load makes one NWS alerts request per facility, one zone request per distinct zone across the zone-based alerts, and one Open-Meteo request per facility. NWS rate-limits with `403` and the client retries, so a slow cold `200` is normal. An upstream that stays down after retries gives `200` with `alerts: null` and null AQI for 15 seconds, then the next load tries again; `dev.log` shows `Live conditions unavailable`.
+- `POST` stores a new row each call. Start from a fresh `up` so the stored-state step's two-row expectation holds.
