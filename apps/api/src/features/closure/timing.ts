@@ -143,17 +143,13 @@ function classify(
   }
   // Rounding epoch ms to the quarter hour is local-time rounding only in zones whose offset is a
   // whole quarter hour, which every US zone is.
-  const releaseIncrement =
-    TIMING_POLICY.releaseIncrementMinutes.value * MS_PER_MINUTE;
-  const scheduledRelease = roundDown(
+  // The release comes from the schedule even when it is already past. The caller compares it
+  // with the evaluation time and the facility's decision deadline.
+  const releaseAt = roundDown(
     hazard.start -
       (day.commuteMinutes + TIMING_POLICY.dismissalMarginMinutes.value) *
         MS_PER_MINUTE,
-    releaseIncrement,
-  );
-  // A release time already past becomes the next announceable time from now.
-  const releaseAt = toInstant(
-    Math.max(scheduledRelease, roundUp(now, releaseIncrement)),
+    TIMING_POLICY.releaseIncrementMinutes.value * MS_PER_MINUTE,
   );
   if (releaseAt > day.opensAt) {
     return { kind: "startsDuringHours", releaseAt: toIso(releaseAt) };

@@ -256,7 +256,7 @@ describe("DST transition days", () => {
   });
 });
 
-it("releases staff now when the computed departure time has already passed", () => {
+it("returns the scheduled departure time even after it has passed", () => {
   const result = evaluateTiming(
     timing({
       now: "2026-01-14T20:05:00Z",
@@ -267,8 +267,8 @@ it("releases staff now when the computed departure time has already passed", () 
   );
   expect(result.status).toEqual({
     posture: "early_dismissal",
-    departAt: "2026-01-14T20:15:00.000Z",
-    departAtLocal: "14:15",
+    departAt: "2026-01-14T19:15:00.000Z",
+    departAtLocal: "13:15",
   });
 });
 
