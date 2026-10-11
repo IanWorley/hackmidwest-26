@@ -202,6 +202,35 @@ cmd_db() {
   echo "saved $out"
 }
 
+# Writes go to a .backup snapshot, never DB_PATH, so the instance keeps its seeded state for other recipes.
+cmd_db_reject() {
+  (( $# == 3 )) || die "usage: RUN_ID=<id> verify.sh db-reject <name> \"<write-sql>\" \"<expected-error>\""
+  require_run
+  local name="$1" sql="$2" expected="$3"
+  local out="$ARTIFACTS/$name.db.txt"
+  local probe
+  probe="$(run_dir "$RUN_ID")/probe-$name.sqlite"
+  sqlite3 -readonly "$DB_PATH" ".backup '$probe'"
+  local before after error status=0
+  before="$(sha256sum < "$probe")"
+  error="$(sqlite3 -bail "$probe" "$sql" 2>&1 > /dev/null)" || status=$?
+  after="$(sha256sum < "$probe")"
+  rm -f "$probe"
+  local verdict="FAIL"
+  if (( status != 0 )) && [[ "$error" == *"$expected"* && "$before" == "$after" ]]; then verdict="rejected"; fi
+  {
+    echo "sql> $sql"
+    echo "expect> $expected"
+    echo "exit> $status"
+    echo "error> $error"
+    echo "snapshot unchanged> $([[ "$before" == "$after" ]] && echo yes || echo no)"
+    echo "verdict> $verdict"
+  } > "$out"
+  cat "$out"
+  echo "saved $out"
+  [[ "$verdict" == "rejected" ]]
+}
+
 cmd_browser() {
   require_run
   WEB_URL="$WEB_URL" API_URL="$API_URL" ARTIFACTS="$ARTIFACTS" TOOLS_DIR="$TOOLS_DIR" \
@@ -301,9 +330,10 @@ case "${1:-}" in
   api) shift; cmd_api "$@" ;;
   agent) shift; cmd_agent "$@" ;;
   db) shift; cmd_db "$@" ;;
+  db-reject) shift; cmd_db_reject "$@" ;;
   browser) shift; cmd_browser "$@" ;;
   down) cmd_down ;;
   publish) shift; cmd_publish "$@" ;;
   list) cmd_list ;;
-  *) die "usage: verify.sh setup | up | doctor | api | agent | db | browser | down | publish | list (see SKILL.md)" ;;
+  *) die "usage: verify.sh setup | up | doctor | api | agent | db | db-reject | browser | down | publish | list (see SKILL.md)" ;;
 esac

@@ -1,6 +1,6 @@
 ---
 name: verify-hackmidwest
-description: Launch and drive the Hack Midwest tasks app (TanStack Start web UI on top of an Elysia + SQLite API, plus a separate agent API) in an isolated instance and capture proof that a feature works for a real user. Use when asked to verify, demo, screenshot, or prove a change to the web pages (/, /tasks), the /api/tasks endpoints, the temporary /api/nws/live NWS pull, or the agent API, beyond what unit tests show.
+description: Launch and drive the Hack Midwest tasks app (TanStack Start web UI on top of an Elysia + SQLite API, plus a separate agent API) in an isolated instance and capture proof that a feature works for a real user. Use when asked to verify, demo, screenshot, or prove a change to the web pages (/, /tasks), the /api/tasks endpoints, the temporary /api/nws/live NWS pull, the agent API, or storage-only schema changes (add-only triggers, CHECK constraints), beyond what unit tests show.
 ---
 
 # Verify the Hack Midwest tasks app
@@ -22,6 +22,7 @@ V="$(git rev-parse --show-toplevel)/.agents/skills/verify-hackmidwest/scripts/ve
 | `RUN_ID=… $V api <name> <METHOD> <path> [json]` | Send one HTTP request to the API and save request + full response. |
 | `RUN_ID=… $V agent <name> <METHOD> <path> [json]` | Same as `api`, against the agent API. |
 | `RUN_ID=… $V db <name> "<sql>"` | Read-only SQL against the instance's database, saved as evidence. |
+| `RUN_ID=… $V db-reject <name> "<write-sql>" "<expected-error>"` | Run one write against a `.backup` snapshot of the database and exit `0` only if SQLite rejects it with that message and the snapshot is unchanged. The instance's database is never written. |
 | `RUN_ID=… $V down` | Stop the instance's process group, delete scratch state, keep evidence. |
 | `RUN_ID=… $V publish <pr> [summary.md]` | Push this run's evidence to the `verification-evidence` branch and comment on the PR with the screenshots embedded. Works after `down`. |
 | `$V list` | Show live run IDs. |
@@ -82,6 +83,14 @@ RUN_ID=<id> $V db rows "select id, title, completed from tasks order by id"
 ```
 
 The API has exactly `GET /api/tasks`, `POST /api/tasks` (body `{"title": string 1..120}`), and the temporary `GET /api/nws/live?lat=&lon=`, which calls api.weather.gov live. The agent API has exactly `GET /health` and `GET /tasks/summary`; drive it with `RUN_ID=<id> $V agent <name> GET <path>`. `db` opens the file with `sqlite3 -readonly`; never write to the database directly. Mutate only through the API.
+
+A storage-only change (a new table, trigger, or `CHECK`) has no web or HTTP path until a route uses it. Prove it with `db-reject`, which pairs the write, the expected error, the exit code, and an unchanged-snapshot check in one `*.db.txt` transcript:
+
+```sh
+RUN_ID=<id> $V db-reject storage-status-events-delete "delete from employee_status_events where id = 1" "employee_status_events is add-only: events cannot be deleted"
+```
+
+It proves rejections only. A write the schema accepts prints `verdict> FAIL` and exits `1`.
 
 ## Evidence
 
