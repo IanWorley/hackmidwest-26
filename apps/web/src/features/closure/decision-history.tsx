@@ -104,11 +104,13 @@ function HistoryTable({
               {formatFacilityTime(decision.decidedAt, timeZone)}
             </TableCell>
             <TableCell>{ACTION_LABELS[decision.action]}</TableCell>
-            <TableCell>{postureText(decision, timeZone)}</TableCell>
-            <TableCell>
-              {`${decision.decidedByName}, ${decision.decidedByRole} ${UNVERIFIED_SUFFIX}`}
+            <TableCell className="whitespace-normal">
+              {postureText(decision, timeZone)}
             </TableCell>
             <TableCell className="whitespace-normal">
+              {`${decision.decidedByName}, ${decision.decidedByRole} ${UNVERIFIED_SUFFIX}`}
+            </TableCell>
+            <TableCell className="min-w-48 whitespace-normal">
               <p>{reasonText(decision)}</p>
               {decision.humanInputs.map((input) => (
                 <p className="text-muted-foreground" key={input.id}>

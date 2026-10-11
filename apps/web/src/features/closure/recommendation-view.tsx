@@ -124,11 +124,23 @@ function Section({
   );
 }
 
+/** Lines may repeat, so each key counts how many times its text came before. */
+function keyedLines(
+  items: readonly string[],
+): { readonly key: string; readonly text: string }[] {
+  const seen = new Map<string, number>();
+  return items.map((text) => {
+    const count = seen.get(text) ?? 0;
+    seen.set(text, count + 1);
+    return { key: `${text}#${count}`, text };
+  });
+}
+
 function TextList({ items }: { items: readonly string[] }): JSX.Element {
   return (
     <ul className="list-disc pl-5">
-      {items.map((item) => (
-        <li key={item}>{item}</li>
+      {keyedLines(items).map(({ key, text }) => (
+        <li key={key}>{text}</li>
       ))}
     </ul>
   );
