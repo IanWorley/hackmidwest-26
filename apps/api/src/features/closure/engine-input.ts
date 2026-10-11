@@ -3,12 +3,11 @@ import { createSchemaFactory } from "drizzle-typebox";
 import { type Static, t } from "elysia";
 import type { FloodCategory } from "../../clients/nwps";
 import { ForecastPeriodSchema, NwsAlertSchema } from "../../clients/nws-model";
+import { CLOSED } from "../../schema-options";
 import { ReadingSchema } from "./readings";
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 const facilityColumns = createSelectSchema(facilities).properties;
-
-const CLOSED = { additionalProperties: false } as const;
 
 const StageAtSchema = t.Object(
   { stageFt: t.Number(), validTime: t.String() },
@@ -83,4 +82,4 @@ const EngineInputSchema = t.Object(
 type EngineInput = Static<typeof EngineInputSchema>;
 
 export type { EngineInput };
-export { CLOSED, EngineInputSchema };
+export { EngineInputSchema };

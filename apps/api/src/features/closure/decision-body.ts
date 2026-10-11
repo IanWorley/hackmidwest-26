@@ -7,6 +7,7 @@ import { FormatRegistry, type TObject, type TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { createSchemaFactory } from "drizzle-typebox";
 import { t, ValidationError } from "elysia";
+import { CLOSED } from "../../schema-options";
 
 const UTC_INSTANT_FORMAT = "utc-instant";
 const NON_BLANK_PATTERN = "\\S";
@@ -22,7 +23,6 @@ const BODY_FIELDS = {
 const BODY_ROOT = "";
 const INVALID_BODY_MESSAGE = "Invalid decision";
 const UNKNOWN_ACTION_MESSAGE = "Expected action accept, override, or defer";
-const CLOSED = { additionalProperties: false } as const;
 
 // Exactly `Date.prototype.toISOString()`, the only instant form the database CHECKs accept.
 // The round trip also rejects impossible dates such as Feb 30.

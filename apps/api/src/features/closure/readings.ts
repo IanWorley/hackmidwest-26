@@ -1,6 +1,7 @@
 import { type Static, t } from "elysia";
 import type { NwsObservation } from "../../clients/nws-model";
 import type { AirQualityObservation } from "../../clients/open-meteo";
+import { CLOSED } from "../../schema-options";
 
 const READING_SOURCES = ["nws", "open-meteo"] as const;
 const OBSERVATION_METRICS = [
@@ -31,7 +32,7 @@ const ReadingSchema = t.Object(
     /** The upstream record this reading came from. */
     rawRef: t.String(),
   },
-  { additionalProperties: false },
+  CLOSED,
 );
 
 type Reading = Static<typeof ReadingSchema>;

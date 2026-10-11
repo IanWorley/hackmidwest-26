@@ -8,10 +8,11 @@ import {
   internalServerErrorResponse,
   type RunRequest,
 } from "../../runtime";
+import { CLOSED } from "../../schema-options";
 import { rejectUnknownFields } from "./decision-body";
 import { recordMissedDecision } from "./decisions";
 import { evaluatePosture } from "./engine";
-import { CLOSED, type EngineInput } from "./engine-input";
+import type { EngineInput } from "./engine-input";
 import {
   decimalIdParams,
   FACILITIES_PATH,

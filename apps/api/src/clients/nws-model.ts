@@ -1,4 +1,5 @@
 import { type Static, t } from "elysia";
+import { CLOSED } from "../schema-options";
 
 const NullableNumber = t.Union([t.Number(), t.Null()]);
 const NullableString = t.Union([t.String(), t.Null()]);
@@ -52,7 +53,7 @@ const ForecastPeriodSchema = t.Object(
     shortForecast: NullableString,
     probabilityOfPrecipitation: NullableNumber,
   },
-  { additionalProperties: false },
+  CLOSED,
 );
 
 const ForecastSchema = t.Object(
@@ -63,7 +64,7 @@ const ForecastSchema = t.Object(
     updateTime: t.String(),
     periods: t.Array(ForecastPeriodSchema),
   },
-  { additionalProperties: false },
+  CLOSED,
 );
 
 /**
@@ -77,7 +78,7 @@ const HazardWindowSchema = t.Object(
     end: t.String(),
     endBasis: t.Union([t.Literal("ends"), t.Literal("expires")]),
   },
-  { additionalProperties: false },
+  CLOSED,
 );
 
 const NwsAlertSchema = t.Object(
@@ -93,7 +94,7 @@ const NwsAlertSchema = t.Object(
     references: t.Array(t.String()),
     hazardWindow: HazardWindowSchema,
   },
-  { additionalProperties: false },
+  CLOSED,
 );
 
 const QuantitySchema = t.Object({

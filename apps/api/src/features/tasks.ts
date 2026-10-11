@@ -10,6 +10,7 @@ import {
   internalServerErrorResponse,
   type RunRequest,
 } from "../runtime";
+import { CLOSED } from "../schema-options";
 
 const TASKS_PATH = "/api/tasks";
 const HTTP_CREATED = 201;
@@ -25,10 +26,7 @@ const taskInsert = createInsertSchema(tasks, {
   }),
 });
 
-const createTaskBody = t.Object(
-  { title: taskInsert.properties.title },
-  { additionalProperties: false },
-);
+const createTaskBody = t.Object({ title: taskInsert.properties.title }, CLOSED);
 
 type NewTask = Pick<typeof tasks.$inferInsert, "title">;
 
