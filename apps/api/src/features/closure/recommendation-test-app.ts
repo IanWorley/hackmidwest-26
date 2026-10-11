@@ -23,7 +23,6 @@ const KANSAS_CITY_ID = 1;
 const UNKNOWN_ID = 999;
 const EVALUATE_PATH = `/api/facilities/${KANSAS_CITY_ID}/recommendations`;
 const LATEST_PATH = `${EVALUATE_PATH}/latest`;
-/** 03:30 Central on 2026-01-14, before the 05:00 deadline (11:00Z). */
 const CLOCK = "2026-01-14T09:30:00.000Z";
 const AS_OF = "2026-01-14T09:00:00.000Z";
 const LATER_AS_OF = "2026-01-14T10:00:00.000Z";
@@ -97,7 +96,6 @@ const lowRiver: NwpsClientShape = {
     }),
 };
 
-/** What the route feeds the engine for Kansas City from the stub clients, evaluated as of `AS_OF`. */
 const EXPECTED_INPUT: EngineInput = {
   now: AS_OF,
   facility: {
@@ -148,10 +146,8 @@ interface TestApp {
   readonly db: Db;
   readonly get: (path: string) => Promise<Response>;
   readonly post: (path: string, body?: object) => Promise<Response>;
-  /** Moves the clock every later request reads. */
   readonly setClock: (at: string) => void;
-  /** Stores a row as if an evaluation had, for snapshots the engine would never write. */
-  readonly insertRow: (snapshot: JsonValue) => Promise<number>;
+  readonly insertUncheckedRow: (snapshot: JsonValue) => Promise<number>;
 }
 
 function settableClock(start: string): {
@@ -190,7 +186,6 @@ function requestFor(path: string, body: object | undefined): Request {
   });
 }
 
-/** Runs `run` against the seeded demo facilities, Kansas City's storm stubbed in, with the clock at `CLOCK`. */
 async function withStormAppOn(
   openStore: () => Promise<DatabaseStore>,
   run: (app: TestApp) => Promise<void>,
@@ -212,7 +207,7 @@ async function withStormAppOn(
       get: (path) => app.handle(new Request(new URL(path, REQUEST_ORIGIN))),
       post: (path, body) => app.handle(requestFor(path, body)),
       setClock: set,
-      insertRow: async (snapshot) => {
+      insertUncheckedRow: async (snapshot) => {
         const content = {
           facilityId: KANSAS_CITY_ID,
           evaluatedAt: CLOCK,

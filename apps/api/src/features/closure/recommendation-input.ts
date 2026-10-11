@@ -13,7 +13,6 @@ import type { EngineInput } from "./engine-input";
 import type { Facility } from "./facilities";
 import { airQualityReadings, observationReadings } from "./readings";
 
-// A CHECK constraint holds the column to the NWPS id format, so a mismatch is a defect.
 function gaugeIdOf({ nwpsGaugeId }: Facility): NwpsGaugeId | null {
   if (nwpsGaugeId === null) {
     return null;
@@ -81,7 +80,6 @@ const pullInput = Effect.fn("pullInput")(function* (
       ...observationReadings(pulled.observation),
       ...airQualityReadings(pulled.airQuality),
     ],
-    // Staleness counts from when NWS issued the forecast, not when it was fetched.
     forecast: {
       asOf: pulled.forecast.updateTime,
       rawRef: pulled.forecast.rawRef,

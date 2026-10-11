@@ -30,8 +30,7 @@ const KANSAS_CITY_ID = 1;
 const DECISION_MAKER_ID = 1;
 const BACKUP_ID = 2;
 const FIRST_RECOMMENDATION_ID = 1;
-/** 04:30 Central the morning after the clock, the as-of demo's next-morning call. */
-const FUTURE_AS_OF = "2026-01-15T10:30:00.000Z";
+const NEXT_MORNING_AS_OF = "2026-01-15T10:30:00.000Z";
 const STORM_START = "2026-01-14T06:00:00.000Z";
 
 function withApp(run: (app: TestApp) => Promise<void>): Promise<void> {
@@ -83,7 +82,7 @@ it(`POST ${EVALUATE_PATH} evaluates at the clock reading when no asOf is given`,
 
 it(`POST ${EVALUATE_PATH} accepts a future asOf, evaluating the data pulled now at that instant and labeling it as_of`, async () => {
   await withApp(async ({ post }) => {
-    const response = await post(EVALUATE_PATH, { asOf: FUTURE_AS_OF });
+    const response = await post(EVALUATE_PATH, { asOf: NEXT_MORNING_AS_OF });
 
     const { evaluatedAt, asOf, mode, snapshot } = await response.json();
     expect([
@@ -92,7 +91,13 @@ it(`POST ${EVALUATE_PATH} accepts a future asOf, evaluating the data pulled now 
       asOf,
       mode,
       snapshot.input.now,
-    ]).toEqual([HTTP_CREATED, CLOCK, FUTURE_AS_OF, "as_of", FUTURE_AS_OF]);
+    ]).toEqual([
+      HTTP_CREATED,
+      CLOCK,
+      NEXT_MORNING_AS_OF,
+      "as_of",
+      NEXT_MORNING_AS_OF,
+    ]);
   });
 });
 

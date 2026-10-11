@@ -84,8 +84,8 @@ it(`GET ${RECOMMENDATIONS_PATH}/:id returns 404 for an id no recommendation has`
 });
 
 it(`GET ${RECOMMENDATIONS_PATH}/:id fails with a 500 when the stored snapshot does not parse`, async () => {
-  await withApp(async ({ get, insertRow }) => {
-    const id = await insertRow({ input: {}, output: {} });
+  await withApp(async ({ get, insertUncheckedRow }) => {
+    const id = await insertUncheckedRow({ input: {}, output: {} });
 
     const response = await get(`${RECOMMENDATIONS_PATH}/${id}`);
 
@@ -108,8 +108,8 @@ it(`GET ${RECOMMENDATIONS_PATH}/:id/replay re-runs the engine on the stored inpu
 });
 
 it(`GET ${RECOMMENDATIONS_PATH}/:id/replay reports a mismatch when the stored output is not what the engine returns`, async () => {
-  await withApp(async ({ get, insertRow }) => {
-    const id = await insertRow({
+  await withApp(async ({ get, insertUncheckedRow }) => {
+    const id = await insertUncheckedRow({
       input: EXPECTED_INPUT,
       output: { ...STORED_OUTPUT, rationale: "Edited after the fact." },
     });
@@ -157,8 +157,8 @@ it("every recommendation route rejects a non-decimal id with 422 instead of alia
 });
 
 it(`GET ${RECOMMENDATIONS_PATH}/:id fails with a 500 when the stored snapshot carries a field the schema does not list`, async () => {
-  await withApp(async ({ get, insertRow }) => {
-    const id = await insertRow({
+  await withApp(async ({ get, insertUncheckedRow }) => {
+    const id = await insertUncheckedRow({
       input: EXPECTED_INPUT,
       output: { ...STORED_OUTPUT, unlisted: "hashed but never returned" },
     });
