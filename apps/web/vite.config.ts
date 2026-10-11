@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig, loadEnv } from "vite";
 import { reactPlugins } from "./react-plugins";
@@ -28,8 +29,10 @@ export default defineConfig(({ mode }) => {
   const webPort = Number(new URL(requireEnv(environment, "WEB_ORIGIN")).port);
   return {
     envDir: ROOT_ENV_DIRECTORY,
+    resolve: { tsconfigPaths: true },
     server: { port: webPort, strictPort: true },
     plugins: [
+      tailwindcss(),
       tanstackStart({
         router: {
           routesDirectory: ROUTES_DIRECTORY,

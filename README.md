@@ -97,6 +97,8 @@ CI runs format, lint, typecheck, build, and tests on every PR. [autofix.ci](http
 - `apps/agent-api/src/features/` — agent and AI endpoints, built the same way as the API's features.
 - `apps/web/src/routes/` — file-based routes; loaders call the API through Eden.
 - `apps/web/src/lib/api.ts` — the single Eden client.
+- `apps/web/src/styles.css` — the Tailwind stylesheet: shadcn theme tokens and posture colors.
+- `apps/web/src/components/ui/` — shadcn/ui components as `bunx shadcn add` writes them; not edited by hand.
 
 ## Adding an app or package
 

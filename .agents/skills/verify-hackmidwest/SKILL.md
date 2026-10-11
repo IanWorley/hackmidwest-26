@@ -42,7 +42,7 @@ $V up                         # or RUN_ID=my-check $V up to choose the id
 - With `STORAGE=broken`, `up` skips migrate and seed and writes a one-line text file at `DB_PATH` instead. The API starts, and every query fails with `SQLITE_NOTADB`. Use it only for recipes that need a storage failure. No real database is edited.
 - The dev supervisor runs under `setsid`, so its PID is the process group `down` kills.
 
-**Ready** means `up` printed `ready RUN_ID=…` followed by the state (`API_URL`, `WEB_URL`, `AGENT_API_URL`, `DB_PATH`, `STORAGE`, `EXPECTED_STATUS`, `ARTIFACTS`, `PGID`, `GIT_REV`). It waits until `GET $API_URL/api/tasks` and `GET $WEB_URL/tasks` both answer with `EXPECTED_STATUS` (`200`, or `500` with `STORAGE=broken`) and the page serves `<title>Hack Midwest tasks</title>`, and `GET $AGENT_API_URL/health` answers `200` (it has no storage, so `STORAGE=broken` does not change it), up to 90 s. On timeout it prints the dev log tail and tears itself down. The first `up` on a machine takes ~10 s; Vite's first SSR compile is the slow part.
+**Ready** means `up` printed `ready RUN_ID=…` followed by the state (`API_URL`, `WEB_URL`, `AGENT_API_URL`, `DB_PATH`, `STORAGE`, `EXPECTED_STATUS`, `ARTIFACTS`, `PGID`, `GIT_REV`). It waits until `GET $API_URL/api/tasks` and `GET $WEB_URL/tasks` both answer with `EXPECTED_STATUS` (`200`, or `500` with `STORAGE=broken`) and the page serves `<title>Tasks · Hack Midwest</title>`, and `GET $AGENT_API_URL/health` answers `200` (it has no storage, so `STORAGE=broken` does not change it), up to 90 s. On timeout it prints the dev log tail and tears itself down. The first `up` on a machine takes ~10 s; Vite's first SSR compile is the slow part.
 
 Instances are isolated by port, database file, and process group, so several runs can live side by side. Do not point the helper at an instance it did not start (for example the developer's `bun run dev`); it only knows runs under `/tmp/verify-hackmidwest/runs/`.
 
@@ -52,7 +52,7 @@ Instances are isolated by port, database file, and process group, so several run
 RUN_ID=<id> $V doctor
 ```
 
-Prints `ok` / `FAIL` per check and exits non-zero on any failure: process group alive, all three ports owned by **this** run's process group (not some other listener), API returns a JSON array, web serves the app title, agent API health answers `200`, database file exists, checkout `HEAD` equals the rev at launch. It also prints how many paths the working tree has changed; the dev server hot-reloads edits, so a running instance reflects uncommitted changes. Run doctor first whenever a step fails unexpectedly. If it fails, `down` and `up` again rather than repairing a half-dead instance.
+Prints `ok` / `FAIL` per check and exits non-zero on any failure: process group alive, all three ports owned by **this** run's process group (not some other listener), API returns a JSON array, web serves the `/tasks` page title, agent API health answers `200`, database file exists, checkout `HEAD` equals the rev at launch. It also prints how many paths the working tree has changed; the dev server hot-reloads edits, so a running instance reflects uncommitted changes. Run doctor first whenever a step fails unexpectedly. If it fails, `down` and `up` again rather than repairing a half-dead instance.
 
 ## Drive
 
@@ -64,14 +64,14 @@ Each invocation opens a fresh headless Chromium page (no cookies or state carrie
 |---|---|
 | `goto <path>` | Open `$WEB_URL<path>` and wait for network idle, which means hydrated. |
 | `click <role> <name>` | Click the element, e.g. `click link "Open the project tasks"`. |
-| `expect <role> <name>` | Wait (up to 15 s) until it is visible, e.g. `expect list "Tasks"`. |
+| `expect <role> <name>` | Wait (up to 15 s) until it is visible, e.g. `expect table "Tasks"`. |
 | `expect-text <text>` | Wait until the exact text is visible. Use it for elements without a name, such as the error alert. |
 | `block-api` | Abort every browser request to `$API_URL` from now on (the API is the network boundary). It does **not** affect SSR fetches made by the web server. |
 | `snap <name>` | Write `<name>.aria.yml` (ARIA tree with URL and title header) and `<name>.png` (full page). |
 
 Any failing step exits 1 and saves `failure-<ts>.png`. An unknown step or a missing argument exits 2 with a usage line before the browser starts. Every step, the URL after it, every browser request to the API (`net GET …/api/tasks -> 200`), and every console error are appended to `$ARTIFACTS/browser.log`.
 
-Stable handles in the app today: link `Open the project tasks` (on `/`), list `Tasks` (on `/tasks`), one checkbox per task named by its title (`[checked]` in the ARIA snapshot when completed), alert text `Tasks could not be loaded.`, pending text `Loading tasks...`, document title `Hack Midwest tasks`.
+Stable handles in the app today: navigation `Main` in the header on every page, with links `Hack Midwest` (to `/`) and `Tasks` (to `/tasks`); link `Open the project tasks` (on `/`); table `Tasks` (on `/tasks`), with one row per task and one checkbox per task named by its title (`[checked]` in the ARIA snapshot when completed); alert text `Tasks could not be loaded.`; pending text `Loading tasks...`; document title `Hack Midwest tasks` on `/` and `Tasks · Hack Midwest` on `/tasks`.
 
 ### API: `$V api` and `$V db`
 

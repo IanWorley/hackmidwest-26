@@ -32,6 +32,17 @@ packages/db/src/schema.ts (Drizzle table + TASK_TITLE_LENGTH)
 Router loaders own data fetching and caching. TanStack Query is deliberately omitted until a feature needs
 polling, optimistic updates, or shared client cache.
 
+The web UI is Tailwind CSS v4 with shadcn/ui components:
+
+- `apps/web/src/styles.css` is the one stylesheet, linked from the root route. It holds shadcn's theme tokens and
+  one color token per site posture (`normal`, `delayed_arrival`, `early_dismissal`, `unscheduled_telework`,
+  `full_closure`, and `not_evaluated`), each with a `-foreground` pair for text on it (`bg-posture-full-closure`,
+  `text-posture-full-closure-foreground`). Dark values follow `prefers-color-scheme`; there is no theme toggle.
+- `apps/web/src/components/ui/` holds shadcn components as the CLI writes them. Add or regenerate one with
+  `bunx shadcn add <name>` in `apps/web`, then `bun run fix`. Don't edit them by hand; wrap them in feature code.
+- Web code imports its own source as `@/…` (`apps/web/src/…`). The alias is defined once, in the web tsconfig's
+  `paths`, and Vite, Vitest, Biome, and dependency-cruiser all resolve it from there.
+
 ## Module boundaries
 
 `bun run lint` runs dependency-cruiser with `.dependency-cruiser.ts` after Biome. It checks the graph of source
@@ -63,6 +74,8 @@ Biome adds the checks dependency-cruiser cannot see:
 - The root `noRestrictedImports` patterns govern which specifiers any workspace may write, including type imports.
   No workspace may import another workspace's source or a `packages/*` folder by relative path, or anything through
   a `node_modules` path, so package exports are the only way in.
+- The same patterns stop `@/` from climbing out of `apps/web/src` through any `..` segment, even one after a folder (`@/features/../../…`), so the alias is never a way into
+  another workspace.
 - `noUndeclaredDependencies` keeps each workspace to its `package.json`. Web does not declare `@hackmidwest/db`, so
   no `@hackmidwest/db` export resolves there, type imports included.
 - `noProcessEnv` limits `process.env` to each backend's `src/index.ts` and `packages/db/scripts/`.
@@ -108,6 +121,10 @@ Biome is configured at three levels:
   `useImportExtensions`.
 - Each workspace's `biome.jsonc` has `"root": false, "extends": "//"` and only that workspace's exceptions,
   copied from `templates/biome/` (library, server app, web app).
+
+Generated shadcn/ui code is the one place lint is relaxed for code we did not write. An override in
+`apps/web/biome.jsonc` scoped to `src/components/ui/**` turns off exactly the rules the CLI's output trips, so
+`shadcn add` output lands unedited apart from formatting. Hand-written web code stays strict.
 
 Exceptions live in `linter.rules` or in narrowly scoped `overrides`. Repo-wide rule settings stay out of a
 root `"**"` override, because an override from the root beats a workspace's `linter.rules` and would silently
