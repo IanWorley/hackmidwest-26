@@ -1,5 +1,10 @@
-import { notificationDispatches, recommendations } from "@hackmidwest/db";
+import {
+  decisions,
+  notificationDispatches,
+  recommendations,
+} from "@hackmidwest/db";
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
+import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { HTTP_NOT_FOUND, HTTP_OK } from "../../runtime";
 import {
@@ -15,6 +20,7 @@ import {
   OVERRIDE,
   RECHECK_AT,
   RECOMMENDATION,
+  SECOND_DECISION_ID,
   storedDecisions,
   UNKNOWN_ID,
 } from "./decision-test-fixtures";
@@ -129,6 +135,30 @@ it("reports a recommendation whose stored hash does not match its content", asyn
       decisionId: 1,
       intact: false,
       breaks: [{ record: "recommendation", id: 2, reason: "content_altered" }],
+    });
+  });
+});
+
+it("reports a decision whose superseded decision is missing", async () => {
+  await withApp(async ({ db, request }) => {
+    await request(decide(), ACCEPT);
+    await request(decide(), {
+      ...OVERRIDE,
+      supersedesDecisionId: FIRST_DECISION_ID,
+    });
+    // Only a write that bypasses the add-only trigger and the foreign key can remove a decision.
+    await db.run(sql`PRAGMA foreign_keys = OFF`);
+    await db.run(sql`DROP TRIGGER decisions_reject_delete`);
+    await db.delete(decisions).where(eq(decisions.id, FIRST_DECISION_ID));
+
+    const response = await request(
+      `/api/decisions/${SECOND_DECISION_ID}/verify`,
+    );
+
+    expect(await response.json()).toEqual({
+      decisionId: 2,
+      intact: false,
+      breaks: [{ record: "decision", id: 2, reason: "missing_predecessor" }],
     });
   });
 });
