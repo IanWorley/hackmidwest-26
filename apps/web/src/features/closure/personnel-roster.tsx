@@ -121,6 +121,17 @@ function Summary({
   );
 }
 
+/** No one has an effective status under an untimed posture, so a status filter left from an earlier load would hide everyone. */
+function appliedFilters(
+  filters: RosterFilters,
+  posture: Personnel["posture"],
+): RosterFilters {
+  if (posture.kind === "untimed") {
+    return { ...filters, status: undefined };
+  }
+  return filters;
+}
+
 export function PersonnelRoster({
   personnel,
   timeZone,
@@ -131,7 +142,10 @@ export function PersonnelRoster({
   recordStatus: RecordStatus;
 }): JSX.Element {
   const [filters, setFilters] = useState<RosterFilters>(NO_FILTERS);
-  const view = filterRoster(personnel.people, filters);
+  const view = filterRoster(
+    personnel.people,
+    appliedFilters(filters, personnel.posture),
+  );
   return (
     <div className="space-y-4">
       <search aria-label={FILTERS_NAME} className="flex flex-wrap gap-4">

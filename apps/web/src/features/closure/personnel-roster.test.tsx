@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import type { JSX } from "react";
 import { expect, it } from "vitest";
 import { PersonnelRoster } from "./personnel-roster";
 import {
@@ -13,7 +14,7 @@ import {
   TELEWORKING,
 } from "./personnel-test-fixtures";
 import type { RecordOutcome } from "./record-status";
-import type { Building, EffectiveStatus } from "./roster-filter";
+import type { Building, EffectiveStatus, Personnel } from "./roster-filter";
 
 type RosterEntry = [
   name: string,
@@ -31,24 +32,27 @@ const ENTRIES: RosterEntry[] = [
   ["Farah Quinn", ANNEX, false, ON_LEAVE],
 ];
 
-const ROSTER = personnel(
-  ENTRIES.map(([name, building, essential, effective], index) =>
-    resolvedPerson(index + 1, name, { building, essential, effective }),
-  ),
+const PEOPLE = ENTRIES.map(([name, building, essential, effective], index) =>
+  resolvedPerson(index + 1, name, { building, essential, effective }),
 );
+const ROSTER = personnel(PEOPLE);
 
 function recorded(): Promise<RecordOutcome> {
   return Promise.resolve({ kind: "recorded" });
 }
 
-function renderRoster(): void {
-  render(
+function roster(personnelData: Personnel): JSX.Element {
+  return (
     <PersonnelRoster
-      personnel={ROSTER}
+      personnel={personnelData}
       recordStatus={recorded}
       timeZone={CHICAGO}
-    />,
+    />
   );
+}
+
+function renderRoster(): void {
+  render(roster(ROSTER));
 }
 
 function summary(): string | null {
@@ -84,4 +88,20 @@ it("narrows the table and the summary to the chosen building and essential flag"
 
   expect(shownNames()).toEqual(["Delia Marsh", "Farah Quinn"]);
   expect(summary()).toBe("1 teleworking · 1 not working");
+});
+
+it("shows everyone when a reload turns untimed while a status filter is chosen", () => {
+  const { rerender } = render(roster(ROSTER));
+  fireEvent.change(screen.getByRole("combobox", { name: "Effective status" }), {
+    target: { value: "teleworking" },
+  });
+  const untimed: Personnel = {
+    ...ROSTER,
+    posture: { kind: "untimed", posture: "early_dismissal" },
+    people: PEOPLE.map(({ effective: _effective, ...person }) => person),
+  };
+
+  rerender(roster(untimed));
+
+  expect(shownNames()).toEqual(ENTRIES.map(([name]) => name));
 });
