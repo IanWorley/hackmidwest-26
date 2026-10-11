@@ -66,12 +66,14 @@ Each invocation opens a fresh headless Chromium page (no cookies or state carrie
 | `goto <path>` | Open `$WEB_URL<path>` and wait for network idle, which means hydrated. |
 | `click <role> <name>` | Click the element, e.g. `click link "Open the project tasks"`. |
 | `expect <role> <name>` | Wait (up to 15 s) until it is visible, e.g. `expect table "Tasks"`. |
-| `expect-text <text>` | Wait until the exact text is visible. Use it for elements without a name, such as the error alert. |
-| `block-api` | Abort every browser request to `$API_URL` from now on (the API is the network boundary). It does **not** affect SSR fetches made by the web server. |
+| `expect-text <text>` | Wait until the exact text is visible. Use it for elements without a name, such as the error alert. It always searches the whole page and ignores `within`. |
+| `expect-focus <role> <name>` | Wait until that element has keyboard focus, e.g. `expect-focus combobox "Posture instead"` after an invalid submit. It respects `within`. |
+| `expect-focus-text <text>` | Wait until the focused element's trimmed text is exactly `<text>`, for focus targets without a role, such as a status notice. |
+| `block-api` | Abort every browser request to `$API_URL` from now on (the API is the network boundary). It affects only the current tab, and it does **not** affect SSR fetches made by the web server. |
 | `fill <label> <text>` | Type into the control with that exact label, e.g. `fill "Reason" "County reports ice."`. |
 | `select <label> <option>` | Choose the option with that exact text in the labeled select, e.g. `select "Recorded by" "Dana Whitfield, County Executive Director"`. |
 | `tab <name>` | Switch to the named tab, opening it on first use. Steps start in tab `main`. A second tab acts as a second person, so one run can stage a conflict. Its log lines carry `[<name>]`. |
-| `within <role> <name>` | Narrow `click`, `expect`, `fill`, and `select` to one region, e.g. `within form "Override the recommendation"` when the page has two `Reason` fields. `goto`, `tab`, and `within-page` widen it back to the whole page. |
+| `within <role> <name>` | Narrow `click`, `expect`, `expect-focus`, `fill`, and `select` to one region, e.g. `within form "Override the recommendation"` when the page has two `Reason` fields. `goto`, `tab`, and `within-page` widen it back to the whole page. |
 | `within-page` | Undo `within`. |
 | `snap <name>` | Write `<name>.aria.yml` (ARIA tree with URL and title header) and `<name>.png` (full page). |
 

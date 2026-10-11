@@ -11,6 +11,8 @@ const STEP_ARGS = {
   click: ["role", "name"],
   expect: ["role", "name"],
   "expect-text": ["text"],
+  "expect-focus": ["role", "name"],
+  "expect-focus-text": ["text"],
   "block-api": [],
   fill: ["label", "text"],
   select: ["label", "option"],
@@ -71,6 +73,10 @@ async function runStep(verb, args) {
     case "expect-text":
       await page.getByText(args[0], { exact: true }).waitFor();
       return;
+    case "expect-focus":
+    case "expect-focus-text":
+      await expectFocus(verb, args);
+      return;
     case "fill":
       await scope.getByLabel(args[0], { exact: true }).fill(args[1]);
       return;
@@ -102,6 +108,28 @@ async function runStep(verb, args) {
     default:
       throw new Error(`unhandled step '${verb}'`);
   }
+}
+
+/**
+ * Waits for keyboard focus on an element by role and name, or on whatever element has exactly this text.
+ * @param {"expect-focus" | "expect-focus-text"} verb
+ * @param {string[]} args
+ */
+async function expectFocus(verb, args) {
+  if (verb === "expect-focus-text") {
+    await page.waitForFunction(
+      (text) => document.activeElement?.textContent?.trim() === text,
+      args[0],
+    );
+    return;
+  }
+  const target = await scope
+    .getByRole(args[0], { name: args[1], exact: true })
+    .elementHandle();
+  await page.waitForFunction(
+    (element) => element === document.activeElement,
+    target,
+  );
 }
 
 /** @param {string} name */
