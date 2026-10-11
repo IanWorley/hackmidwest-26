@@ -20,6 +20,7 @@ const LIVE_CONDITIONS_TTL: Duration.Input = "1 minute";
 const UNAVAILABLE_CONDITIONS_TTL: Duration.Input = "15 seconds";
 const LIVE_CONDITIONS_CACHE_CAPACITY = 4;
 const LIVE_REQUEST_CONCURRENCY = 4;
+const LIVE_PULL_MESSAGE = "Pulling live conditions from NWS and Open-Meteo";
 
 const AqiSchema = t.Object({ value: t.Number(), observedAt: t.String() });
 
@@ -72,35 +73,59 @@ function polygonsOf(geometry: AreaGeometry): number[][][][] {
   return geometry.coordinates;
 }
 
-const zonesGeometry = Effect.fn("zonesGeometry")(function* (
+/**
+ * Fetches each zone once, under one concurrency limit for the whole pull. A zone NWS cannot serve
+ * has no outline, so its alert stays listed instead of failing every alert and AQI value.
+ */
+const zoneOutlines = Effect.fn("zoneOutlines")(function* (
   zoneUrls: readonly string[],
 ) {
   const nws = yield* NwsClient;
-  const geometries = yield* Effect.forEach(zoneUrls, nws.zoneGeometry, {
-    concurrency: LIVE_REQUEST_CONCURRENCY,
-  });
-  const polygons = geometries.flatMap((geometry) => {
-    if (geometry === null) {
+  const unique = [...new Set(zoneUrls)];
+  const outlines = yield* Effect.forEach(
+    unique,
+    (zoneUrl) =>
+      nws
+        .zoneGeometry(zoneUrl)
+        .pipe(
+          Effect.catch((error) =>
+            Effect.logWarning("Zone outline unavailable", error).pipe(
+              Effect.as(null),
+            ),
+          ),
+        ),
+    { concurrency: LIVE_REQUEST_CONCURRENCY },
+  );
+  return new Map(
+    unique.map((zoneUrl, index) => [zoneUrl, outlines[index] ?? null]),
+  );
+});
+
+function zonesArea(
+  zoneUrls: readonly string[],
+  outlines: ReadonlyMap<string, AreaGeometry | null>,
+): MultiPolygon | null {
+  const polygons = zoneUrls.flatMap((zoneUrl) => {
+    const outline = outlines.get(zoneUrl);
+    if (outline === undefined || outline === null) {
       return [];
     }
-    return polygonsOf(geometry);
+    return polygonsOf(outline);
   });
   if (polygons.length === 0) {
     return null;
   }
-  return { type: "MultiPolygon", coordinates: polygons } satisfies MultiPolygon;
-});
+  return { type: "MultiPolygon", coordinates: polygons };
+}
 
-const alertFeature = Effect.fn("alertFeature")(function* ({
-  alert,
-  geometry,
-  affectedZones,
-}: NwsAlertArea) {
-  const area = geometry ?? (yield* zonesGeometry(affectedZones));
+function alertFeature(
+  { alert, geometry, affectedZones }: NwsAlertArea,
+  outlines: ReadonlyMap<string, AreaGeometry | null>,
+): AlertFeature {
   return {
     type: "Feature",
     id: alert.id,
-    geometry: area,
+    geometry: geometry ?? zonesArea(affectedZones, outlines),
     properties: {
       event: alert.event,
       headline: alert.headline,
@@ -110,8 +135,8 @@ const alertFeature = Effect.fn("alertFeature")(function* ({
       onset: alert.hazardWindow.start,
       ends: alert.hazardWindow.end,
     },
-  } satisfies AlertFeature;
-});
+  };
+}
 
 const alertCollection = Effect.fn("alertCollection")(function* (
   points: readonly GeoPoint[],
@@ -123,11 +148,15 @@ const alertCollection = Effect.fn("alertCollection")(function* (
   const inForce = new Set(
     currentAlerts(areas.map(({ alert }) => alert)).map(({ id }) => id),
   );
-  const features = yield* Effect.forEach(
-    uniqueById(areas.filter(({ alert }) => inForce.has(alert.id))),
-    alertFeature,
-    { concurrency: LIVE_REQUEST_CONCURRENCY },
+  const current = uniqueById(
+    areas.filter(({ alert }) => inForce.has(alert.id)),
   );
+  const outlines = yield* zoneOutlines(
+    current
+      .filter(({ geometry }) => geometry === null)
+      .flatMap(({ affectedZones }) => affectedZones),
+  );
+  const features = current.map((area) => alertFeature(area, outlines));
   return { type: "FeatureCollection", features } satisfies AlertCollection;
 });
 
@@ -144,6 +173,8 @@ const currentAqi = Effect.fn("currentAqi")(function* (point: GeoPoint) {
 const liveConditions = Effect.fn("liveConditions")(function* (
   points: readonly GeoPoint[],
 ) {
+  // One line per upstream pull, so a reader of the API log can count cache misses.
+  yield* Effect.logInfo(LIVE_PULL_MESSAGE);
   return yield* Effect.all(
     {
       alerts: alertCollection(points),
