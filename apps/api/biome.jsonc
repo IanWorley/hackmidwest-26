@@ -97,6 +97,16 @@
       }
     },
     {
+      // Golden SHA-256 digests are test vectors, not credentials, and read as
+      // high-entropy strings to the secret scanner.
+      "includes": ["src/features/closure/recommendation-store.test.ts"],
+      "linter": {
+        "rules": {
+          "security": { "noSecrets": "off" }
+        }
+      }
+    },
+    {
       // Opt-in integration tests call live services. They read credentials
       // from the environment so a run without them, such as CI, skips them.
       "includes": ["src/**/*.integration.test.ts"],

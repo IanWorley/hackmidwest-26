@@ -21,7 +21,6 @@ const STORED_ROW = {
 
 /** SHA-256 of the row's content columns as canonical JSON, computed outside the codebase with sha256sum. */
 const STORED_ROW_DIGEST =
-  // biome-ignore lint/security/noSecrets: a SHA-256 test vector, not a credential.
   "042e094b54806b328237f2d6ae09c8568acc2fe33fa4caebdba988542aacd31e";
 
 it("recommendationHash digests a stored row's content columns to a fixed SHA-256, so renaming a column cannot silently change hashes", () => {
