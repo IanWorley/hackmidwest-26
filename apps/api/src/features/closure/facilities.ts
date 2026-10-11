@@ -20,7 +20,11 @@ import {
 const FACILITIES_PATH = "/api/facilities";
 const FACILITY_PATH = `${FACILITIES_PATH}/:id`;
 const FACILITY_NOT_FOUND_MESSAGE = "Facility not found";
-const MIN_FACILITY_ID = 1;
+/**
+ * Decimal digits only, so `0x1` or `1e0` cannot alias facility 1 the way
+ * numeric coercion would. Fifteen digits keeps every match a safe integer.
+ */
+const FACILITY_ID_PATTERN = "^[1-9][0-9]{0,14}$";
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 
@@ -30,7 +34,7 @@ const facilityResponse = t.Object({
 });
 
 const facilityParams = t.Object({
-  id: t.Numeric({ minimum: MIN_FACILITY_ID, multipleOf: 1 }),
+  id: t.String({ pattern: FACILITY_ID_PATTERN }),
 });
 
 const facilityNotFoundResponse = t.Object({
@@ -106,7 +110,7 @@ export function createFacilitiesModule(runRequest: RunRequest) {
       FACILITY_PATH,
       ({ params, status }) =>
         runRequest(
-          getFacility(params.id).pipe(
+          getFacility(Number(params.id)).pipe(
             Effect.map(
               Option.getOrElse(() =>
                 status(HTTP_NOT_FOUND, {

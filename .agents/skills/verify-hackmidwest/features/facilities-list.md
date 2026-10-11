@@ -9,7 +9,7 @@ The `/facilities` page shows every facility in name order as a row of the `Facil
 - `facilities-detail` shows the facility name as the heading, plus its time zone, hours, NWS zone, and hazards.
 - `facilities-not-found` shows `Facility not found.` for an id no facility has, or a path segment that is not a decimal positive integer (`0x1`, `1e0`, `abc`). Malformed ids never reach the API.
 - `facilities-load-error` shows `Facility could not be loaded.` with a matching title when the API fails.
-- `facilities-api` answers `GET /api/facilities` with every facility in name order, `GET /api/facilities/:id` with one facility, and `404 {"message":"Facility not found"}` for an unknown id.
+- `facilities-api` answers `GET /api/facilities` with every facility in name order, `GET /api/facilities/:id` with one facility, `404 {"message":"Facility not found"}` for an unknown id, and `422` for an id that is not a decimal positive integer (`0x1`, `1e0`, `01`).
 
 ## How to get to it (user POV)
 
@@ -35,6 +35,7 @@ Preconditions:
 - **API list.** Run `RUN_ID=<id> $V api facilities-api-list GET /api/facilities`. `200` with 4 objects in name order; the Kansas City object has `"hazards":["winter","wind","airQuality"]`.
 - **API detail.** Run `RUN_ID=<id> $V api facilities-api-detail GET /api/facilities/1`. `200` with `"name":"Kansas City Area Service Center"` and `"nwsZone":"MOZ037"`.
 - **API not found.** Run `RUN_ID=<id> $V api facilities-api-404 GET /api/facilities/999`. `404` with body `{"message":"Facility not found"}`.
+- **API malformed id.** Run `RUN_ID=<id> $V api facilities-api-malformed GET /api/facilities/0x1`. `422`, not facility 1.
 - **Stored state.** Run `RUN_ID=<id> $V db facilities-rows "select f.id, f.name, group_concat(h.hazard) from facilities f left join facility_hazards h on h.facility_id = f.id group by f.id order by f.name"`. Rows match the rendered names in order, and each row holds the same hazards as the page, in storage order rather than display order.
 
 ## Gotchas

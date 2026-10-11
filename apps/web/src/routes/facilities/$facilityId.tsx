@@ -14,11 +14,12 @@ const TIME_ZONE_LABEL = "Time zone";
 const HOURS_LABEL = "Hours";
 const NWS_ZONE_LABEL = "NWS zone";
 const HAZARDS_LABEL = "Hazards";
-const LOADING_TEXT = "Loading facility...";
+const LOADING_TITLE = "Loading facility";
+const LOADING_TEXT = `${LOADING_TITLE}...`;
 const LOAD_ERROR_TITLE = "Facility could not be loaded";
 const LOAD_ERROR_TEXT = `${LOAD_ERROR_TITLE}.`;
 
-/** The title names the outcome the page renders, so a failed load is not called "not found". */
+/** The title names the state the page renders, so a pending or failed load is not called "not found". */
 function facilityTitle(
   name: string | undefined,
   status: AnyRouteMatch["status"],
@@ -29,7 +30,10 @@ function facilityTitle(
   if (status === "notFound") {
     return NOT_FOUND_TITLE;
   }
-  return LOAD_ERROR_TITLE;
+  if (status === "error") {
+    return LOAD_ERROR_TITLE;
+  }
+  return LOADING_TITLE;
 }
 
 function FacilityPage(): JSX.Element {

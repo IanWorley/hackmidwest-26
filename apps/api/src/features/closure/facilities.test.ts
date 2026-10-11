@@ -9,6 +9,9 @@ import { FACILITIES_PATH } from "./facilities";
 const REQUEST_ORIGIN = "http://api.test";
 const WEB_ORIGIN = "http://web.test";
 const UNKNOWN_FACILITY_ID = 999;
+const HTTP_UNPROCESSABLE = 422;
+// Each one coerces to a number, and the first three would alias facility 1.
+const MALFORMED_FACILITY_IDS = ["0x1", "1e0", "01", "0"] as const;
 
 async function getFromSeededApp(path: string): Promise<Response> {
   const store = await createTestDatabaseWithDemoFacilities();
@@ -84,5 +87,11 @@ describe(`GET ${FACILITIES_PATH}/:id`, () => {
 
     expect(response.status).toBe(HTTP_NOT_FOUND);
     expect(await response.json()).toEqual({ message: "Facility not found" });
+  });
+
+  it.each(MALFORMED_FACILITY_IDS)("rejects facility id %j", async (id) => {
+    const response = await getFromSeededApp(`${FACILITIES_PATH}/${id}`);
+
+    expect(response.status).toBe(HTTP_UNPROCESSABLE);
   });
 });
