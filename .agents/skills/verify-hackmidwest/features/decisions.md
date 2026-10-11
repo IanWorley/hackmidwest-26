@@ -24,14 +24,14 @@ A named decision maker accepts, overrides, or defers a recommendation through `P
 - `POST /api/recommendations/:id/decisions` with a JSON body whose `action` is `accept`, `override`, or `defer`.
 - `GET /api/facilities/:id/decisions`.
 - `GET /api/decisions/:id/verify`.
-- No route creates a recommendation yet, and no route runs the missed-deadline `no_decision` write. Do not report either as verified here.
+- Recommendations come from `POST /api/facilities/:id/recommendations`, which also writes the missed-deadline `no_decision` row. Both are verified in [recommendations](./recommendations.md), not here.
 
 ## Driving it with verify.sh
 
 Preconditions:
 
 - Baseline state from the index on a fresh `up`, so the recommendation and decision ids below start at `1`.
-- Staging exception: no route creates recommendations yet, so the recipe inserts them with `sqlite3` against the instance's own `DB_PATH`. It and the missing-predecessor tamper at the end are the only direct writes, and each is recorded by the `db` read that follows it. Define the helpers in the same shell command as the steps that use them. `rec` prints the canonical JSON of a recommendation (sorted keys, every column except `id` and `content_hash`), so its SHA-256 is the content hash the API recomputes:
+- Staging exception: a deferral must recheck before `decideBy`, and a live evaluation's `decideBy` is that morning's deadline, so the recipe inserts recommendations with a far-future `decideBy` using `sqlite3` against the instance's own `DB_PATH`. It and the missing-predecessor tamper at the end are the only direct writes, and each is recorded by the `db` read that follows it. Define the helpers in the same shell command as the steps that use them. `rec` prints the canonical JSON of a recommendation (sorted keys, every column except `id` and `content_hash`), so its SHA-256 is the content hash the API recomputes:
 
   ```sh
   source /tmp/verify-hackmidwest/runs/<id>/state.env
