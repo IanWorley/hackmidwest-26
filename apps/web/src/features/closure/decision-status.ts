@@ -6,7 +6,7 @@ import type {
 
 interface DecisionStatus {
   readonly label: string;
-  /** Whether the decide-by deadline still matters after this decision. */
+  /** Nobody has settled the facility yet, so its deadline (or how overdue it is) stays shown. */
   readonly awaitsDecision: boolean;
 }
 
@@ -14,7 +14,7 @@ const DECISION_STATUSES: Record<DecisionAction, DecisionStatus> = {
   accept: { label: "Accepted", awaitsDecision: false },
   override: { label: "Overridden", awaitsDecision: false },
   defer: { label: "Deferred", awaitsDecision: true },
-  no_decision: { label: "Missed decision", awaitsDecision: false },
+  no_decision: { label: "Missed decision", awaitsDecision: true },
 };
 
 /** The decision's chosen posture once accepted or overridden; the recommendation's otherwise. */

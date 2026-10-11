@@ -7,6 +7,7 @@ import { ALL_DAY_END, nwsAlert, OVERNIGHT_END } from "./engine-test-fixtures";
 
 const ZONE_A_URL = "https://api.weather.gov/zones/forecast/MOZ037";
 const ZONE_B_URL = "https://api.weather.gov/zones/forecast/MOZ038";
+const FAILING_ZONE_URL = "https://api.weather.gov/zones/forecast/MOZ099";
 const ZONE_A_RING = squareRing({ lat: 39.0, lon: -94.7 });
 const ZONE_B_RING = squareRing({ lat: 39.0, lon: -94.5 });
 const STORM_RING = squareRing({ lat: 39.1, lon: -94.6 });
@@ -67,6 +68,27 @@ const SUPERSEDING_AREAS: NwsAlertArea[] = [
   },
 ];
 
+/** Two zone alerts share zone A, and a third names only a zone NWS cannot serve. */
+const SHARED_AND_FAILING_ZONES: NwsAlertArea[] = [
+  ZONE_AREA,
+  {
+    alert: {
+      ...nwsAlert("Wind Advisory", "Moderate", OVERNIGHT_END),
+      id: "urn:oid:wind",
+    },
+    geometry: null,
+    affectedZones: [ZONE_A_URL],
+  },
+  {
+    alert: {
+      ...nwsAlert("Flood Watch", "Moderate", OVERNIGHT_END),
+      id: "urn:oid:flood",
+    },
+    geometry: null,
+    affectedZones: [FAILING_ZONE_URL],
+  },
+];
+
 const ALERTS_DOWN = new NwsError({
   url: "https://api.weather.gov/alerts/active",
   reason: { kind: "timeout" },
@@ -80,7 +102,9 @@ function countingMapClients(
 ): {
   readonly clients: ApiClients;
   readonly alertAreaCalls: () => number;
+  readonly zoneCalls: () => readonly string[];
 } {
+  const zoneUrls: string[] = [];
   let calls = 0;
   const nws: NwsClientShape = {
     activeAlerts: notUsedByMap,
@@ -92,7 +116,18 @@ function countingMapClients(
         calls += 1;
       }).pipe(Effect.andThen(areas)),
     zoneGeometry: (zoneUrl) =>
-      Effect.succeed(ZONE_GEOMETRY.get(zoneUrl) ?? null),
+      Effect.sync(() => {
+        zoneUrls.push(zoneUrl);
+      }).pipe(
+        Effect.andThen(() => {
+          if (zoneUrl === FAILING_ZONE_URL) {
+            return Effect.fail(
+              new NwsError({ url: zoneUrl, reason: { kind: "timeout" } }),
+            );
+          }
+          return Effect.succeed(ZONE_GEOMETRY.get(zoneUrl) ?? null);
+        }),
+      ),
   };
   return {
     clients: {
@@ -108,16 +143,21 @@ function countingMapClients(
       },
     },
     alertAreaCalls: () => calls,
+    zoneCalls: () => zoneUrls,
   };
 }
 
 export {
   ALERTS_DOWN,
   countingMapClients,
+  FAILING_ZONE_URL,
+  SHARED_AND_FAILING_ZONES,
   STORM_ALERT,
   STORM_RING,
   SUPERSEDING_AREAS,
   ZONE_A_RING,
+  ZONE_A_URL,
   ZONE_ALERT,
   ZONE_B_RING,
+  ZONE_B_URL,
 };

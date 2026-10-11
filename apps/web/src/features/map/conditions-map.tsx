@@ -58,6 +58,14 @@ const CONTIGUOUS_US_EAST_LON = -66.9;
 const AQI_PREFIX = "Modeled AQI";
 const OPEN_FACILITY_PREFIX = "Open";
 const AQI_SEPARATOR = " · ";
+const AQI_UNAVAILABLE_TEXT = "Modeled AQI unavailable";
+/** The reading's own hour, in UTC like the evaluation stamp, since it can be older than the standing. */
+const AQI_TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "UTC",
+  timeZoneName: "short",
+});
 const MARKER_CLASS = "rounded-full border-2 border-white shadow-md";
 const AQI_RING_CLASS = "ring-4";
 const FIT_OPTIONS: FitBoundsOptions = {
@@ -140,13 +148,16 @@ function AqiText({
   facility: MapFacility;
   showAqi: boolean;
 }): JSX.Element | null {
-  if (!showAqi || facility.aqi === null) {
+  if (!showAqi) {
     return null;
   }
-  const { value } = facility.aqi;
+  if (facility.aqi === null) {
+    return <span className="text-xs">{AQI_UNAVAILABLE_TEXT}</span>;
+  }
+  const { value, observedAt } = facility.aqi;
   return (
     <span className="text-xs">
-      {`${AQI_PREFIX} ${Math.round(value)}${AQI_SEPARATOR}${aqiCategory(value).label}`}
+      {`${AQI_PREFIX} ${Math.round(value)}${AQI_SEPARATOR}${aqiCategory(value).label}${AQI_SEPARATOR}${AQI_TIME_FORMAT.format(Date.parse(observedAt))}`}
     </span>
   );
 }

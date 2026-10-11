@@ -1,15 +1,20 @@
-import { ClientOnly, createFileRoute } from "@tanstack/react-router";
+import {
+  ClientOnly,
+  createFileRoute,
+  useNavigate,
+} from "@tanstack/react-router";
 import { type JSX, lazy, Suspense, useCallback, useState } from "react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
+import { AlertList } from "@/features/map/alert-list";
 import { LayerToggles } from "@/features/map/layer-toggles";
 import {
   MAP_LAYERS,
   useMapLayers,
   validateLayersSearch,
+  withoutLayer,
 } from "@/features/map/layers";
 import { loadMap } from "@/features/map/load-map";
 import { PostureLegend } from "@/features/map/posture-legend";
-import { UnmappedAlerts } from "@/features/map/unmapped-alerts";
 import { pageTitle } from "@/lib/page-title";
 import { useRefreshEvery } from "@/lib/use-refresh-every";
 
@@ -39,7 +44,15 @@ function ConditionsPage(): JSX.Element {
     (layer) => layer !== "radar" || !radarFailed,
   );
   const active = layers.filter((layer) => available.includes(layer));
-  const hideRadar = useCallback((): void => setRadarFailed(true), []);
+  const navigate = useNavigate({ from: "/conditions" });
+  // Drop radar from the URL too, so the address matches what is drawn and a reload does not retry it.
+  const hideRadar = useCallback((): void => {
+    setRadarFailed(true);
+    navigate({
+      search: ({ layers: raw }) => ({ layers: withoutLayer(raw, "radar") }),
+      replace: true,
+    }).catch(() => undefined);
+  }, [navigate]);
   const mapFallback = <p>{MAP_LOADING_TEXT}</p>;
   return (
     <section className="space-y-4">
@@ -64,7 +77,7 @@ function ConditionsPage(): JSX.Element {
         </Suspense>
       </ClientOnly>
       {alerts !== null && active.includes("alerts") && (
-        <UnmappedAlerts alerts={alerts.features} />
+        <AlertList alerts={alerts.features} />
       )}
     </section>
   );
