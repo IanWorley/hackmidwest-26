@@ -151,3 +151,24 @@ it("starts fresh when the page reloads with a newer decision", async () => {
     screen.getByRole("button", { name: "Dispatch notifications" }).textContent,
   ]).toEqual([null, "Dispatch notifications"]);
 });
+
+it("reloads the screen after a dispatch, so the record chain check covers the new rows", async () => {
+  const onReload = vi.fn<() => Promise<void>>(() => Promise.resolve());
+  const dispatch = vi.fn(async (_id: number) => DISPATCHED);
+  render(
+    <DispatchPanel
+      decisionId={DECISION_ID}
+      dispatch={dispatch}
+      initial={UNDISPATCHED}
+      onReload={onReload}
+      timezone={TIMEZONE}
+    />,
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Dispatch notifications" }),
+  );
+  await screen.findByRole("table", { name: "Dispatched notices" });
+
+  expect(onReload).toHaveBeenCalledTimes(1);
+});

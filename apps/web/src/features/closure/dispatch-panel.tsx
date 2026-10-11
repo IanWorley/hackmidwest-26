@@ -148,7 +148,7 @@ export function DispatchPanel({
   initial: DecisionNotifications;
   timezone: string;
   dispatch: (decisionId: number) => Promise<DispatchResult>;
-  /** Called after a 409, since another tab dispatched or superseded this decision. */
+  /** Called after every answer: a dispatch appends to the record chain, and a 409 means another tab acted. */
   onReload: () => Promise<void>;
 }): JSX.Element {
   const [local, setLocal] = useState<LocalOutcome | null>(null);
@@ -170,6 +170,7 @@ export function DispatchPanel({
         return;
       }
       settle(READY, result.view);
+      await onReload();
     } catch {
       settle({ kind: "failed" });
     }
