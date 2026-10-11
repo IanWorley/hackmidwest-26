@@ -2,6 +2,7 @@ import {
   AGENT_API_CRUISE_PROBES,
   AGENT_API_LINT_PROBES,
 } from "./agent-api-boundary-probes";
+import { API_INTEGRATION_TEST_LINT_PROBES } from "./api-integration-test-probes";
 import {
   type BoundaryProbe,
   DB_CONNECTION_STUB,
@@ -249,20 +250,6 @@ export const LINT_PROBES: readonly BoundaryProbe[] = [
     ],
   },
   {
-    behavior: "an API integration test may read process.env",
-    files: {
-      "apps/api/src/clients/probe.integration.test.ts": `${IMPORT_PROCESS}export const probe = process.env.NWS_USER_AGENT;\n`,
-    },
-    violatedRules: [],
-  },
-  {
-    behavior: "an API unit test cannot read process.env",
-    files: {
-      "apps/api/src/clients/probe.test.ts": `${IMPORT_PROCESS}export const probe = process.env.NWS_USER_AGENT;\n`,
-    },
-    violatedRules: ["style/noProcessEnv"],
-  },
-  {
     behavior: "the API entry point may read process.env",
     files: {
       "apps/api/src/index.ts": `${IMPORT_PROCESS}export const probe = process.env.API_PORT;\n`,
@@ -305,4 +292,5 @@ export const LINT_PROBES: readonly BoundaryProbe[] = [
     violatedRules: ["style/noRestrictedGlobals"],
   },
   ...AGENT_API_LINT_PROBES,
+  ...API_INTEGRATION_TEST_LINT_PROBES,
 ];
