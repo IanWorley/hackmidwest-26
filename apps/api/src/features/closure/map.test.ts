@@ -10,7 +10,9 @@ import {
   ZONE_B_RING,
 } from "./map-test-app";
 import {
-  AS_OF,
+  CLOCK,
+  EVALUATE_PATH,
+  LATER_AS_OF,
   type TestApp,
   withAppOn,
   withStormAppOn,
@@ -31,11 +33,12 @@ function withCountingApp(
   );
 }
 
-it(`GET ${MAP_PATH} reports each facility's latest recommendation, or not_evaluated without one`, async () => {
+it(`GET ${MAP_PATH} reports each facility's newest live recommendation, not a later preview, or not_evaluated without one`, async () => {
   await withStormAppOn(
     createTestDatabaseWithDemoFacilities,
-    async ({ get, insertUncheckedRow }) => {
-      const recommendationId = await insertUncheckedRow({});
+    async ({ get, post }) => {
+      await post(EVALUATE_PATH);
+      await post(EVALUATE_PATH, { asOf: LATER_AS_OF });
 
       const { facilities } = await (await get(MAP_PATH)).json();
 
@@ -56,10 +59,9 @@ it(`GET ${MAP_PATH} reports each facility's latest recommendation, or not_evalua
           aqi: CLEAN_AIR,
           standing: {
             posture: "full_closure",
-            recommendationId,
+            recommendationId: 1,
             decideBy: "2026-01-14T11:00:00.000Z",
-            asOf: AS_OF,
-            mode: "as_of",
+            asOf: CLOCK,
             decided: false,
           },
         },

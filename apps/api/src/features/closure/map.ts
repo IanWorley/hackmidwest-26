@@ -25,7 +25,7 @@ import {
   type RunRequest,
 } from "../../runtime";
 import { postureSchema } from "./postures";
-import { EVALUATION_MODES, modeOf } from "./recommendation-store";
+import { LIVE_RECOMMENDATION } from "./recommendation-mode";
 
 const MAP_PATH = "/api/map";
 /** Alerts and AQI change over minutes, so a minute of reuse spares api.weather.gov on page refreshes without hiding a new warning for long. */
@@ -41,8 +41,8 @@ const StandingSchema = t.Union([
     posture: postureSchema,
     recommendationId: t.Integer(),
     decideBy: t.String(),
+    /** When the evaluation ran, so a reader can judge how fresh the standing is. */
     asOf: t.String(),
-    mode: t.UnionEnum(EVALUATION_MODES),
     /** A decision row exists for this recommendation. */
     decided: t.Boolean(),
   }),
@@ -205,12 +205,13 @@ function liveConditionsTimeToLive(
   return Duration.zero;
 }
 
-/** Each facility's latest recommendation (highest id, as `findLatestRecommendation` orders) and whether it has a decision. */
+/** Each facility's newest live recommendation, the one `findLatestRecommendation` returns and a decision is about, and whether it has a decision. Previews never become a standing. */
 const readStandings = Effect.fn("readStandings")(function* () {
   const db = yield* Database;
   const latestIds = db
     .select({ id: max(recommendations.id) })
     .from(recommendations)
+    .where(LIVE_RECOMMENDATION)
     .groupBy(recommendations.facilityId);
   const [facilityRows, latestRows, decidedRows] = yield* Effect.tryPromise({
     try: () =>
@@ -246,7 +247,6 @@ const readStandings = Effect.fn("readStandings")(function* () {
         recommendationId: row.id,
         decideBy: row.decideBy,
         asOf: row.asOf,
-        mode: modeOf(row),
         decided: decided.has(row.id),
       },
     ]),
