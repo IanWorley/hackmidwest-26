@@ -1,14 +1,11 @@
 import type {
   decisions,
+  humanInputs,
   notificationDispatches,
   recommendations,
 } from "@hackmidwest/db";
 import { t } from "elysia";
-import {
-  decisionHash,
-  dispatchHash,
-  type HumanInputContent,
-} from "./decision-store";
+import { decisionHash, dispatchHash } from "./decision-store";
 import { recommendationHash } from "./recommendation-store";
 
 /** Each kind is one table on the chain, listed parent before child. */
@@ -48,7 +45,7 @@ interface StoredChain {
   readonly recommendation: typeof recommendations.$inferSelect;
   readonly decisions: readonly {
     readonly row: typeof decisions.$inferSelect;
-    readonly humanInputs: readonly HumanInputContent[];
+    readonly humanInputs: readonly (typeof humanInputs.$inferSelect)[];
   }[];
   readonly dispatches: readonly (typeof notificationDispatches.$inferSelect)[];
 }
@@ -91,40 +88,41 @@ function verifyChain(
   decisionId: number,
   chain: StoredChain,
 ): ChainVerification {
-  const { id, contentHash, ...recommendation } = chain.recommendation;
+  const { recommendation } = chain;
   const decisionHashes = new Map(
     chain.decisions.map(({ row }) => [row.id, row.contentHash]),
   );
   const links = [
     checkLink({
       kind: "recommendation",
-      id,
-      storedHash: contentHash,
+      id: recommendation.id,
+      storedHash: recommendation.contentHash,
       recomputedHash: recommendationHash(recommendation),
     }),
-    ...chain.decisions.map(({ row, humanInputs }) => {
-      const { id: rowId, contentHash: rowHash, ...content } = row;
-      return checkLink({
+    ...chain.decisions.map(({ row, humanInputs: inputs }) =>
+      checkLink({
         kind: "decision",
-        id: rowId,
-        storedHash: rowHash,
-        recomputedHash: decisionHash({ ...content, humanInputs }),
-        parent: { copiedHash: row.recommendationHash, storedHash: contentHash },
-      });
-    }),
-    ...chain.dispatches.map((dispatch) => {
-      const { id: rowId, contentHash: rowHash, ...content } = dispatch;
-      return checkLink({
+        id: row.id,
+        storedHash: row.contentHash,
+        recomputedHash: decisionHash({ ...row, humanInputs: inputs }),
+        parent: {
+          copiedHash: row.recommendationHash,
+          storedHash: recommendation.contentHash,
+        },
+      }),
+    ),
+    ...chain.dispatches.map((dispatch) =>
+      checkLink({
         kind: "notification_dispatch",
-        id: rowId,
-        storedHash: rowHash,
-        recomputedHash: dispatchHash(content),
+        id: dispatch.id,
+        storedHash: dispatch.contentHash,
+        recomputedHash: dispatchHash(dispatch),
         parent: {
           copiedHash: dispatch.decisionHash,
           storedHash: decisionHashes.get(dispatch.decisionId) ?? "",
         },
-      });
-    }),
+      }),
+    ),
   ];
   return { decisionId, ok: links.every((link) => link.ok), links };
 }

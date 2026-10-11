@@ -47,20 +47,63 @@ class DecisionStorageError extends Data.TaggedError("DecisionStorageError")<{
   readonly cause: unknown;
 }> {}
 
-function decisionHash(content: DecisionContent): string {
-  return contentHash(content);
+/** Hashes only the content columns and input fields, so a stored row with its stored inputs recomputes the hash its insert wrote. */
+function decisionHash({
+  recommendationId,
+  recommendationHash,
+  facilityId,
+  action,
+  chosenPosture,
+  decidedById,
+  decidedByName,
+  decidedByRole,
+  decidedAt,
+  identityVerified,
+  reasonCategory,
+  reasonText,
+  recheckAt,
+  supersedesDecisionId,
+  humanInputs: inputs,
+}: DecisionContent): string {
+  return contentHash({
+    recommendationId,
+    recommendationHash,
+    facilityId,
+    action,
+    chosenPosture,
+    decidedById,
+    decidedByName,
+    decidedByRole,
+    decidedAt,
+    identityVerified,
+    reasonCategory,
+    reasonText,
+    recheckAt,
+    supersedesDecisionId,
+    humanInputs: inputs.map(
+      ({ reportedBy, reportedAt, text }) =>
+        ({ reportedBy, reportedAt, text }) satisfies HumanInputContent,
+    ),
+  } satisfies DecisionContent);
 }
 
-function dispatchHash(content: DispatchContent): string {
-  return contentHash(content);
-}
-
-function inputContent({
-  reportedBy,
-  reportedAt,
-  text,
-}: HumanInputRow): HumanInputContent {
-  return { reportedBy, reportedAt, text };
+/** Hashes only the content columns, so a stored row recomputes the hash its insert wrote. */
+function dispatchHash({
+  decisionId,
+  decisionHash: copiedDecisionHash,
+  employeeId,
+  channel,
+  sendBy,
+  recordedAt,
+}: DispatchContent): string {
+  return contentHash({
+    decisionId,
+    decisionHash: copiedDecisionHash,
+    employeeId,
+    channel,
+    sendBy,
+    recordedAt,
+  } satisfies DispatchContent);
 }
 
 function recordOf(
@@ -236,18 +279,13 @@ const loadChain = Effect.fn("loadChain")(function* (decisionId: number) {
     recommendation,
     decisions: decisionRows.map((row) => ({
       row,
-      humanInputs: (grouped.get(row.id) ?? []).map(inputContent),
+      humanInputs: grouped.get(row.id) ?? [],
     })),
     dispatches: dispatchRows,
   });
 });
 
-export type {
-  DecisionContent,
-  DecisionMaker,
-  DecisionRecord,
-  HumanInputContent,
-};
+export type { DecisionContent, DecisionMaker, DecisionRecord };
 export {
   DecisionRecordSchema,
   decisionHash,

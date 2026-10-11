@@ -100,7 +100,10 @@
     {
       // Golden SHA-256 digests are test vectors, not credentials, and read as
       // high-entropy strings to the secret scanner.
-      "includes": ["src/features/closure/recommendation-store.test.ts"],
+      "includes": [
+        "src/features/closure/decision-store.test.ts",
+        "src/features/closure/recommendation-store.test.ts"
+      ],
       "linter": {
         "rules": {
           "security": { "noSecrets": "off" }
