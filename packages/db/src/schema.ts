@@ -1,7 +1,6 @@
 import {
   between,
   eq,
-  gt,
   inArray,
   isNotNull,
   ne,
@@ -22,6 +21,8 @@ import {
 const LOCAL_TIME_FORMAT = "%H:%M";
 // Exactly `Date.prototype.toISOString()`, so string comparison orders instants.
 const UTC_INSTANT_FORMAT = "%Y-%m-%dT%H:%M:%fZ";
+// strftime passes 24:xx through unchanged, so the clock bound is explicit.
+const END_OF_DAY = "24:00";
 
 // strftime returns NULL for an impossible value and normalizes overflow (Feb 30
 // becomes Mar 2), so only a real time in exactly this shape survives the round
@@ -32,7 +33,7 @@ function hasFormat(column: AnySQLiteColumn, format: string): SQL {
 }
 
 function isLocalTime(column: AnySQLiteColumn): SQL {
-  return hasFormat(column, LOCAL_TIME_FORMAT);
+  return sql`${hasFormat(column, LOCAL_TIME_FORMAT)} and ${column} < ${END_OF_DAY}`.inlineParams();
 }
 
 function isUtcInstant(column: AnySQLiteColumn): SQL {
@@ -41,6 +42,16 @@ function isUtcInstant(column: AnySQLiteColumn): SQL {
 
 function isLocalTimeRange(start: AnySQLiteColumn, end: AnySQLiteColumn): SQL {
   return sql`${isLocalTime(start)} and ${isLocalTime(end)} and ${start} < ${end}`;
+}
+
+// SQLite stores a non-numeric string in an integer column, and TEXT compares above every number.
+function isPositiveInteger(column: AnySQLiteColumn): SQL {
+  return sql`typeof(${column}) = 'integer' and ${column} > 0`;
+}
+
+// Drizzle reads any stored value other than 1 as false, so a stray 2 would flip the flag.
+function isBoolean(column: AnySQLiteColumn): SQL {
+  return sql`${column} in (0, 1)`;
 }
 
 function implies(condition: SQL, requirement: SQL): SQL {
@@ -146,11 +157,11 @@ export const facilities = sqliteTable(
     ),
     check(
       "facilities_typical_commute_minutes_positive",
-      gt(table.typicalCommuteMinutes, 0).inlineParams(),
+      isPositiveInteger(table.typicalCommuteMinutes),
     ),
     check(
       "facilities_notification_lead_minutes_positive",
-      gt(table.notificationLeadMinutes, 0).inlineParams(),
+      isPositiveInteger(table.notificationLeadMinutes),
     ),
     check(
       "facilities_backup_differs",
@@ -216,8 +227,19 @@ export const employees = sqliteTable(
       inArray(table.preferredChannel, NOTIFICATION_CHANNELS).inlineParams(),
     ),
     check(
+      "employees_essential_personnel_boolean",
+      isBoolean(table.essentialPersonnel),
+    ),
+    check(
+      "employees_telework_eligible_boolean",
+      isBoolean(table.teleworkEligible),
+    ),
+    check(
       "employees_sms_requires_mobile_phone",
-      implies(eq(table.preferredChannel, "sms"), isNotNull(table.mobilePhone)),
+      implies(
+        eq(table.preferredChannel, "sms"),
+        sql`${isNotNull(table.mobilePhone)} and trim(${table.mobilePhone}) <> ''`,
+      ),
     ),
     check(
       "employees_shift",
@@ -225,7 +247,7 @@ export const employees = sqliteTable(
     ),
     check(
       "employees_commute_minutes_positive",
-      gt(table.commuteMinutes, 0).inlineParams(),
+      sql`${table.commuteMinutes} is null or ${isPositiveInteger(table.commuteMinutes)}`,
     ),
   ],
 );
@@ -240,7 +262,7 @@ export const buildingRosterEntries = sqliteTable("building_roster_entries", {
   employeeId: integer("employee_id").references(() => employees.id),
 });
 
-/** Add-only: migration triggers reject UPDATE and DELETE, so a correction is a newer event. */
+/** Add-only: migration triggers reject UPDATE and DELETE and drop an insert that reuses an id, so a correction is a newer event. */
 export const employeeStatusEvents = sqliteTable(
   "employee_status_events",
   {

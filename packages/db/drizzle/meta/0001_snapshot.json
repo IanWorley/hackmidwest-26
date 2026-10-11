@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "29bf5851-b96a-4083-8eb6-4b889ea5af86",
+  "id": "cf755165-e5b9-49ac-857f-890a10427428",
   "prevId": "24930990-4aa4-4235-a01c-5ce37ece7f71",
   "tables": {
     "building_roster_entries": {
@@ -342,17 +342,25 @@
           "name": "employees_preferred_channel",
           "value": "\"employees\".\"preferred_channel\" in ('email', 'sms')"
         },
+        "employees_essential_personnel_boolean": {
+          "name": "employees_essential_personnel_boolean",
+          "value": "\"employees\".\"essential_personnel\" in (0, 1)"
+        },
+        "employees_telework_eligible_boolean": {
+          "name": "employees_telework_eligible_boolean",
+          "value": "\"employees\".\"telework_eligible\" in (0, 1)"
+        },
         "employees_sms_requires_mobile_phone": {
           "name": "employees_sms_requires_mobile_phone",
-          "value": "not (\"employees\".\"preferred_channel\" = 'sms') or \"employees\".\"mobile_phone\" is not null"
+          "value": "not (\"employees\".\"preferred_channel\" = 'sms') or \"employees\".\"mobile_phone\" is not null and trim(\"employees\".\"mobile_phone\") <> ''"
         },
         "employees_shift": {
           "name": "employees_shift",
-          "value": "(\"employees\".\"shift_start\" is null) = (\"employees\".\"shift_end\" is null) and \"employees\".\"shift_start\" is strftime('%H:%M', \"employees\".\"shift_start\") and \"employees\".\"shift_end\" is strftime('%H:%M', \"employees\".\"shift_end\") and \"employees\".\"shift_start\" < \"employees\".\"shift_end\""
+          "value": "(\"employees\".\"shift_start\" is null) = (\"employees\".\"shift_end\" is null) and \"employees\".\"shift_start\" is strftime('%H:%M', \"employees\".\"shift_start\") and \"employees\".\"shift_start\" < '24:00' and \"employees\".\"shift_end\" is strftime('%H:%M', \"employees\".\"shift_end\") and \"employees\".\"shift_end\" < '24:00' and \"employees\".\"shift_start\" < \"employees\".\"shift_end\""
         },
         "employees_commute_minutes_positive": {
           "name": "employees_commute_minutes_positive",
-          "value": "\"employees\".\"commute_minutes\" > 0"
+          "value": "\"employees\".\"commute_minutes\" is null or typeof(\"employees\".\"commute_minutes\") = 'integer' and \"employees\".\"commute_minutes\" > 0"
         }
       }
     },
@@ -513,27 +521,27 @@
         },
         "facilities_hours": {
           "name": "facilities_hours",
-          "value": "\"facilities\".\"opens_at\" is strftime('%H:%M', \"facilities\".\"opens_at\") and \"facilities\".\"closes_at\" is strftime('%H:%M', \"facilities\".\"closes_at\") and \"facilities\".\"opens_at\" < \"facilities\".\"closes_at\""
+          "value": "\"facilities\".\"opens_at\" is strftime('%H:%M', \"facilities\".\"opens_at\") and \"facilities\".\"opens_at\" < '24:00' and \"facilities\".\"closes_at\" is strftime('%H:%M', \"facilities\".\"closes_at\") and \"facilities\".\"closes_at\" < '24:00' and \"facilities\".\"opens_at\" < \"facilities\".\"closes_at\""
         },
         "facilities_arrival_window": {
           "name": "facilities_arrival_window",
-          "value": "\"facilities\".\"arrival_window_start\" is strftime('%H:%M', \"facilities\".\"arrival_window_start\") and \"facilities\".\"arrival_window_end\" is strftime('%H:%M', \"facilities\".\"arrival_window_end\") and \"facilities\".\"arrival_window_start\" < \"facilities\".\"arrival_window_end\""
+          "value": "\"facilities\".\"arrival_window_start\" is strftime('%H:%M', \"facilities\".\"arrival_window_start\") and \"facilities\".\"arrival_window_start\" < '24:00' and \"facilities\".\"arrival_window_end\" is strftime('%H:%M', \"facilities\".\"arrival_window_end\") and \"facilities\".\"arrival_window_end\" < '24:00' and \"facilities\".\"arrival_window_start\" < \"facilities\".\"arrival_window_end\""
         },
         "facilities_departure_window": {
           "name": "facilities_departure_window",
-          "value": "\"facilities\".\"departure_window_start\" is strftime('%H:%M', \"facilities\".\"departure_window_start\") and \"facilities\".\"departure_window_end\" is strftime('%H:%M', \"facilities\".\"departure_window_end\") and \"facilities\".\"departure_window_start\" < \"facilities\".\"departure_window_end\""
+          "value": "\"facilities\".\"departure_window_start\" is strftime('%H:%M', \"facilities\".\"departure_window_start\") and \"facilities\".\"departure_window_start\" < '24:00' and \"facilities\".\"departure_window_end\" is strftime('%H:%M', \"facilities\".\"departure_window_end\") and \"facilities\".\"departure_window_end\" < '24:00' and \"facilities\".\"departure_window_start\" < \"facilities\".\"departure_window_end\""
         },
         "facilities_decision_deadline_format": {
           "name": "facilities_decision_deadline_format",
-          "value": "\"facilities\".\"decision_deadline\" is strftime('%H:%M', \"facilities\".\"decision_deadline\")"
+          "value": "\"facilities\".\"decision_deadline\" is strftime('%H:%M', \"facilities\".\"decision_deadline\") and \"facilities\".\"decision_deadline\" < '24:00'"
         },
         "facilities_typical_commute_minutes_positive": {
           "name": "facilities_typical_commute_minutes_positive",
-          "value": "\"facilities\".\"typical_commute_minutes\" > 0"
+          "value": "typeof(\"facilities\".\"typical_commute_minutes\") = 'integer' and \"facilities\".\"typical_commute_minutes\" > 0"
         },
         "facilities_notification_lead_minutes_positive": {
           "name": "facilities_notification_lead_minutes_positive",
-          "value": "\"facilities\".\"notification_lead_minutes\" > 0"
+          "value": "typeof(\"facilities\".\"notification_lead_minutes\") = 'integer' and \"facilities\".\"notification_lead_minutes\" > 0"
         },
         "facilities_backup_differs": {
           "name": "facilities_backup_differs",

@@ -52,9 +52,11 @@ CREATE TABLE `employees` (
 	`commute_minutes` integer,
 	FOREIGN KEY (`assigned_building_id`) REFERENCES `buildings`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "employees_preferred_channel" CHECK("employees"."preferred_channel" in ('email', 'sms')),
-	CONSTRAINT "employees_sms_requires_mobile_phone" CHECK(not ("employees"."preferred_channel" = 'sms') or "employees"."mobile_phone" is not null),
-	CONSTRAINT "employees_shift" CHECK(("employees"."shift_start" is null) = ("employees"."shift_end" is null) and "employees"."shift_start" is strftime('%H:%M', "employees"."shift_start") and "employees"."shift_end" is strftime('%H:%M', "employees"."shift_end") and "employees"."shift_start" < "employees"."shift_end"),
-	CONSTRAINT "employees_commute_minutes_positive" CHECK("employees"."commute_minutes" > 0)
+	CONSTRAINT "employees_essential_personnel_boolean" CHECK("employees"."essential_personnel" in (0, 1)),
+	CONSTRAINT "employees_telework_eligible_boolean" CHECK("employees"."telework_eligible" in (0, 1)),
+	CONSTRAINT "employees_sms_requires_mobile_phone" CHECK(not ("employees"."preferred_channel" = 'sms') or "employees"."mobile_phone" is not null and trim("employees"."mobile_phone") <> ''),
+	CONSTRAINT "employees_shift" CHECK(("employees"."shift_start" is null) = ("employees"."shift_end" is null) and "employees"."shift_start" is strftime('%H:%M', "employees"."shift_start") and "employees"."shift_start" < '24:00' and "employees"."shift_end" is strftime('%H:%M', "employees"."shift_end") and "employees"."shift_end" < '24:00' and "employees"."shift_start" < "employees"."shift_end"),
+	CONSTRAINT "employees_commute_minutes_positive" CHECK("employees"."commute_minutes" is null or typeof("employees"."commute_minutes") = 'integer' and "employees"."commute_minutes" > 0)
 );
 --> statement-breakpoint
 CREATE TABLE `facilities` (
@@ -79,12 +81,12 @@ CREATE TABLE `facilities` (
 	FOREIGN KEY (`backup_decision_maker_id`) REFERENCES `decision_makers`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "facilities_latitude_range" CHECK("facilities"."latitude" between -90 and 90),
 	CONSTRAINT "facilities_longitude_range" CHECK("facilities"."longitude" between -180 and 180),
-	CONSTRAINT "facilities_hours" CHECK("facilities"."opens_at" is strftime('%H:%M', "facilities"."opens_at") and "facilities"."closes_at" is strftime('%H:%M', "facilities"."closes_at") and "facilities"."opens_at" < "facilities"."closes_at"),
-	CONSTRAINT "facilities_arrival_window" CHECK("facilities"."arrival_window_start" is strftime('%H:%M', "facilities"."arrival_window_start") and "facilities"."arrival_window_end" is strftime('%H:%M', "facilities"."arrival_window_end") and "facilities"."arrival_window_start" < "facilities"."arrival_window_end"),
-	CONSTRAINT "facilities_departure_window" CHECK("facilities"."departure_window_start" is strftime('%H:%M', "facilities"."departure_window_start") and "facilities"."departure_window_end" is strftime('%H:%M', "facilities"."departure_window_end") and "facilities"."departure_window_start" < "facilities"."departure_window_end"),
-	CONSTRAINT "facilities_decision_deadline_format" CHECK("facilities"."decision_deadline" is strftime('%H:%M', "facilities"."decision_deadline")),
-	CONSTRAINT "facilities_typical_commute_minutes_positive" CHECK("facilities"."typical_commute_minutes" > 0),
-	CONSTRAINT "facilities_notification_lead_minutes_positive" CHECK("facilities"."notification_lead_minutes" > 0),
+	CONSTRAINT "facilities_hours" CHECK("facilities"."opens_at" is strftime('%H:%M', "facilities"."opens_at") and "facilities"."opens_at" < '24:00' and "facilities"."closes_at" is strftime('%H:%M', "facilities"."closes_at") and "facilities"."closes_at" < '24:00' and "facilities"."opens_at" < "facilities"."closes_at"),
+	CONSTRAINT "facilities_arrival_window" CHECK("facilities"."arrival_window_start" is strftime('%H:%M', "facilities"."arrival_window_start") and "facilities"."arrival_window_start" < '24:00' and "facilities"."arrival_window_end" is strftime('%H:%M', "facilities"."arrival_window_end") and "facilities"."arrival_window_end" < '24:00' and "facilities"."arrival_window_start" < "facilities"."arrival_window_end"),
+	CONSTRAINT "facilities_departure_window" CHECK("facilities"."departure_window_start" is strftime('%H:%M', "facilities"."departure_window_start") and "facilities"."departure_window_start" < '24:00' and "facilities"."departure_window_end" is strftime('%H:%M', "facilities"."departure_window_end") and "facilities"."departure_window_end" < '24:00' and "facilities"."departure_window_start" < "facilities"."departure_window_end"),
+	CONSTRAINT "facilities_decision_deadline_format" CHECK("facilities"."decision_deadline" is strftime('%H:%M', "facilities"."decision_deadline") and "facilities"."decision_deadline" < '24:00'),
+	CONSTRAINT "facilities_typical_commute_minutes_positive" CHECK(typeof("facilities"."typical_commute_minutes") = 'integer' and "facilities"."typical_commute_minutes" > 0),
+	CONSTRAINT "facilities_notification_lead_minutes_positive" CHECK(typeof("facilities"."notification_lead_minutes") = 'integer' and "facilities"."notification_lead_minutes" > 0),
 	CONSTRAINT "facilities_backup_differs" CHECK("facilities"."decision_maker_id" <> "facilities"."backup_decision_maker_id")
 );
 --> statement-breakpoint
@@ -105,4 +107,11 @@ END;
 CREATE TRIGGER `employee_status_events_reject_delete` BEFORE DELETE ON `employee_status_events`
 BEGIN
 	SELECT RAISE(ABORT, 'employee_status_events is add-only: events cannot be deleted');
+END;
+--> statement-breakpoint
+-- REPLACE deletes the old row without firing delete triggers unless recursive_triggers is on, so an insert that reuses an id is dropped before it can overwrite. IGNORE rather than ABORT keeps ON CONFLICT DO NOTHING seeding idempotent.
+CREATE TRIGGER `employee_status_events_keep_existing` BEFORE INSERT ON `employee_status_events`
+WHEN EXISTS (SELECT 1 FROM `employee_status_events` WHERE `id` = NEW.`id`)
+BEGIN
+	SELECT RAISE(IGNORE);
 END;
