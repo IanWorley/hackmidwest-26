@@ -17,7 +17,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 - Prefer ARIA roles and exact accessible names. Use `expect-text` only for elements that have no accessible name.
 - Treat every command as literal. Keep quoted names, paths, and JSON unchanged.
 - Run browser actions through `$V browser`, HTTP through `$V api`, stored-state checks through `$V db`, and schema rejections through `$V db-reject`.
-- Mutate data only through `POST /api/tasks`, `POST /api/facilities/:id/recommendations`, and `POST /api/recommendations/:id/decisions`. Never write to SQLite directly. Three exceptions: `db-reject` writes only to a throwaway snapshot, the [decisions](./decisions.md) recipe stages recommendation rows with `sqlite3` because it needs a `decideBy` far in the future, and the [recommendations](./recommendations.md) recipe stages one past-deadline recommendation for its missed-deadline step.
+- Mutate data only through `POST /api/tasks`, `POST /api/facilities/:id/recommendations`, and `POST /api/recommendations/:id/decisions`. Never write to SQLite directly. Three exceptions: `db-reject` writes only to a throwaway snapshot, the [decisions](./decisions.md) recipe stages recommendation rows with `sqlite3` because it needs a `decideBy` far in the future, and the [recommendations](./recommendations.md) recipe stages recommendations whose `decideBy` or `evaluatedAt` it must place relative to the clock, for its missed-deadline, lapsed-deferral, and out-of-order steps.
 
 ## Proof and skip reporting
 
