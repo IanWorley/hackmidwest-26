@@ -7,11 +7,18 @@ const DECIMAL_DIGITS = /^[0-9]+$/u;
 const HTTP_PROTOCOLS: readonly string[] = ["http:", "https:"];
 const ORIGIN_PATH = "/";
 
+type LlmConfig =
+  | {
+      readonly kind: "openrouter";
+      readonly apiKey: string;
+      readonly model: string;
+    }
+  | { readonly kind: "template" };
+
 interface AgentApiConfig {
   readonly port: number;
   readonly tasksApiUrl: string;
-  readonly openRouterApiKey: string | undefined;
-  readonly openRouterModel: string | undefined;
+  readonly llm: LlmConfig;
 }
 
 function tcpPort(name: string): z.ZodType<number, string> {
@@ -50,6 +57,22 @@ function throwConfigError(issues: readonly StandardSchemaV1.Issue[]): never {
   throw new Error(issues.map((issue) => issue.message).join("\n"));
 }
 
+/** A key without a model fails at startup rather than silently falling back to the template. */
+function llmConfig(
+  apiKey: string | undefined,
+  model: string | undefined,
+): LlmConfig {
+  if (apiKey === undefined) {
+    return { kind: "template" };
+  }
+  if (model === undefined) {
+    throw new Error(
+      "OPENROUTER_MODEL must be configured with OPENROUTER_API_KEY",
+    );
+  }
+  return { kind: "openrouter", apiKey, model };
+}
+
 export function readAgentApiConfig(
   environment: NodeJS.ProcessEnv,
 ): AgentApiConfig {
@@ -69,7 +92,8 @@ export function readAgentApiConfig(
   return {
     port: env.AGENT_API_PORT,
     tasksApiUrl: env.TASKS_API_URL,
-    openRouterApiKey: env.OPENROUTER_API_KEY,
-    openRouterModel: env.OPENROUTER_MODEL,
+    llm: llmConfig(env.OPENROUTER_API_KEY, env.OPENROUTER_MODEL),
   };
 }
+
+export type { LlmConfig };
