@@ -22,4 +22,9 @@ function effectivePosture(standing: EvaluatedStanding): Posture {
   return standing.decision?.chosenPosture ?? standing.posture;
 }
 
-export { DECISION_STATUSES, effectivePosture };
+/** A deferral promises to decide by its recheck time, which comes before the recommendation's own deadline. */
+function decisionDeadline(standing: EvaluatedStanding): string {
+  return standing.decision?.recheckAt ?? standing.decideBy;
+}
+
+export { DECISION_STATUSES, decisionDeadline, effectivePosture };
