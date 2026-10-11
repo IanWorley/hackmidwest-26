@@ -45,7 +45,7 @@ const runLogResponse = t.Object({
   steps: t.Tuple([
     stepSchema(
       EVALUATE_TOOL,
-      t.Object({ facilityId: t.String() }),
+      t.Object({ facilityId: t.Integer() }),
       t.Unsafe<RecommendationRecord>(t.Unknown()),
     ),
     stepSchema(
@@ -84,7 +84,7 @@ const runFacility = Effect.fn("runFacility")(
     const closureApi = yield* ClosureApi;
     const evaluate = yield* step(
       EVALUATE_TOOL,
-      { facilityId: decimalFacilityId },
+      { facilityId: Number(decimalFacilityId) },
       closureApi.evaluate(decimalFacilityId),
     );
     const recommendation = evaluate.output;

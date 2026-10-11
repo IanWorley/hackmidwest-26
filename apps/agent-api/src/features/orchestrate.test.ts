@@ -126,7 +126,7 @@ it("returns the evaluate, preview, and narrate steps in order", () =>
       steps: [
         {
           tool: "evaluate",
-          input: { facilityId: "1" },
+          input: { facilityId: 1 },
           output: storedRecommendation,
           startedAt: TEST_CLOCK_EPOCH,
           durationMs: 0,
