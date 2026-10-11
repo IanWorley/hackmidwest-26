@@ -23,6 +23,7 @@
               "createFacilitiesModule",
               "createFloodLiveModule",
               "createNwsLiveModule",
+              "createPersonnelModule",
               "createTasksModule"
             ]
           }

@@ -146,6 +146,7 @@ export {
   decisionBody,
   firstInvalidField,
   invalidBody,
+  nonBlankText,
   reasonBody,
   utcInstant,
   validationErrorResponse,
