@@ -23,6 +23,8 @@ export {
   type Hazard,
   LATITUDE_RANGE,
   LONGITUDE_RANGE,
+  ROAD_CLASSES,
+  type RoadClass,
 } from "./facilities";
 export {
   buildingRosterEntries,

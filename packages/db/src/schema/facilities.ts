@@ -17,6 +17,16 @@ import {
 export const HAZARDS = ["winter", "wind", "airQuality"] as const;
 export type Hazard = (typeof HAZARDS)[number];
 
+// MnDOT Maintenance Manual Ch. 2 Table 2's route classification of the roads staff commute on, busiest first.
+export const ROAD_CLASSES = [
+  "superCommuter",
+  "urbanCommuter",
+  "ruralCommuter",
+  "primary",
+  "secondary",
+] as const;
+export type RoadClass = (typeof ROAD_CLASSES)[number];
+
 export const LATITUDE_RANGE = { min: -90, max: 90 } as const;
 export const LONGITUDE_RANGE = { min: -180, max: 180 } as const;
 
@@ -50,6 +60,7 @@ export const facilities = sqliteTable(
     typicalCommuteMinutes: integer("typical_commute_minutes").notNull(),
     decisionDeadline: text("decision_deadline").notNull(),
     notificationLeadMinutes: integer("notification_lead_minutes").notNull(),
+    roadClass: text("road_class", { enum: ROAD_CLASSES }).notNull(),
     decisionMakerId: integer("decision_maker_id")
       .notNull()
       .references(() => decisionMakers.id),
@@ -95,6 +106,10 @@ export const facilities = sqliteTable(
     check(
       "facilities_notification_lead_minutes_positive",
       isPositiveInteger(table.notificationLeadMinutes),
+    ),
+    check(
+      "facilities_road_class",
+      inArray(table.roadClass, ROAD_CLASSES).inlineParams(),
     ),
     check(
       "facilities_backup_differs",

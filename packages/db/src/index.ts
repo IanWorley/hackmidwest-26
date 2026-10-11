@@ -29,6 +29,8 @@ export {
   type Posture,
   REASON_CATEGORIES,
   type ReasonCategory,
+  ROAD_CLASSES,
+  type RoadClass,
   recommendations,
   TASK_TITLE_LENGTH,
   tasks,

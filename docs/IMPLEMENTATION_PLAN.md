@@ -160,6 +160,8 @@ PR. Validators in `apps/api` are derived with `drizzle-typebox`, not hand-writte
   - `arrival_window` (e.g. 06:30–09:00 local) and `departure_window` (e.g. 15:30–18:00 local).
   - `typical_commute_minutes`, `decision_deadline` (latest useful morning decision),
     `notification_lead_minutes`.
+  - `road_class` (`ROAD_CLASSES`): the MnDOT route class of the roads staff commute on, from
+    `superCommuter` down to `secondary`. It picks the winter post-hazard buffer.
 - [ ] `buildings` and `employees` are **separate lists** (the brief calls out that building rosters and
       employee rosters disagree). `employees` carries `assigned_building_id`, `essential_personnel`,
       `telework_eligible`, `current_status` (`in_office` / `teleworking` / `on_detail_elsewhere` / `leave`),
@@ -212,7 +214,9 @@ ending at 05:00 and one starting at 13:00 call for different responses.
 
 - [ ] **Hazard window.** `[start, end]` from alert `onset`/`ends`, refined by the hourly forecast (first and
       last hour the threshold is exceeded). Add a configurable `postHazardBufferMinutes` per hazard in
-      `thresholds.ts` with its rationale in the citation field.
+      `thresholds.ts` with its rationale in the citation field. Winter's buffer is a table keyed by the
+      facility's road class (MnDOT Bare Lane Regain Time, 3 h for Super Commuter up to 36 h for Secondary);
+      read it through `postHazardBuffer(hazard, roadClass)`.
 - [ ] **Compare the window with the facility day:**
 
   | Hazard window vs. facility day | Default posture |
