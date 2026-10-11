@@ -8,6 +8,10 @@ import {
   useMapLayers,
 } from "./layers";
 
+/** The outline variant's pressed fill is nearly white, so a layer that is on must look on. */
+const PRESSED_CLASS =
+  "aria-pressed:bg-primary aria-pressed:text-primary-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground";
+
 /** The URL owns which layers are on, so a reload or a shared link restores them. */
 export function LayerToggles({
   available,
@@ -30,7 +34,7 @@ export function LayerToggles({
       variant="outline"
     >
       {available.map((layer) => (
-        <ToggleGroupItem key={layer} value={layer}>
+        <ToggleGroupItem className={PRESSED_CLASS} key={layer} value={layer}>
           {MAP_LAYER_LABELS[layer]}
         </ToggleGroupItem>
       ))}
