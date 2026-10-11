@@ -1,5 +1,6 @@
 import { Context, Effect, Layer, ManagedRuntime } from "effect";
 import { type ElysiaCustomStatusResponse, status, t } from "elysia";
+import type { LlmClient } from "./llm";
 import type { TasksApiClient } from "./tasks-api";
 
 type InternalServerFailure = ElysiaCustomStatusResponse<
@@ -7,12 +8,19 @@ type InternalServerFailure = ElysiaCustomStatusResponse<
   typeof internalServerErrorResponse.static
 >;
 
-function agentApiLayer(tasksApi: TasksApiClient) {
-  return Layer.succeed(TasksApi, tasksApi);
+function agentApiLayer(tasksApi: TasksApiClient, llm: LlmClient) {
+  return Layer.mergeAll(
+    Layer.succeed(TasksApi, tasksApi),
+    Layer.succeed(Llm, llm),
+  );
 }
 
 export class TasksApi extends Context.Service<TasksApi, TasksApiClient>()(
   "@hackmidwest/agent-api/TasksApi",
+) {}
+
+export class Llm extends Context.Service<Llm, LlmClient>()(
+  "@hackmidwest/agent-api/Llm",
 ) {}
 
 export const HTTP_OK = 200;
@@ -36,8 +44,9 @@ export interface AgentApiRuntime {
 
 export function createAgentApiRuntime(
   tasksApi: TasksApiClient,
+  llm: LlmClient,
 ): AgentApiRuntime {
-  const runtime = ManagedRuntime.make(agentApiLayer(tasksApi));
+  const runtime = ManagedRuntime.make(agentApiLayer(tasksApi, llm));
   return {
     runRequest: (program) =>
       runtime.runPromise(
