@@ -74,6 +74,19 @@ function aqiRingClass(facility: MapFacility, showAqi: boolean): string {
   return cn(AQI_RING_CLASS, aqiCategory(facility.aqi.value).ringClassName);
 }
 
+function DecisionDeadline({
+  decideBy,
+  decided,
+}: {
+  decideBy: string;
+  decided: boolean;
+}): JSX.Element {
+  if (decided) {
+    return <span className="text-xs">{DECIDED_TEXT}</span>;
+  }
+  return <DecideByCountdown decideBy={decideBy} />;
+}
+
 function DecisionStatus({
   standing,
 }: {
@@ -82,13 +95,13 @@ function DecisionStatus({
   if (standing.posture === "not_evaluated") {
     return null;
   }
-  if (standing.decided) {
-    return <span className="text-xs">{DECIDED_TEXT}</span>;
-  }
   return (
     <>
-      <DecideByCountdown decideBy={standing.decideBy} />
-      <AsOfMarker asOf={standing.asOf} mode={standing.mode} />
+      <DecisionDeadline
+        decideBy={standing.decideBy}
+        decided={standing.decided}
+      />
+      <AsOfMarker asOf={standing.asOf} />
     </>
   );
 }

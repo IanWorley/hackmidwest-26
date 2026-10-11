@@ -14,7 +14,6 @@ export type MapFacility = MapData["facilities"][number];
 export type Standing = MapFacility["standing"];
 export type StandingPosture = Standing["posture"];
 export type EvaluatedStanding = Exclude<Standing, { posture: "not_evaluated" }>;
-export type EvaluationMode = EvaluatedStanding["mode"];
 export type Aqi = NonNullable<MapFacility["aqi"]>;
 export type AlertFeature = MapData["alerts"]["features"][number];
 export type AlertSeverity = AlertFeature["properties"]["severity"];
