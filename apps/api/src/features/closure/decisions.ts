@@ -193,4 +193,4 @@ export function createDecisionsModule(runRequest: RunRequest) {
     });
 }
 
-export { DECISIONS_PATH };
+export { DECISIONS_PATH, decisionNotFound, decisionNotFoundResponse };

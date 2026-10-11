@@ -19,6 +19,7 @@
               "apiLayer",
               "createApp",
               "createDecisionsModule",
+              "createDirectivesModule",
               "createFacilitiesModule",
               "createRecommendationsModule",
               "createNwsLiveModule",
@@ -102,6 +103,7 @@
       // high-entropy strings to the secret scanner.
       "includes": [
         "src/features/closure/decision-store.test.ts",
+        "src/features/closure/directive-store.test.ts",
         "src/features/closure/recommendation-store.test.ts"
       ],
       "linter": {
