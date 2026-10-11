@@ -12,6 +12,7 @@ READY_POLL_SECONDS=1
 STOP_POLL_SECONDS=0.5
 LOG_TAIL_LINES=40
 HOST="localhost"
+NWS_USER_AGENT_VALUE="(verify-hackmidwest, verify@example.com)"
 APP_TITLE="Hack Midwest tasks"
 TASKS_API_PATH="/api/tasks"
 TASKS_PAGE_PATH="/tasks"
@@ -84,6 +85,7 @@ cmd_up() {
   export WEB_ORIGIN="http://$HOST:$web_port"
   export DB_PATH="$dir/db.sqlite"
   export VITE_API_BASE_URL="http://$HOST:$api_port"
+  export NWS_USER_AGENT="$NWS_USER_AGENT_VALUE"
 
   if [[ "$storage" == "$STORAGE_BROKEN" ]]; then
     # The API opens a file the harness wrote, so every query fails without editing a real database.

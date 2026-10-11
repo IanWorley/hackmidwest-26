@@ -7,17 +7,29 @@ const MAX_TCP_PORT = 65_535;
 const HTTP_PROTOCOL = "http:";
 const HTTPS_PROTOCOL = "https:";
 const ORIGIN_PATH = "/";
+const MIN_USER_AGENT_LENGTH = 1;
 
 const EnvironmentSchema = t.Object({
   apiPort: t.String({ pattern: "^[0-9]+$" }),
   webOrigin: t.String(),
 });
+const NwsUserAgentSchema = t.String({ minLength: MIN_USER_AGENT_LENGTH });
 const PortSchema = t.Integer({ minimum: MIN_TCP_PORT, maximum: MAX_TCP_PORT });
 
 interface ApiConfig {
   readonly port: number;
   readonly webOrigin: string;
   readonly database: DatabaseLocation;
+  readonly nwsUserAgent: string;
+  readonly airNowApiKey: string | undefined;
+}
+
+/** Bun loads `KEY=` from .env as "", which means the key is not set. */
+function readOptional(value: string | undefined): string | undefined {
+  if (value === "") {
+    return undefined;
+  }
+  return value;
 }
 
 /** Fail startup before opening a connection or listener when configuration is invalid. */
@@ -46,6 +58,18 @@ export function readApiConfig(environment: NodeJS.ProcessEnv): ApiConfig {
       "WEB_ORIGIN must be an HTTP(S) origin without credentials or a path",
     );
   }
+  const nwsUserAgent = environment.NWS_USER_AGENT;
+  if (!Value.Check(NwsUserAgentSchema, nwsUserAgent)) {
+    throw new Error(
+      "NWS_USER_AGENT must be configured; NWS requires an app name and contact",
+    );
+  }
   const database = readDatabaseLocation(environment);
-  return { port, webOrigin: origin.origin, database };
+  return {
+    port,
+    webOrigin: origin.origin,
+    database,
+    nwsUserAgent,
+    airNowApiKey: readOptional(environment.AIRNOW_API_KEY),
+  };
 }

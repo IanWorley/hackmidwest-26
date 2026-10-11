@@ -69,6 +69,8 @@ bun run db:seed
 bun run dev
 ```
 
+Replace the placeholder `NWS_USER_AGENT` in `.env` with your own app name and contact. The API will not start without it.
+
 Open <http://localhost:3000/tasks>. The API serves `GET/POST /api/tasks` on <http://localhost:3001>. The agent API serves `GET /health` and `GET /tasks/summary` on <http://localhost:3002>, reading tasks from the API over HTTP.
 
 ## Commands
