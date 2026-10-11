@@ -25,6 +25,8 @@ const DEFER: DecisionRequest = {
   decidedById: 1,
   reason: { category: "road_reports", text: "Waiting on the county." },
 };
+/** Any id: these tests never change the recommendation under the dialog. */
+const RECOMMENDATION_ID = 1;
 const HELD_AT = "2026-01-15T11:15:00.000Z";
 const MS_PER_MINUTE = 60_000;
 const REVIEW_MINUTES = 5;
@@ -39,7 +41,9 @@ function startSubmit(
   record: Record,
   request: DecisionRequest,
 ): Promise<DecideOutcome> {
-  const { result } = renderHook(() => useConfirmedDecision(record));
+  const { result } = renderHook(() =>
+    useConfirmedDecision(record, RECOMMENDATION_ID),
+  );
   let pending: Promise<DecideOutcome> = Promise.resolve(RECORDED);
   act(() => {
     pending = result.current.submitDecision(request);

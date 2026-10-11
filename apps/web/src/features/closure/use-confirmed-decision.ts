@@ -51,8 +51,25 @@ function heldRequest(state: ConfirmState): DecisionRequest | null {
   return state.request;
 }
 
-export function useConfirmedDecision(submit: Submit): ConfirmedDecision {
+/**
+ * `recommendationId` is the recommendation `submit` records against. A reload onto another one
+ * drops a request still awaiting confirmation, because the manager reviewed it for the old one.
+ */
+export function useConfirmedDecision(
+  submit: Submit,
+  recommendationId: number,
+): ConfirmedDecision {
   const [state, setState] = useState<ConfirmState>({ kind: "idle" });
+  // Adjusting state during render, as the decision panel does, so the dialog never paints against
+  // the new recommendation. The held promise is left unsettled: the panel resets itself on the
+  // same change, so nothing is waiting on its answer.
+  const [heldFor, setHeldFor] = useState(recommendationId);
+  if (heldFor !== recommendationId) {
+    setHeldFor(recommendationId);
+    if (state.kind === "confirming") {
+      setState({ kind: "idle" });
+    }
+  }
 
   function submitDecision(request: DecisionRequest): Promise<DecideOutcome> {
     return new Promise((settle) => {
