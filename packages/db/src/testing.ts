@@ -1,10 +1,18 @@
-import { type DatabaseStore, openDatabase } from "./client";
+import {
+  type DatabaseLocation,
+  type DatabaseStore,
+  openDatabase,
+} from "./client";
 import { applyMigrations } from "./migrations";
 import { seedDemoFacilities } from "./seed";
 
-/** A fresh connection plus real migrations is the fixture; no SQL copy lives in tests. */
-export async function createTestDatabase(): Promise<DatabaseStore> {
-  const store = openDatabase({ kind: "memory" });
+const MEMORY: DatabaseLocation = { kind: "memory" };
+
+/** A fresh connection plus real migrations is the fixture; no SQL copy lives in tests. Pass a file location when a test needs more than one connection. */
+export async function createTestDatabase(
+  location: DatabaseLocation = MEMORY,
+): Promise<DatabaseStore> {
+  const store = openDatabase(location);
   try {
     await applyMigrations(store.db);
     return store;
@@ -15,8 +23,10 @@ export async function createTestDatabase(): Promise<DatabaseStore> {
 }
 
 /** The test database holding the same demo facilities `db:seed` writes. */
-export async function createTestDatabaseWithDemoFacilities(): Promise<DatabaseStore> {
-  const store = await createTestDatabase();
+export async function createTestDatabaseWithDemoFacilities(
+  location: DatabaseLocation = MEMORY,
+): Promise<DatabaseStore> {
+  const store = await createTestDatabase(location);
   try {
     await seedDemoFacilities(store.db);
     return store;
