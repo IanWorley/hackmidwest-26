@@ -76,12 +76,16 @@ function samplesFor(metric: NumericMetric, sources: SampleSources): Sample[] {
   }
 }
 
+/** Like a reading, a forecast issued after `now` is ignored so an as-of replay never sees it. */
 function forecastWindSamples({
   now,
   facilityDayEnd,
   forecast,
 }: SampleSources): Sample[] {
   const nowAt = parseInstant(now);
+  if (parseInstant(forecast.updateTime) > nowAt) {
+    return [];
+  }
   const input: InputRef = {
     kind: "forecast",
     source: "nws",
