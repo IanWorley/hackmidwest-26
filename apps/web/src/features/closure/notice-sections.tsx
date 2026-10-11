@@ -12,10 +12,12 @@ const CHAIN_HEADING = "Record chain";
 
 export function NotificationsSection({
   decisionId,
+  onReload,
   result,
   timezone,
 }: {
   decisionId: number;
+  onReload: () => Promise<void>;
   result: DecisionNotificationsResult;
   timezone: string;
 }): JSX.Element {
@@ -32,6 +34,7 @@ export function NotificationsSection({
           decisionId={decisionId}
           dispatch={dispatchDecision}
           initial={result.view}
+          onReload={onReload}
           timezone={timezone}
         />
       )}

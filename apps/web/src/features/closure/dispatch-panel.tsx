@@ -142,11 +142,14 @@ export function DispatchPanel({
   initial,
   timezone,
   dispatch,
+  onReload,
 }: {
   decisionId: number;
   initial: DecisionNotifications;
   timezone: string;
   dispatch: (decisionId: number) => Promise<DispatchResult>;
+  /** Called after a 409, since another tab dispatched or superseded this decision. */
+  onReload: () => Promise<void>;
 }): JSX.Element {
   const [local, setLocal] = useState<LocalOutcome | null>(null);
   const { state, view } = shownFor(local, decisionId, initial);
@@ -163,13 +166,14 @@ export function DispatchPanel({
       const result = await dispatch(decisionId);
       if (result.kind === "conflict") {
         settle({ kind: "conflict", conflict: result.conflict });
+        await onReload();
         return;
       }
       settle(READY, result.view);
     } catch {
       settle({ kind: "failed" });
     }
-  }, [dispatch, decisionId]);
+  }, [dispatch, decisionId, onReload]);
 
   let content = (
     <>

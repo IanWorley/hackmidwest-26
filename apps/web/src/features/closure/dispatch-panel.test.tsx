@@ -7,6 +7,8 @@ import { TIMEZONE, UNDISPATCHED } from "./notification-test-fixtures";
 
 const DECISION_ID = 21;
 
+const reloadNothing = vi.fn<() => Promise<void>>(() => Promise.resolve());
+
 const DISPATCHED: DispatchResult = {
   kind: "dispatched",
   view: {
@@ -39,6 +41,7 @@ it("dispatches the decision and shows each notice's lead time", async () => {
       decisionId={DECISION_ID}
       dispatch={dispatch}
       initial={UNDISPATCHED}
+      onReload={reloadNothing}
       timezone={TIMEZONE}
     />,
   );
@@ -71,7 +74,7 @@ it("dispatches the decision and shows each notice's lead time", async () => {
   ]);
 });
 
-it("shows why a decision cannot be dispatched", async () => {
+it("shows why a decision cannot be dispatched and reloads the screen", async () => {
   const dispatch = vi.fn(
     async (_id: number): Promise<DispatchResult> => ({
       kind: "conflict",
@@ -82,11 +85,13 @@ it("shows why a decision cannot be dispatched", async () => {
       },
     }),
   );
+  const onReload = vi.fn(reloadNothing);
   render(
     <DispatchPanel
       decisionId={DECISION_ID}
       dispatch={dispatch}
       initial={UNDISPATCHED}
+      onReload={onReload}
       timezone={TIMEZONE}
     />,
   );
@@ -97,6 +102,7 @@ it("shows why a decision cannot be dispatched", async () => {
 
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toBe("This decision was already dispatched");
+  await vi.waitFor(() => expect(onReload).toHaveBeenCalledTimes(1));
 });
 
 it("offers no dispatch when the package has nobody to tell", () => {
@@ -108,6 +114,7 @@ it("offers no dispatch when the package has nobody to tell", () => {
         ...UNDISPATCHED,
         package: { ...UNDISPATCHED.package, recipients: [] },
       }}
+      onReload={reloadNothing}
       timezone={TIMEZONE}
     />,
   );
@@ -126,6 +133,7 @@ it("starts fresh when the page reloads with a newer decision", async () => {
         decisionId={decisionId}
         dispatch={dispatch}
         initial={UNDISPATCHED}
+        onReload={reloadNothing}
         timezone={TIMEZONE}
       />
     );
