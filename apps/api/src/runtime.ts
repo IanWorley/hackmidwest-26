@@ -1,6 +1,7 @@
 import type { Database as DrizzleDatabase } from "@hackmidwest/db";
 import { Context, Effect, Layer, ManagedRuntime } from "effect";
 import { type ElysiaCustomStatusResponse, status, t } from "elysia";
+import type { NwpsClientShape } from "./clients/nwps";
 import type { NwsClientShape } from "./clients/nws";
 import type { OpenMeteoClientShape } from "./clients/open-meteo";
 
@@ -12,6 +13,7 @@ type InternalServerFailure = ElysiaCustomStatusResponse<
 /** Outbound API clients the process builds once and every request shares. */
 interface ApiClients {
   readonly nws: NwsClientShape;
+  readonly nwps: NwpsClientShape;
   readonly openMeteo: OpenMeteoClientShape;
 }
 
@@ -19,6 +21,7 @@ function apiLayer(db: DrizzleDatabase, clients: ApiClients) {
   return Layer.mergeAll(
     Layer.succeed(Database, db),
     Layer.succeed(NwsClient, clients.nws),
+    Layer.succeed(NwpsClient, clients.nwps),
     Layer.succeed(OpenMeteoClient, clients.openMeteo),
   );
 }
@@ -29,6 +32,10 @@ export class Database extends Context.Service<Database, DrizzleDatabase>()(
 
 export class NwsClient extends Context.Service<NwsClient, NwsClientShape>()(
   "@hackmidwest/api/NwsClient",
+) {}
+
+export class NwpsClient extends Context.Service<NwpsClient, NwpsClientShape>()(
+  "@hackmidwest/api/NwpsClient",
 ) {}
 
 export class OpenMeteoClient extends Context.Service<
