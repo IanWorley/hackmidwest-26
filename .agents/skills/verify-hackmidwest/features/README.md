@@ -46,6 +46,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [Home page](./home-navigation.md) covers the landing links, the header navigation, and client-side navigation to the task list.
 - [Task list](./tasks-list.md) covers the server-rendered `/tasks` page, its ordering, and completion state.
 - [Facility list and detail](./facilities-list.md) covers the server-rendered `/facilities` page, the link from each row to `/facilities/<id>`, the not-found page, and `GET /api/facilities` and `GET /api/facilities/:id`.
+- [Decision screen](./decision-screen.md) covers the decision UI on `/facilities/<id>`: the live recommendation and countdown, Re-evaluate, Accept / Override / Defer with the Recorded-by select, directives, the stale-view alerts, and `GET /api/facilities/:id/recorders` and `GET /api/facilities/:id/buildings`.
 - [Create a task](./create-task.md) covers `POST /api/tasks`, its validation, and seeing the new task on `/tasks`.
 - [Agent API](./agent-api.md) covers the separate agent API: its `GET /health` liveness and its `GET /tasks/summary` read of the tasks API over HTTP.
 - [Recommendations](./recommendations.md) covers `POST /api/facilities/:id/recommendations` (live and as-of), the latest and by-id reads, replay, and the stored add-only row.

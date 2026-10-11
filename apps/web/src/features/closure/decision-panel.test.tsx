@@ -13,7 +13,7 @@ const RECORDERS: Recorder[] = [
 
 function renderPanel(
   outcome: DecideOutcome,
-  currentDecisionId: number | undefined,
+  currentDecisionId?: number,
 ): {
   submitDecision: ReturnType<
     typeof vi.fn<(r: DecisionRequest) => Promise<DecideOutcome>>
