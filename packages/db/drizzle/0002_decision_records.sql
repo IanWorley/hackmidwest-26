@@ -6,6 +6,8 @@ CREATE TABLE `decisions` (
 	`action` text NOT NULL,
 	`chosen_posture` text,
 	`decided_by_id` integer NOT NULL,
+	`decided_by_name` text NOT NULL,
+	`decided_by_role` text NOT NULL,
 	`decided_at` text NOT NULL,
 	`minutes_before_decide_by` integer NOT NULL,
 	`identity_verified` integer NOT NULL,
@@ -17,6 +19,8 @@ CREATE TABLE `decisions` (
 	FOREIGN KEY (`facility_id`) REFERENCES `facilities`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`decided_by_id`) REFERENCES `decision_makers`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`supersedes_decision_id`) REFERENCES `decisions`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "decisions_decided_by_name_not_blank" CHECK(trim("decisions"."decided_by_name", char(32, 9, 10, 11, 12, 13)) <> ''),
+	CONSTRAINT "decisions_decided_by_role_not_blank" CHECK(trim("decisions"."decided_by_role", char(32, 9, 10, 11, 12, 13)) <> ''),
 	CONSTRAINT "decisions_recommendation_hash_sha256" CHECK(length("decisions"."recommendation_hash") = 64 and "decisions"."recommendation_hash" not glob '*[^0-9a-f]*'),
 	CONSTRAINT "decisions_action" CHECK("decisions"."action" in ('accept', 'override', 'defer', 'no_decision')),
 	CONSTRAINT "decisions_chosen_posture" CHECK(("decisions"."chosen_posture" is not null) = ("decisions"."action" in ('accept', 'override')) and ("decisions"."chosen_posture" is null or "decisions"."chosen_posture" in ('normal', 'delayed_arrival', 'early_dismissal', 'unscheduled_telework', 'full_closure'))),
@@ -29,6 +33,8 @@ CREATE TABLE `decisions` (
 	CONSTRAINT "decisions_content_hash_sha256" CHECK(length("decisions"."content_hash") = 64 and "decisions"."content_hash" not glob '*[^0-9a-f]*')
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `decisions_one_root_per_recommendation` ON `decisions` (`recommendation_id`) WHERE "decisions"."supersedes_decision_id" is null;--> statement-breakpoint
+CREATE UNIQUE INDEX `decisions_one_successor` ON `decisions` (`supersedes_decision_id`);--> statement-breakpoint
 CREATE TABLE `human_inputs` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`decision_id` integer NOT NULL,
@@ -112,6 +118,19 @@ CREATE TRIGGER `decisions_keep_existing` BEFORE INSERT ON `decisions`
 WHEN EXISTS (SELECT 1 FROM `decisions` WHERE `id` = NEW.`id`)
 BEGIN
 	SELECT RAISE(IGNORE);
+END;
+--> statement-breakpoint
+-- REPLACE resolves the chain's unique indexes by deleting the conflicting decision, so a second root or successor aborts before that can happen.
+CREATE TRIGGER `decisions_reject_second_root` BEFORE INSERT ON `decisions`
+WHEN NEW.`supersedes_decision_id` IS NULL AND EXISTS (SELECT 1 FROM `decisions` WHERE `recommendation_id` = NEW.`recommendation_id` AND `supersedes_decision_id` IS NULL)
+BEGIN
+	SELECT RAISE(ABORT, 'decisions is add-only: this recommendation already has a decision; supersede it instead');
+END;
+--> statement-breakpoint
+CREATE TRIGGER `decisions_reject_second_successor` BEFORE INSERT ON `decisions`
+WHEN NEW.`supersedes_decision_id` IS NOT NULL AND EXISTS (SELECT 1 FROM `decisions` WHERE `supersedes_decision_id` = NEW.`supersedes_decision_id`)
+BEGIN
+	SELECT RAISE(ABORT, 'decisions is add-only: this decision is already superseded; supersede the newest decision instead');
 END;
 --> statement-breakpoint
 CREATE TRIGGER `notification_dispatches_reject_update` BEFORE UPDATE ON `notification_dispatches`

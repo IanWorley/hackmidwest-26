@@ -31,20 +31,25 @@ const DECIDE_BY = "2026-10-02T11:00:00.000Z";
 const MINUTES_BEFORE_DECIDE_BY = 30;
 const SEND_BY = "2026-10-02T11:30:00.000Z";
 const RECORDED_AT = "2026-10-02T10:35:00.000Z";
+const DECIDER_NAME = "Dana Whitfield";
+const DECIDER_ROLE = "Facility Director";
+const REPLACEMENT_DECISION_ID = 2;
+
+const RECOMMENDATION = {
+  id: RECOMMENDATION_ID,
+  facilityId: SEEDED_FACILITY_ID,
+  evaluatedAt: EVALUATED_AT,
+  asOf: AS_OF,
+  posture: "delayed_arrival",
+  confidence: "medium",
+  decideBy: DECIDE_BY,
+  snapshot: { posture: "delayed_arrival" },
+  contentHash: RECOMMENDATION_HASH,
+} as const;
 
 async function insertDecisionRecordChain(db: Database): Promise<void> {
   await seedDemoFacilities(db);
-  await db.insert(recommendations).values({
-    id: RECOMMENDATION_ID,
-    facilityId: SEEDED_FACILITY_ID,
-    evaluatedAt: EVALUATED_AT,
-    asOf: AS_OF,
-    posture: "delayed_arrival",
-    confidence: "medium",
-    decideBy: DECIDE_BY,
-    snapshot: { posture: "delayed_arrival" },
-    contentHash: RECOMMENDATION_HASH,
-  });
+  await db.insert(recommendations).values(RECOMMENDATION);
   await db.insert(decisions).values({
     id: DECISION_ID,
     recommendationId: RECOMMENDATION_ID,
@@ -53,6 +58,8 @@ async function insertDecisionRecordChain(db: Database): Promise<void> {
     action: "accept",
     chosenPosture: "delayed_arrival",
     decidedById: SEEDED_DECISION_MAKER_ID,
+    decidedByName: DECIDER_NAME,
+    decidedByRole: DECIDER_ROLE,
     decidedAt: DECIDED_AT,
     minutesBeforeDecideBy: MINUTES_BEFORE_DECIDE_BY,
     identityVerified: false,
@@ -148,7 +155,8 @@ it.each(ADD_ONLY_TABLES)(
 it("rejects an override decision without a reason", async () => {
   const store = await createTestDatabase();
   try {
-    await insertDecisionRecordChain(store.db);
+    await seedDemoFacilities(store.db);
+    await store.db.insert(recommendations).values(RECOMMENDATION);
 
     await expect(
       store.db
@@ -160,6 +168,8 @@ it("rejects an override decision without a reason", async () => {
           action: "override",
           chosenPosture: "full_closure",
           decidedById: SEEDED_DECISION_MAKER_ID,
+          decidedByName: DECIDER_NAME,
+          decidedByRole: DECIDER_ROLE,
           decidedAt: DECIDED_AT,
           minutesBeforeDecideBy: MINUTES_BEFORE_DECIDE_BY,
           identityVerified: false,
@@ -191,6 +201,64 @@ it("rejects an INSERT OR REPLACE that dispatches the same decision to the same r
       cause: {
         message: expect.stringContaining(
           "notification_dispatches is add-only: this decision was already dispatched to this recipient",
+        ),
+      },
+    });
+  } finally {
+    store.close();
+  }
+});
+
+it("rejects an INSERT OR REPLACE that adds a second root decision for a recommendation", async () => {
+  const store = await createTestDatabase();
+  try {
+    await insertDecisionRecordChain(store.db);
+
+    await expect(
+      store.db.run(
+        sql`insert or replace into decisions (id, recommendation_id, recommendation_hash, facility_id, action, chosen_posture, decided_by_id, decided_by_name, decided_by_role, decided_at, minutes_before_decide_by, identity_verified, content_hash) values (${REPLACEMENT_DECISION_ID}, ${RECOMMENDATION_ID}, ${RECOMMENDATION_HASH}, ${SEEDED_FACILITY_ID}, 'accept', 'delayed_arrival', ${SEEDED_DECISION_MAKER_ID}, ${DECIDER_NAME}, ${DECIDER_ROLE}, ${DECIDED_AT}, ${MINUTES_BEFORE_DECIDE_BY}, 0, ${DECISION_HASH})`,
+      ),
+    ).rejects.toMatchObject({
+      cause: {
+        message: expect.stringContaining(
+          "decisions is add-only: this recommendation already has a decision; supersede it instead",
+        ),
+      },
+    });
+  } finally {
+    store.close();
+  }
+});
+
+it("rejects a second decision that supersedes an already superseded decision", async () => {
+  const store = await createTestDatabase();
+  try {
+    await insertDecisionRecordChain(store.db);
+    const correction = {
+      recommendationId: RECOMMENDATION_ID,
+      recommendationHash: RECOMMENDATION_HASH,
+      facilityId: SEEDED_FACILITY_ID,
+      action: "override",
+      chosenPosture: "full_closure",
+      decidedById: SEEDED_DECISION_MAKER_ID,
+      decidedByName: DECIDER_NAME,
+      decidedByRole: DECIDER_ROLE,
+      decidedAt: DECIDED_AT,
+      minutesBeforeDecideBy: MINUTES_BEFORE_DECIDE_BY,
+      identityVerified: false,
+      reasonCategory: "road_reports",
+      reasonText: "County reports the highway closed.",
+      supersedesDecisionId: DECISION_ID,
+      contentHash: DECISION_HASH,
+    } as const;
+    await store.db.insert(decisions).values(correction);
+
+    await expect(
+      store.db.insert(decisions).values(correction).execute(),
+    ).rejects.toMatchObject({
+      cause: {
+        message: expect.stringContaining(
+          "decisions is add-only: this decision is already superseded; supersede the newest decision instead",
         ),
       },
     });

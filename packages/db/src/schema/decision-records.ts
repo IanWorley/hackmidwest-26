@@ -1,4 +1,4 @@
-import { inArray, isNotNull, sql } from "drizzle-orm";
+import { inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   type AnySQLiteColumn,
   check,
@@ -99,7 +99,7 @@ export const recommendations = sqliteTable(
   ],
 );
 
-/** Add-only: migration triggers reject UPDATE and DELETE and drop an insert that reuses an id, so a changed decision is a newer row that supersedes it. */
+/** Add-only: migration triggers reject UPDATE and DELETE and drop an insert that reuses an id, so a changed decision is a newer row that supersedes it. Each recommendation has one root decision and each decision at most one successor, so a facility has a single current decision. The decider's name and role are copied in because decision_makers rows can change later. */
 export const decisions = sqliteTable(
   "decisions",
   {
@@ -116,6 +116,8 @@ export const decisions = sqliteTable(
     decidedById: integer("decided_by_id")
       .notNull()
       .references(() => decisionMakers.id),
+    decidedByName: text("decided_by_name").notNull(),
+    decidedByRole: text("decided_by_role").notNull(),
     decidedAt: text("decided_at").notNull(),
     // Negative when the decision came after decideBy.
     minutesBeforeDecideBy: integer("minutes_before_decide_by").notNull(),
@@ -130,6 +132,11 @@ export const decisions = sqliteTable(
     contentHash: text("content_hash").notNull(),
   },
   (table) => [
+    uniqueIndex("decisions_one_root_per_recommendation")
+      .on(table.recommendationId)
+      .where(isNull(table.supersedesDecisionId)),
+    uniqueIndex("decisions_one_successor").on(table.supersedesDecisionId),
+    ...nonBlankChecks("decisions", table.decidedByName, table.decidedByRole),
     check(
       "decisions_recommendation_hash_sha256",
       isSha256Hex(table.recommendationHash),

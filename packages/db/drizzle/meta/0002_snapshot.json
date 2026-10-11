@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e3b2684d-e711-4af9-baab-caf7a19972d3",
+  "id": "512ccee3-4878-4ca3-a469-12fcdd80901f",
   "prevId": "afd4268a-b374-43a2-94cc-ac98cefaece5",
   "tables": {
     "building_roster_entries": {
@@ -215,6 +215,20 @@
           "notNull": true,
           "autoincrement": false
         },
+        "decided_by_name": {
+          "name": "decided_by_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decided_by_role": {
+          "name": "decided_by_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "decided_at": {
           "name": "decided_at",
           "type": "text",
@@ -265,7 +279,19 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "decisions_one_root_per_recommendation": {
+          "name": "decisions_one_root_per_recommendation",
+          "columns": ["recommendation_id"],
+          "isUnique": true,
+          "where": "\"decisions\".\"supersedes_decision_id\" is null"
+        },
+        "decisions_one_successor": {
+          "name": "decisions_one_successor",
+          "columns": ["supersedes_decision_id"],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "decisions_recommendation_id_recommendations_id_fk": {
           "name": "decisions_recommendation_id_recommendations_id_fk",
@@ -307,6 +333,14 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
+        "decisions_decided_by_name_not_blank": {
+          "name": "decisions_decided_by_name_not_blank",
+          "value": "trim(\"decisions\".\"decided_by_name\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "decisions_decided_by_role_not_blank": {
+          "name": "decisions_decided_by_role_not_blank",
+          "value": "trim(\"decisions\".\"decided_by_role\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
         "decisions_recommendation_hash_sha256": {
           "name": "decisions_recommendation_hash_sha256",
           "value": "length(\"decisions\".\"recommendation_hash\") = 64 and \"decisions\".\"recommendation_hash\" not glob '*[^0-9a-f]*'"
