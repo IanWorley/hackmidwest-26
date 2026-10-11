@@ -81,6 +81,24 @@ it("prefers the later of two directives with equal specificity", () => {
   expect(winningDirective(ESSENTIAL, true, [later, earlier], NOW)).toBe(later);
 });
 
+it("breaks a tie of equal specificity and issuedAt toward the higher id", () => {
+  const lower = directive({
+    id: 1,
+    scope: { kind: "facility" },
+    directive: "telework",
+  });
+  const higher = directive({
+    id: 2,
+    scope: { kind: "facility" },
+    directive: "report",
+  });
+
+  expect([
+    winningDirective(ESSENTIAL, true, [lower, higher], NOW),
+    winningDirective(ESSENTIAL, true, [higher, lower], NOW),
+  ]).toEqual([higher, higher]);
+});
+
 it("ignores a directive issued after now", () => {
   const issued = directive({
     id: 1,
