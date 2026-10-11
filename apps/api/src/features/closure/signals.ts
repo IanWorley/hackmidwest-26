@@ -4,15 +4,18 @@ import { currentAlerts, type HazardEvidence } from "./hazard-window";
 import type { Reading } from "./readings";
 import type { NwsSeverity, WindMetric } from "./thresholds";
 import { TIMING_POLICY } from "./timing-policy";
-import { MS_PER_MINUTE, parseInstant, toInstant, toIso } from "./zoned-time";
+import {
+  type IsoInstant,
+  MS_PER_MINUTE,
+  parseInstant,
+  toInstant,
+  toIso,
+} from "./zoned-time";
 
-/** International mile, exact by definition. */
 const KMH_PER_MPH = 1.609_344;
 /** "15 mph" or "10 to 20 mph". Anything else ("Calm", null) yields no signal. */
 const FORECAST_WIND_PATTERN = /^(?<low>\d+)(?: to (?<high>\d+))? mph$/u;
 
-/** ISO-8601 instant, as produced by `Date#toISOString`. */
-type IsoInstant = string;
 type NonEmpty<T> = readonly [T, ...T[]];
 type Period = HazardEvidence["exceedingPeriods"][number];
 type ReadingInput = Exclude<InputKind, "forecast">;
@@ -31,7 +34,6 @@ type Quantity =
     }
   | { readonly unit: "aqi"; readonly value: number };
 
-/** Where a signal came from and the time it covers. */
 type Origin =
   | {
       readonly source: "alerts";

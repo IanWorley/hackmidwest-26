@@ -5,6 +5,8 @@ const TIME_PART_WIDTH = 2;
 declare const instantBrand: unique symbol;
 /** UTC epoch milliseconds. Internal to the closure engine: its public surface speaks ISO strings. */
 type Instant = number & { readonly [instantBrand]: true };
+/** ISO-8601 instant, as produced by `Date#toISOString`. */
+type IsoInstant = string;
 
 interface CalendarDate {
   readonly year: number;
@@ -126,7 +128,7 @@ function pad(value: number): string {
   return String(value).padStart(TIME_PART_WIDTH, "0");
 }
 
-export type { CalendarDate, Instant };
+export type { CalendarDate, Instant, IsoInstant };
 export {
   addDays,
   calendarDate,

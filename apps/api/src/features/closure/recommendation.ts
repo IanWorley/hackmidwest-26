@@ -4,11 +4,9 @@ import type { InputKind, StaleInput } from "./freshness";
 import type { EndBasis } from "./hazard-window";
 import type { WindMetric } from "./thresholds";
 import type { OpmStatus, TimingResult } from "./timing";
+import type { IsoInstant } from "./zoned-time";
 
 const MINUTES_PER_HOUR = 60;
-
-/** ISO-8601 instant, as produced by `Date#toISOString`. */
-type IsoInstant = string;
 
 interface Finding extends Exceedance {
   readonly timing: TimingResult;
