@@ -13,7 +13,7 @@ import {
 interface NoticeScreen {
   /** Who the latest recommendation would notify; null when there is none or it cannot be built. */
   readonly preview: NotificationPreview | null;
-  /** The package for the decision in force, the facility's newest, or why it has none. */
+  /** The package for the facility's current decision, as the server reports it, or why it has none. */
   readonly current: {
     readonly decisionId: number;
     readonly result: DecisionNotificationsResult;
@@ -24,9 +24,11 @@ interface NoticeScreen {
   readonly decidedRecommendation: Recommendation | null;
 }
 
-/** The screen fields notices depend on: which recommendation is latest and which decision is newest. */
+/** The screen fields notices depend on: the latest recommendation, the current decision, and the history. */
 interface NoticeSources {
   readonly latestRecommendation: { readonly id: number } | null;
+  /** The server's current decision for today's facility day; it can outlive a re-evaluation. */
+  readonly currentDecision: { readonly id: number } | null;
   /** Newest first. */
   readonly history: readonly {
     readonly id: number;
@@ -63,7 +65,7 @@ function whenPresent<Value, Loaded>(
 }
 
 async function loadNoticeScreen(
-  { latestRecommendation, history }: NoticeSources,
+  { latestRecommendation, currentDecision, history }: NoticeSources,
   signal: AbortSignal,
 ): Promise<NoticeScreen> {
   const [newest] = history;
@@ -78,7 +80,7 @@ async function loadNoticeScreen(
   const [preview, current, verification, decidedRecommendation] =
     await Promise.all([
       previewOrNull(latestRecommendation, signal),
-      whenPresent(newest, async ({ id }) => ({
+      whenPresent(currentDecision, async ({ id }) => ({
         decisionId: id,
         result: await loadDecisionNotifications({ decisionId: id, signal }),
       })),

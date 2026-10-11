@@ -142,6 +142,7 @@ it("reloads once the facility day rolls over at closing time", () => {
   const onReload = vi.fn<() => Promise<void>>(() => Promise.resolve());
   render(
     <DecisionScreenView
+      notices={NO_NOTICES}
       onReload={onReload}
       screen={{
         ...SCREEN,
@@ -159,6 +160,7 @@ it("reloads once the facility day rolls over at closing time", () => {
 it("keeps the standing decision and its directives after a same-day re-evaluation", () => {
   render(
     <DecisionScreenView
+      notices={NO_NOTICES}
       onReload={reloadNothing}
       screen={{
         ...SCREEN,
