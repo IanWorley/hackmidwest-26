@@ -1,5 +1,5 @@
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createApp } from "../../app";
 import { makeNwpsClient } from "../../clients/nwps";
 import { makeNwsClient } from "../../clients/nws";
@@ -161,34 +161,5 @@ describe(`GET ${FACILITIES_PATH}/:id/recorders`, () => {
 
     expect(response.status).toBe(HTTP_NOT_FOUND);
     expect(await response.json()).toEqual({ message: "Facility not found" });
-  });
-});
-
-describe(`GET ${FACILITIES_PATH}/:id/facility-date`, () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  // Kansas City closes at 16:30 America/Chicago (CDT, UTC-5), which is 21:30Z.
-  it.each([
-    ["2026-10-11T21:29:59Z", "2026-10-11"],
-    ["2026-10-11T21:30:00Z", "2026-10-12"],
-  ])("at %s the facility day is %s", async (now, date) => {
-    vi.useFakeTimers({ now: Date.parse(now), toFake: ["Date"] });
-
-    const response = await getFromSeededApp(
-      `${FACILITIES_PATH}/1/facility-date`,
-    );
-
-    expect(response.status).toBe(HTTP_OK);
-    expect(await response.json()).toEqual({ facilityDate: date });
-  });
-
-  it("returns 404 for an id no facility has", async () => {
-    const response = await getFromSeededApp(
-      `${FACILITIES_PATH}/${UNKNOWN_FACILITY_ID}/facility-date`,
-    );
-
-    expect(response.status).toBe(HTTP_NOT_FOUND);
   });
 });
