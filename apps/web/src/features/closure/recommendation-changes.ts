@@ -1,6 +1,6 @@
 import type { Recommendation } from "./notification-api";
 
-type Posture = Recommendation["posture"];
+type OpmStatus = Recommendation["snapshot"]["output"]["status"];
 type Confidence = Recommendation["confidence"];
 type Finding = Recommendation["snapshot"]["output"]["findings"][number];
 type HazardWindow = Pick<Finding["timing"]["hazardWindow"], "start" | "end">;
@@ -8,11 +8,12 @@ type HazardWindow = Pick<Finding["timing"]["hazardWindow"], "start" | "end">;
 /** Only the fields the diff reads, so a full record and a test fixture both fit. */
 interface ComparedRecommendation {
   readonly id: number;
-  readonly posture: Posture;
   readonly confidence: Confidence;
   readonly snapshot: {
     readonly output: {
       readonly facilityDate: string;
+      /** The posture with its delay or release time, so a changed time counts as a change. */
+      readonly status: OpmStatus;
       readonly findings: readonly {
         readonly timing: { readonly hazardWindow: HazardWindow };
       }[];
@@ -21,7 +22,11 @@ interface ComparedRecommendation {
 }
 
 type RecommendationChange =
-  | { readonly field: "posture"; readonly from: Posture; readonly to: Posture }
+  | {
+      readonly field: "posture";
+      readonly from: OpmStatus;
+      readonly to: OpmStatus;
+    }
   | {
       readonly field: "confidence";
       readonly from: Confidence;
@@ -43,6 +48,19 @@ function hazardWindowOf(record: ComparedRecommendation): HazardWindow | null {
   return { start, end };
 }
 
+function sameStatus(left: OpmStatus, right: OpmStatus): boolean {
+  switch (left.posture) {
+    case "delayed_arrival":
+      return (
+        right.posture === left.posture && right.delayHours === left.delayHours
+      );
+    case "early_dismissal":
+      return right.posture === left.posture && right.departAt === left.departAt;
+    default:
+      return right.posture === left.posture;
+  }
+}
+
 function sameWindow(
   left: HazardWindow | null,
   right: HazardWindow | null,
@@ -55,12 +73,10 @@ function recommendationChanges(
   latest: ComparedRecommendation,
 ): RecommendationChange[] {
   const changes: RecommendationChange[] = [];
-  if (decided.posture !== latest.posture) {
-    changes.push({
-      field: "posture",
-      from: decided.posture,
-      to: latest.posture,
-    });
+  const fromStatus = decided.snapshot.output.status;
+  const toStatus = latest.snapshot.output.status;
+  if (!sameStatus(fromStatus, toStatus)) {
+    changes.push({ field: "posture", from: fromStatus, to: toStatus });
   }
   if (decided.confidence !== latest.confidence) {
     changes.push({

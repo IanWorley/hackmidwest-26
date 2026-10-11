@@ -8,11 +8,11 @@ import {
 
 const DECIDED: ComparedRecommendation = {
   id: 7,
-  posture: "delayed_arrival",
   confidence: "medium",
   snapshot: {
     output: {
       facilityDate: "2026-01-15",
+      status: { posture: "delayed_arrival", delayHours: 2 },
       findings: [
         {
           timing: {
@@ -29,14 +29,23 @@ const DECIDED: ComparedRecommendation = {
 
 const LATEST: ComparedRecommendation = {
   id: 9,
-  posture: "full_closure",
   confidence: "high",
-  snapshot: { output: { facilityDate: "2026-01-15", findings: [] } },
+  snapshot: {
+    output: {
+      facilityDate: "2026-01-15",
+      status: { posture: "full_closure" },
+      findings: [],
+    },
+  },
 };
 
 it("reports the posture, confidence, and hazard-window changes between two recommendations", () => {
   expect(recommendationChanges(DECIDED, LATEST)).toEqual([
-    { field: "posture", from: "delayed_arrival", to: "full_closure" },
+    {
+      field: "posture",
+      from: { posture: "delayed_arrival", delayHours: 2 },
+      to: { posture: "full_closure" },
+    },
     { field: "confidence", from: "medium", to: "high" },
     {
       field: "hazardWindow",
@@ -70,5 +79,36 @@ it("says the newer recommendation matches when nothing it shows changed", () => 
   );
   expect(screen.getByRole("status").textContent).toBe(
     "A newer recommendation is availablePosture, confidence, and hazard window match the recommendation you decided on.Your decision is unchanged. Record a new decision to act on it.",
+  );
+});
+
+/** An early-dismissal recommendation releasing at the given time, otherwise the decided one. */
+function dismissingAt(
+  id: number,
+  departAt: string,
+  departAtLocal: string,
+): ComparedRecommendation {
+  return {
+    ...DECIDED,
+    id,
+    snapshot: {
+      output: {
+        ...DECIDED.snapshot.output,
+        status: { posture: "early_dismissal", departAt, departAtLocal },
+      },
+    },
+  };
+}
+
+it("lists a changed release time even when both recommendations dismiss early", () => {
+  render(
+    <NewerRecommendationBanner
+      decided={dismissingAt(DECIDED.id, "2026-01-15T20:00:00.000Z", "14:00")}
+      latest={dismissingAt(LATEST.id, "2026-01-15T18:00:00.000Z", "12:00")}
+      timezone="America/Chicago"
+    />,
+  );
+  expect(screen.getByRole("list", { name: "What changed" }).textContent).toBe(
+    "Posture: Early dismissal at 14:00 → Early dismissal at 12:00",
   );
 });

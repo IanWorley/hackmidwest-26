@@ -1,7 +1,6 @@
 import type { JSX } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { facilityClock } from "./facility-clock";
-import { POSTURE_LABELS } from "./labels";
 import {
   type ComparedRecommendation,
   type Confidence,
@@ -9,6 +8,7 @@ import {
   type RecommendationChange,
   recommendationChanges,
 } from "./recommendation-changes";
+import { statusText } from "./recommendation-text";
 
 const TITLE = "A newer recommendation is available";
 const UNCHANGED_TEXT =
@@ -75,7 +75,7 @@ function changeText(
 ): string {
   switch (change.field) {
     case "posture":
-      return `${POSTURE_LABELS[change.from]} ${ARROW} ${POSTURE_LABELS[change.to]}`;
+      return `${statusText(change.from)} ${ARROW} ${statusText(change.to)}`;
     case "confidence":
       return `${CONFIDENCE_LABELS[change.from]} ${ARROW} ${CONFIDENCE_LABELS[change.to]}`;
     case "hazardWindow":
