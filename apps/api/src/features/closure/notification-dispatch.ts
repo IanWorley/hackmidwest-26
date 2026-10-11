@@ -1,5 +1,5 @@
 import { notificationDispatches } from "@hackmidwest/db";
-import { Data, DateTime, Effect, Option } from "effect";
+import { Data, DateTime, Effect, Option, Semaphore } from "effect";
 import { Database } from "../../runtime";
 import type { RecordContent } from "./decision-chain";
 import { parseDecimalId } from "./facilities";
@@ -36,6 +36,11 @@ class NotificationStoreError extends Data.TaggedError(
   readonly operation: "preview" | "read" | "dispatch";
   readonly cause: unknown;
 }> {}
+
+// As with missed-decision writes in decisions.ts: libsql gives each transaction its own connection
+// with no busy timeout, so a second concurrent dispatch would fail on the write lock with a 500
+// instead of reading the first one's rows and answering already_dispatched.
+const dispatchWrites = Semaphore.makeUnsafe(1);
 
 const DECISION_NOT_FOUND: DecisionNotificationsOutcome = {
   kind: "decision_not_found",
@@ -174,7 +179,8 @@ const decisionNotifications = Effect.fn("decisionNotifications")(function* (
   if (facts === undefined) {
     return DECISION_NOT_FOUND;
   }
-  const planned = decidedPackage(facts, now);
+  // A dispatched package is rebuilt as of its dispatch, so its wording matches what was recorded.
+  const planned = decidedPackage(facts, facts.dispatches[0]?.recordedAt ?? now);
   if (planned.kind === "conflict") {
     return planned;
   }
@@ -199,7 +205,7 @@ const dispatchNotifications = Effect.fn("dispatchNotifications")(function* (
       db.transaction((tx) => dispatchInTransaction(tx, decisionId.value, now)),
     catch: (cause) =>
       new NotificationStoreError({ operation: "dispatch", cause }),
-  });
+  }).pipe(Semaphore.withPermit(dispatchWrites));
 });
 
 export type { DecisionNotificationsOutcome };
