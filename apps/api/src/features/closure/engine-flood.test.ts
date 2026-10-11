@@ -109,3 +109,12 @@ it("holds a river still above major stage at its last point instead of clearing 
     ).status,
   ).toEqual({ posture: "full_closure" });
 });
+
+it("counts a gauge with forecast stages but no observation as a present input", () => {
+  const gauge = river(CREST_FT.atModerate);
+  expect(
+    evaluatePosture(
+      input(["flood"], { gauge: gauge && { ...gauge, observed: null } }),
+    ).confidence.reasons,
+  ).toEqual([{ kind: "endBasis", endBasis: "forecast" }]);
+});
