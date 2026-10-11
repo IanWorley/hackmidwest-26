@@ -1,5 +1,6 @@
 import { decisions, facilities, recommendations } from "@hackmidwest/db";
-import { asc, inArray, max } from "drizzle-orm";
+import { and, asc, eq, inArray, max, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { createSchemaFactory } from "drizzle-typebox";
 import { Cache, Data, Effect, Option } from "effect";
 import { Elysia, t } from "elysia";
@@ -16,7 +17,7 @@ import {
   makeLiveConditionsCache,
 } from "./map-live";
 import { postureSchema } from "./postures";
-import { LIVE_RECOMMENDATION } from "./recommendation-mode";
+import { LIVE_RECOMMENDATION, NEWEST_FIRST } from "./recommendation-mode";
 
 const MAP_PATH = "/api/map";
 
@@ -92,16 +93,35 @@ function standingsByFacility(
   );
 }
 
+const candidate = alias(recommendations, "candidate");
+
+/** The candidate row is its facility's current recommendation under the same order `findLatestRecommendation` uses. */
+function isCurrentRecommendation(db: Db): SQL {
+  return eq(
+    candidate.id,
+    db
+      .select({ id: recommendations.id })
+      .from(recommendations)
+      .where(
+        and(
+          eq(recommendations.facilityId, candidate.facilityId),
+          LIVE_RECOMMENDATION,
+        ),
+      )
+      .orderBy(...NEWEST_FIRST)
+      .limit(1),
+  );
+}
+
 /**
- * Facilities by name, each with its newest live recommendation, the one `findLatestRecommendation`
+ * Facilities by name, each with its current live recommendation (latest evaluation time), the one `findLatestRecommendation`
  * returns and a decision is about, and the newest decision on it. Previews never become a standing.
  */
 async function queryStandings(db: Db): Promise<FacilityStanding[]> {
   const latestIds = db
-    .select({ id: max(recommendations.id) })
-    .from(recommendations)
-    .where(LIVE_RECOMMENDATION)
-    .groupBy(recommendations.facilityId);
+    .select({ id: candidate.id })
+    .from(candidate)
+    .where(isCurrentRecommendation(db));
   const tipIds = db
     .select({ id: max(decisions.id) })
     .from(decisions)

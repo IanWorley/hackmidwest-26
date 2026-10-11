@@ -23,6 +23,8 @@ import {
 } from "./recommendation-test-app";
 
 const DEMO_FACILITY_COUNT = 4;
+/** Earlier than the test app's clock, for an evaluation that read the clock first but stored second. */
+const EARLIER_CLOCK = "2026-01-14T09:00:00.000Z";
 const KANSAS_CITY_ID = 1;
 const KANSAS_CITY_DECIDER = 1;
 const DECISIONS_PATH = "/api/recommendations/1/decisions";
@@ -229,4 +231,25 @@ it(`GET ${MAP_PATH} still reports standings when the live pull fails`, async () 
       ],
     ]);
   }, Effect.fail(ALERTS_DOWN));
+});
+
+it(`GET ${MAP_PATH} follows the newest evaluation time, not the newest row, when evaluations store out of order`, async () => {
+  await withStormAppOn(
+    createTestDatabaseWithDemoFacilities,
+    async ({ get, post, setClock }) => {
+      await post(EVALUATE_PATH);
+      setClock(EARLIER_CLOCK);
+      await post(EVALUATE_PATH);
+
+      const { facilities } = await (await get(MAP_PATH)).json();
+
+      const kansasCity = facilities.find(
+        ({ id }: { id: number }) => id === KANSAS_CITY_ID,
+      );
+      expect([
+        kansasCity.standing.recommendationId,
+        kansasCity.standing.asOf,
+      ]).toEqual([1, CLOCK]);
+    },
+  );
 });
