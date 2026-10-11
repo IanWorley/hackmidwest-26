@@ -72,10 +72,35 @@ function findingPosture(
   return undefined;
 }
 
+/** A longer delay or an earlier release asks more of staff, as the engine ranks them. */
+function moreDisruptive(
+  current: FacilityPosture | undefined,
+  next: FacilityPosture,
+): FacilityPosture {
+  if (current === undefined) {
+    return next;
+  }
+  if (
+    current.posture === "delayed_arrival" &&
+    next.posture === "delayed_arrival" &&
+    next.delayMinutes > current.delayMinutes
+  ) {
+    return next;
+  }
+  if (
+    current.posture === "early_dismissal" &&
+    next.posture === "early_dismissal" &&
+    Date.parse(next.releaseAt) < Date.parse(current.releaseAt)
+  ) {
+    return next;
+  }
+  return current;
+}
+
 /**
  * The recommendation's own status supplies the timing when it names the chosen posture. Otherwise
- * the first finding that times the chosen posture supplies it, as when the engine capped a long delay
- * into telework and the decider overrode back to a delayed arrival.
+ * the most disruptive timing any finding gives the chosen posture supplies it, as when the engine
+ * capped a long delay into telework and the decider overrode back to a delayed arrival.
  */
 function timedPosture(
   posture: TimedPosture,
@@ -86,7 +111,8 @@ function timedPosture(
   }
   const timed = recommendation.findings
     .map((finding) => findingPosture(posture, finding.timing))
-    .find((found) => found !== undefined);
+    .filter((found) => found !== undefined)
+    .reduce<FacilityPosture | undefined>(moreDisruptive, undefined);
   if (timed === undefined) {
     return { kind: "untimed", posture };
   }
