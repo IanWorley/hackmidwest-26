@@ -48,6 +48,7 @@ import {
   DecisionWriteError,
   insertDecision,
   recordDecision,
+  type Transaction,
 } from "./record-decision";
 
 const RECOMMENDATION_DECISIONS_PATH = "/api/recommendations/:id/decisions";
@@ -122,44 +123,35 @@ function toHttpResponse(outcome: DecisionOutcome): RecordDecisionResponse {
   }
 }
 
-/**
- * When decideBy has passed and nobody decided, record a no_decision row naming the facility's
- * backup decision maker. Returns none when a decision exists or decideBy has not passed, so a
- * second run writes nothing.
- */
-const recordMissedDecision = Effect.fn("recordMissedDecision")(function* (
+/** The no_decision row to write, or undefined when a decision exists or decideBy has not passed. */
+async function missedDecisionInTransaction(
+  tx: Transaction,
   recommendationId: number,
   now: DateTime.Utc,
-) {
-  const db = yield* Database;
-  const [[target], [existing]] = yield* Effect.tryPromise({
-    try: () =>
-      db.batch([
-        db
-          .select({ recommendation: recommendations, backup: decisionMakers })
-          .from(recommendations)
-          .innerJoin(facilities, eq(facilities.id, recommendations.facilityId))
-          .innerJoin(
-            decisionMakers,
-            eq(decisionMakers.id, facilities.backupDecisionMakerId),
-          )
-          .where(eq(recommendations.id, recommendationId)),
-        db
-          .select({ id: decisions.id })
-          .from(decisions)
-          .where(eq(decisions.recommendationId, recommendationId))
-          .limit(1),
-      ]),
-    catch: (cause) => new DecisionWriteError({ cause }),
-  });
+): Promise<DecisionRow | undefined> {
+  const [target] = await tx
+    .select({ recommendation: recommendations, backup: decisionMakers })
+    .from(recommendations)
+    .innerJoin(facilities, eq(facilities.id, recommendations.facilityId))
+    .innerJoin(
+      decisionMakers,
+      eq(decisionMakers.id, facilities.backupDecisionMakerId),
+    )
+    .where(eq(recommendations.id, recommendationId));
+  const [existing] = await tx
+    .select({ id: decisions.id })
+    .from(decisions)
+    .where(eq(decisions.recommendationId, recommendationId))
+    .limit(1);
   if (
     target === undefined ||
     existing !== undefined ||
     DateTime.toEpochMillis(now) <= Date.parse(target.recommendation.decideBy)
   ) {
-    return Option.none<DecisionRow>();
+    return undefined;
   }
-  const recorded = yield* insertDecision(
+  const { decision } = await insertDecision(
+    tx,
     {
       ...decisionBasis(target.recommendation, target.backup, now),
       action: "no_decision",
@@ -171,7 +163,27 @@ const recordMissedDecision = Effect.fn("recordMissedDecision")(function* (
     },
     [],
   );
-  return Option.map(recorded, ({ decision }) => decision);
+  return decision;
+}
+
+/**
+ * When decideBy has passed and nobody decided, record a no_decision row naming the facility's
+ * backup decision maker. Returns none when a decision exists or decideBy has not passed, so a
+ * second run writes nothing.
+ */
+const recordMissedDecision = Effect.fn("recordMissedDecision")(function* (
+  recommendationId: number,
+  now: DateTime.Utc,
+) {
+  const db = yield* Database;
+  const missed = yield* Effect.tryPromise({
+    try: () =>
+      db.transaction((tx) =>
+        missedDecisionInTransaction(tx, recommendationId, now),
+      ),
+    catch: (cause) => new DecisionWriteError({ cause }),
+  });
+  return Option.fromNullishOr(missed);
 });
 
 function createDecisionsModule(runRequest: RunRequest) {

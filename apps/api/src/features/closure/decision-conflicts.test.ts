@@ -4,10 +4,8 @@ import {
   recommendations,
 } from "@hackmidwest/db";
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
-import { Effect, Option } from "effect";
 import { expect, it } from "vitest";
 import {
-  Database,
   HTTP_CONFLICT,
   HTTP_CREATED,
   HTTP_UNPROCESSABLE_ENTITY,
@@ -23,7 +21,6 @@ import {
   storedDecisions,
   UNKNOWN_ID,
 } from "./decision-test-fixtures";
-import { insertDecision } from "./record-decision";
 import { contentHash } from "./records";
 
 const withApp = appRunner(createTestDatabaseWithDemoFacilities);
@@ -138,25 +135,5 @@ it("records a decision without dispatching any notification", async () => {
       (await db.select().from(decisions)).length,
       await db.select().from(notificationDispatches),
     ]).toEqual([1, []]);
-  });
-});
-
-it("yields nothing when another decision reached the chain first", async () => {
-  await withApp(async ({ db, request }) => {
-    await request(decide(), ACCEPT);
-    const [winner] = await storedDecisions(db);
-    if (winner === undefined) {
-      throw new Error("the first accept recorded no decision");
-    }
-    const { id: _id, contentHash: _hash, ...staleRoot } = winner;
-
-    const result = await Effect.runPromise(
-      insertDecision(staleRoot, []).pipe(Effect.provideService(Database, db)),
-    );
-
-    expect([result, (await storedDecisions(db)).map(({ id }) => id)]).toEqual([
-      Option.none(),
-      [FIRST_DECISION_ID],
-    ]);
   });
 });

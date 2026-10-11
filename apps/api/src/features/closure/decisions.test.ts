@@ -174,12 +174,18 @@ it.each([DECIDE_BY, AFTER_DECIDE_BY])(
   },
 );
 
-it("rejects a decider who is not a decision maker", async () => {
+// Grace Lindqvist decides for Fargo, not Kansas City, the fixture recommendation's facility.
+const OTHER_FACILITY_DECIDER_ID = 5;
+
+it.each([
+  { case: "is not a decision maker", decidedById: UNKNOWN_ID },
+  {
+    case: "decides only for another facility",
+    decidedById: OTHER_FACILITY_DECIDER_ID,
+  },
+])("rejects a decider who $case", async ({ decidedById }) => {
   await withApp(async ({ request }) => {
-    const response = await request(decide(), {
-      ...ACCEPT,
-      decidedById: UNKNOWN_ID,
-    });
+    const response = await request(decide(), { ...ACCEPT, decidedById });
 
     expect([response.status, await response.json()]).toEqual([
       HTTP_UNPROCESSABLE_ENTITY,
@@ -187,7 +193,7 @@ it("rejects a decider who is not a decision maker", async () => {
         type: "validation",
         on: "body",
         property: "/decidedById",
-        message: "No decision maker has this id",
+        message: "Only the facility's decision maker or its backup can decide",
       },
     ]);
   });

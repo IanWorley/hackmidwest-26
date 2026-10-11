@@ -1,11 +1,12 @@
 import {
-  DECISION_CHAIN_MOVED_MESSAGES,
+  type Database as DrizzleDatabase,
   decisionMakers,
   decisions,
+  facilities,
   humanInputs,
   recommendations,
 } from "@hackmidwest/db";
-import { desc, eq, max } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, max, or } from "drizzle-orm";
 import { Data, DateTime, Effect, Option } from "effect";
 import { Database } from "../../runtime";
 import type { DecisionBody } from "./decision-body";
@@ -24,144 +25,134 @@ import {
 import { parseDecimalId } from "./facilities";
 import { contentHash } from "./records";
 
+type DecisionMakerRow = typeof decisionMakers.$inferSelect;
 type HumanInputContent = Omit<typeof humanInputs.$inferInsert, "decisionId">;
 
 class DecisionWriteError extends Data.TaggedError("DecisionWriteError")<{
   readonly cause: unknown;
 }> {}
 
-const loadDecisionContext = Effect.fn("loadDecisionContext")(function* (
-  recommendationId: number,
-  decidedById: number,
-) {
-  const db = yield* Database;
-  const [[recommendation], [decider]] = yield* Effect.tryPromise({
-    try: () =>
-      db.batch([
-        db
-          .select()
-          .from(recommendations)
-          .where(eq(recommendations.id, recommendationId)),
-        db
-          .select()
-          .from(decisionMakers)
-          .where(eq(decisionMakers.id, decidedById)),
-      ]),
-    catch: (cause) => new DecisionWriteError({ cause }),
-  });
-  if (recommendation === undefined) {
-    return Option.none<DecisionContext>();
-  }
-  const [[latestRecommendation], [newestDecision]] = yield* Effect.tryPromise({
-    try: () =>
-      db.batch([
-        db
-          .select({ id: max(recommendations.id) })
-          .from(recommendations)
-          .where(eq(recommendations.facilityId, recommendation.facilityId)),
-        db
-          .select({ id: decisions.id })
-          .from(decisions)
-          .where(eq(decisions.recommendationId, recommendation.id))
-          .orderBy(desc(decisions.id))
-          .limit(1),
-      ]),
-    catch: (cause) => new DecisionWriteError({ cause }),
-  });
-  return Option.some<DecisionContext>({
-    recommendation,
-    decider,
-    // Rows are add-only and ids only grow, so the highest id is the latest evaluation.
-    latestRecommendationId: latestRecommendation?.id ?? recommendation.id,
-    latestDecisionId: newestDecision?.id ?? null,
-  });
-});
+/** A transaction handle: every read and write of one decision goes through it. */
+type Transaction = Parameters<Parameters<DrizzleDatabase["transaction"]>[0]>[0];
 
 interface RecordedDecision {
   readonly decision: DecisionRow;
   readonly inputs: readonly HumanInputRow[];
 }
 
-/** Walks the error's cause chain, since drizzle wraps the driver error that carries the trigger message. */
-function isChainMoved(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
+/** The decider only when they are the facility's decision maker or its backup. */
+async function eligibleDecider(
+  tx: Transaction,
+  facilityId: number,
+  decidedById: number,
+): Promise<DecisionMakerRow | undefined> {
+  const [decider] = await tx
+    .select(getTableColumns(decisionMakers))
+    .from(decisionMakers)
+    .innerJoin(
+      facilities,
+      or(
+        eq(facilities.decisionMakerId, decisionMakers.id),
+        eq(facilities.backupDecisionMakerId, decisionMakers.id),
+      ),
+    )
+    .where(
+      and(eq(decisionMakers.id, decidedById), eq(facilities.id, facilityId)),
+    );
+  return decider;
+}
+
+async function loadDecisionContext(
+  tx: Transaction,
+  recommendationId: number,
+  decidedById: number,
+): Promise<DecisionContext | undefined> {
+  const [recommendation] = await tx
+    .select()
+    .from(recommendations)
+    .where(eq(recommendations.id, recommendationId));
+  if (recommendation === undefined) {
+    return undefined;
   }
-  const { message } = error;
-  return (
-    DECISION_CHAIN_MOVED_MESSAGES.some((moved) => message.includes(moved)) ||
-    isChainMoved(error.cause)
+  const [latestRecommendation] = await tx
+    .select({ id: max(recommendations.id) })
+    .from(recommendations)
+    .where(eq(recommendations.facilityId, recommendation.facilityId));
+  const [newestDecision] = await tx
+    .select({ id: decisions.id })
+    .from(decisions)
+    .where(eq(decisions.recommendationId, recommendation.id))
+    .orderBy(desc(decisions.id))
+    .limit(1);
+  return {
+    recommendation,
+    decider: await eligibleDecider(tx, recommendation.facilityId, decidedById),
+    // Rows are add-only and ids only grow, so the highest id is the latest evaluation.
+    latestRecommendationId: latestRecommendation?.id ?? recommendation.id,
+    latestDecisionId: newestDecision?.id ?? null,
+  };
+}
+
+/** Inserts the decision and its human inputs inside the caller's transaction. */
+async function insertDecision(
+  tx: Transaction,
+  content: DecisionContent,
+  inputs: readonly HumanInputContent[],
+): Promise<RecordedDecision> {
+  const [decision] = await tx
+    .insert(decisions)
+    .values({ ...content, contentHash: contentHash(content) })
+    .returning();
+  if (decision === undefined) {
+    throw new Error("The decision insert returned no row");
+  }
+  if (inputs.length === 0) {
+    return { decision, inputs: [] };
+  }
+  const recorded = await tx
+    .insert(humanInputs)
+    .values(inputs.map((input) => ({ ...input, decisionId: decision.id })))
+    .returning();
+  return { decision, inputs: recorded };
+}
+
+async function decideInTransaction(
+  tx: Transaction,
+  recommendationId: number,
+  body: DecisionBody,
+  decidedAt: DateTime.Utc,
+): Promise<DecisionOutcome> {
+  const context = await loadDecisionContext(
+    tx,
+    recommendationId,
+    body.decidedById,
   );
+  if (context === undefined) {
+    return RECOMMENDATION_NOT_FOUND;
+  }
+  const plan = planDecision(body, context, decidedAt);
+  if ("kind" in plan) {
+    return plan;
+  }
+  const { decision, inputs } = await insertDecision(
+    tx,
+    plan,
+    body.humanInputs ?? [],
+  );
+  return {
+    kind: "recorded",
+    decision: toDecisionResponse(
+      decision,
+      context.recommendation.decideBy,
+      inputs,
+    ),
+  };
 }
 
 /**
- * The decision and its human inputs land together or not at all. None when another decision
- * reached the chain between the caller's read and this insert, so the database is the last word
- * on staleness.
+ * The staleness checks and the insert share one write transaction. It begins IMMEDIATE, so no
+ * other writer can add a recommendation or decision between the check and the insert.
  */
-const insertDecision = Effect.fn("insertDecision")(function* (
-  content: DecisionContent,
-  inputs: readonly HumanInputContent[],
-) {
-  const db = yield* Database;
-  const written = yield* Effect.tryPromise({
-    try: () =>
-      db
-        .transaction(async (tx): Promise<RecordedDecision> => {
-          const [decision] = await tx
-            .insert(decisions)
-            .values({ ...content, contentHash: contentHash(content) })
-            .returning();
-          if (decision === undefined) {
-            throw new Error("The decision insert returned no row");
-          }
-          const none: HumanInputRow[] = [];
-          if (inputs.length === 0) {
-            return { decision, inputs: none };
-          }
-          const recorded = await tx
-            .insert(humanInputs)
-            .values(
-              inputs.map((input) => ({ ...input, decisionId: decision.id })),
-            )
-            .returning();
-          return { decision, inputs: recorded };
-        })
-        .catch((error: unknown): undefined => {
-          if (isChainMoved(error)) {
-            return;
-          }
-          throw error;
-        }),
-    catch: (cause) => new DecisionWriteError({ cause }),
-  });
-  return Option.fromNullishOr(written);
-});
-
-/** The 409 a request gets when it lost the race to extend the chain. */
-const chainMovedConflict = Effect.fn("chainMovedConflict")(function* (
-  recommendationId: number,
-) {
-  const db = yield* Database;
-  const [newest] = yield* Effect.tryPromise({
-    try: () =>
-      db
-        .select({ id: decisions.id })
-        .from(decisions)
-        .where(eq(decisions.recommendationId, recommendationId))
-        .orderBy(desc(decisions.id))
-        .limit(1),
-    catch: (cause) => new DecisionWriteError({ cause }),
-  });
-  return {
-    kind: "conflict",
-    conflict: {
-      conflict: "newer_decision",
-      latestDecisionId: newest?.id ?? null,
-    },
-  } satisfies DecisionOutcome;
-});
-
 const recordDecision = Effect.fn("recordDecision")(function* (
   decimalId: string,
   body: DecisionBody,
@@ -170,30 +161,16 @@ const recordDecision = Effect.fn("recordDecision")(function* (
   if (Option.isNone(recommendationId)) {
     return RECOMMENDATION_NOT_FOUND;
   }
-  const context = yield* loadDecisionContext(
-    recommendationId.value,
-    body.decidedById,
-  );
-  if (Option.isNone(context)) {
-    return RECOMMENDATION_NOT_FOUND;
-  }
-  const plan = planDecision(body, context.value, yield* DateTime.now);
-  if ("kind" in plan) {
-    return plan;
-  }
-  const recorded = yield* insertDecision(plan, body.humanInputs ?? []);
-  if (Option.isNone(recorded)) {
-    return yield* chainMovedConflict(context.value.recommendation.id);
-  }
-  const { decision, inputs } = recorded.value;
-  return {
-    kind: "recorded",
-    decision: toDecisionResponse(
-      decision,
-      context.value.recommendation.decideBy,
-      inputs,
-    ),
-  } satisfies DecisionOutcome;
+  const decidedAt = yield* DateTime.now;
+  const db = yield* Database;
+  return yield* Effect.tryPromise({
+    try: () =>
+      db.transaction((tx) =>
+        decideInTransaction(tx, recommendationId.value, body, decidedAt),
+      ),
+    catch: (cause) => new DecisionWriteError({ cause }),
+  });
 });
 
+export type { Transaction };
 export { DecisionWriteError, insertDecision, recordDecision };

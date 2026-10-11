@@ -43,6 +43,9 @@ interface DecisionContext {
   readonly latestDecisionId: number | null;
 }
 
+const DECIDER_NOT_ELIGIBLE_MESSAGE =
+  "Only the facility's decision maker or its backup can decide";
+
 const RECOMMENDATION_NOT_FOUND: Refusal = { kind: "recommendation_not_found" };
 
 function rejected(property: string, message: string): Refusal {
@@ -154,7 +157,7 @@ function planDecision(
     return conflict;
   }
   if (context.decider === undefined) {
-    return rejected(BODY_FIELDS.decidedById, "No decision maker has this id");
+    return rejected(BODY_FIELDS.decidedById, DECIDER_NOT_ELIGIBLE_MESSAGE);
   }
   if (body.supersedesDecisionId !== undefined && body.reason === undefined) {
     return rejected(
@@ -178,6 +181,7 @@ function planDecision(
 export type { DecisionContent, DecisionContext, DecisionOutcome };
 export {
   conflictResponse,
+  DECIDER_NOT_ELIGIBLE_MESSAGE,
   decisionBasis,
   planDecision,
   RECOMMENDATION_NOT_FOUND,
