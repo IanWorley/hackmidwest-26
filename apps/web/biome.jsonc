@@ -96,9 +96,10 @@
       }
     },
     {
-      // Registries keyed by API enum values, which are snake_case postures
+      // Registries keyed by API enum values, which are snake_case postures and decision actions
       // and PascalCase NWS severities, not names this code chose.
       "includes": [
+        "src/features/closure/decision-status.ts",
         "src/features/closure/posture.ts",
         "src/features/map/alert-severity.ts"
       ],
