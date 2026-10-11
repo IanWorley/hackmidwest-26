@@ -76,6 +76,17 @@
       }
     },
     {
+      // These tests pin canonical JSON and its SHA-256 digest to literal
+      // expected values, so the input numbers and the hex digest are the point.
+      "includes": ["src/features/closure/records.test.ts"],
+      "linter": {
+        "rules": {
+          "security": { "noSecrets": "off" },
+          "style": { "noMagicNumbers": "off" }
+        }
+      }
+    },
+    {
       // Effect service keys are classes, and runtime.ts is the one place
       // every service key is declared and provided.
       "includes": ["src/runtime.ts"],
