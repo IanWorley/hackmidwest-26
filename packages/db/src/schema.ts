@@ -33,6 +33,16 @@ export type EmployeeStatus = (typeof EMPLOYEE_STATUSES)[number];
 export const NOTIFICATION_CHANNELS = ["email", "sms"] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
+// Ordered least to most disruptive, so a higher index is a stronger response.
+export const POSTURES = [
+  "normal",
+  "delayed_arrival",
+  "early_dismissal",
+  "unscheduled_telework",
+  "full_closure",
+] as const;
+export type Posture = (typeof POSTURES)[number];
+
 export const LATITUDE_RANGE = { min: -90, max: 90 } as const;
 export const LONGITUDE_RANGE = { min: -180, max: 180 } as const;
 

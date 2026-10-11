@@ -16,6 +16,8 @@ export {
   LONGITUDE_RANGE,
   NOTIFICATION_CHANNELS,
   type NotificationChannel,
+  POSTURES,
+  type Posture,
   TASK_TITLE_LENGTH,
   tasks,
 } from "./schema";
