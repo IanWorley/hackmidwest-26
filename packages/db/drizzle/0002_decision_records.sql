@@ -133,6 +133,26 @@ BEGIN
 	SELECT RAISE(ABORT, 'decisions is add-only: this decision is already superseded; supersede the newest decision instead');
 END;
 --> statement-breakpoint
+-- A decision records exactly what its decider saw, so it must agree with the recommendation it references.
+CREATE TRIGGER `decisions_match_recommendation` BEFORE INSERT ON `decisions`
+WHEN NOT EXISTS (SELECT 1 FROM `recommendations` WHERE `id` = NEW.`recommendation_id` AND `content_hash` = NEW.`recommendation_hash` AND `facility_id` = NEW.`facility_id`)
+BEGIN
+	SELECT RAISE(ABORT, 'decisions must copy the referenced recommendation''s facility and content hash');
+END;
+--> statement-breakpoint
+CREATE TRIGGER `decisions_posture_matches_action` BEFORE INSERT ON `decisions`
+WHEN (NEW.`action` = 'accept' AND NEW.`chosen_posture` IS NOT (SELECT `posture` FROM `recommendations` WHERE `id` = NEW.`recommendation_id`))
+	OR (NEW.`action` = 'override' AND NEW.`chosen_posture` IS (SELECT `posture` FROM `recommendations` WHERE `id` = NEW.`recommendation_id`))
+BEGIN
+	SELECT RAISE(ABORT, 'decisions must accept the recommended posture or override it with a different one');
+END;
+--> statement-breakpoint
+CREATE TRIGGER `notification_dispatches_match_decision` BEFORE INSERT ON `notification_dispatches`
+WHEN NOT EXISTS (SELECT 1 FROM `decisions` WHERE `id` = NEW.`decision_id` AND `content_hash` = NEW.`decision_hash`)
+BEGIN
+	SELECT RAISE(ABORT, 'notification_dispatches must copy the referenced decision''s content hash');
+END;
+--> statement-breakpoint
 CREATE TRIGGER `notification_dispatches_reject_update` BEFORE UPDATE ON `notification_dispatches`
 BEGIN
 	SELECT RAISE(ABORT, 'notification_dispatches is add-only: record a dispatch once instead of updating it');

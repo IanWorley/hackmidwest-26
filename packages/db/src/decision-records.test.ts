@@ -1,87 +1,24 @@
 import { sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import type { Database } from "./client";
+import {
+  DECISION_HASH,
+  DECISION_ID,
+  DISPATCH_HASH,
+  insertDecisionRecordChain,
+  MISMATCHED_HASH,
+  RECORDED_AT,
+  REPLACEMENT_DISPATCH_ID,
+  SECOND_SEEDED_EMPLOYEE_ID,
+  SEEDED_EMPLOYEE_ID,
+  SEND_BY,
+} from "./decision-records.fixtures";
 import {
   decisions,
   humanInputs,
   notificationDispatches,
   recommendations,
 } from "./schema";
-import { seedDemoFacilities } from "./seed";
 import { createTestDatabase } from "./testing";
-
-const SEEDED_FACILITY_ID = 1;
-const SEEDED_DECISION_MAKER_ID = 1;
-const SEEDED_EMPLOYEE_ID = 1;
-const RECOMMENDATION_ID = 1;
-const DECISION_ID = 1;
-const DISPATCH_ID = 1;
-const REPLACEMENT_DISPATCH_ID = 2;
-const RECOMMENDATION_HASH =
-  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const DECISION_HASH =
-  "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const DISPATCH_HASH =
-  "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
-const AS_OF = "2026-10-02T09:55:00.000Z";
-const EVALUATED_AT = "2026-10-02T10:00:00.000Z";
-const DECIDED_AT = "2026-10-02T10:30:00.000Z";
-const DECIDE_BY = "2026-10-02T11:00:00.000Z";
-// DECIDED_AT is 30 minutes before DECIDE_BY.
-const MINUTES_BEFORE_DECIDE_BY = 30;
-const SEND_BY = "2026-10-02T11:30:00.000Z";
-const RECORDED_AT = "2026-10-02T10:35:00.000Z";
-const DECIDER_NAME = "Dana Whitfield";
-const DECIDER_ROLE = "Facility Director";
-const REPLACEMENT_DECISION_ID = 2;
-
-const RECOMMENDATION = {
-  id: RECOMMENDATION_ID,
-  facilityId: SEEDED_FACILITY_ID,
-  evaluatedAt: EVALUATED_AT,
-  asOf: AS_OF,
-  posture: "delayed_arrival",
-  confidence: "medium",
-  decideBy: DECIDE_BY,
-  snapshot: { posture: "delayed_arrival" },
-  contentHash: RECOMMENDATION_HASH,
-} as const;
-
-async function insertDecisionRecordChain(db: Database): Promise<void> {
-  await seedDemoFacilities(db);
-  await db.insert(recommendations).values(RECOMMENDATION);
-  await db.insert(decisions).values({
-    id: DECISION_ID,
-    recommendationId: RECOMMENDATION_ID,
-    recommendationHash: RECOMMENDATION_HASH,
-    facilityId: SEEDED_FACILITY_ID,
-    action: "accept",
-    chosenPosture: "delayed_arrival",
-    decidedById: SEEDED_DECISION_MAKER_ID,
-    decidedByName: DECIDER_NAME,
-    decidedByRole: DECIDER_ROLE,
-    decidedAt: DECIDED_AT,
-    minutesBeforeDecideBy: MINUTES_BEFORE_DECIDE_BY,
-    identityVerified: false,
-    contentHash: DECISION_HASH,
-  });
-  await db.insert(notificationDispatches).values({
-    id: DISPATCH_ID,
-    decisionId: DECISION_ID,
-    decisionHash: DECISION_HASH,
-    employeeId: SEEDED_EMPLOYEE_ID,
-    channel: "email",
-    sendBy: SEND_BY,
-    recordedAt: RECORDED_AT,
-    contentHash: DISPATCH_HASH,
-  });
-  await db.insert(humanInputs).values({
-    decisionId: DECISION_ID,
-    reportedBy: "Night shift supervisor",
-    reportedAt: RECORDED_AT,
-    text: "The north lot has not been plowed.",
-  });
-}
 
 const ADD_ONLY_TABLES = [
   {
@@ -152,42 +89,6 @@ it.each(ADD_ONLY_TABLES)(
   },
 );
 
-it("rejects an override decision without a reason", async () => {
-  const store = await createTestDatabase();
-  try {
-    await seedDemoFacilities(store.db);
-    await store.db.insert(recommendations).values(RECOMMENDATION);
-
-    await expect(
-      store.db
-        .insert(decisions)
-        .values({
-          recommendationId: RECOMMENDATION_ID,
-          recommendationHash: RECOMMENDATION_HASH,
-          facilityId: SEEDED_FACILITY_ID,
-          action: "override",
-          chosenPosture: "full_closure",
-          decidedById: SEEDED_DECISION_MAKER_ID,
-          decidedByName: DECIDER_NAME,
-          decidedByRole: DECIDER_ROLE,
-          decidedAt: DECIDED_AT,
-          minutesBeforeDecideBy: MINUTES_BEFORE_DECIDE_BY,
-          identityVerified: false,
-          contentHash: DECISION_HASH,
-        })
-        .execute(),
-    ).rejects.toMatchObject({
-      cause: {
-        message: expect.stringContaining(
-          "CHECK constraint failed: decisions_override_and_defer_require_reason",
-        ),
-      },
-    });
-  } finally {
-    store.close();
-  }
-});
-
 it("rejects an INSERT OR REPLACE that dispatches the same decision to the same recipient again", async () => {
   const store = await createTestDatabase();
   try {
@@ -209,56 +110,28 @@ it("rejects an INSERT OR REPLACE that dispatches the same decision to the same r
   }
 });
 
-it("rejects an INSERT OR REPLACE that adds a second root decision for a recommendation", async () => {
+it("rejects a dispatch whose decision hash differs from the decision's content hash", async () => {
   const store = await createTestDatabase();
   try {
     await insertDecisionRecordChain(store.db);
 
     await expect(
-      store.db.run(
-        sql`insert or replace into decisions (id, recommendation_id, recommendation_hash, facility_id, action, chosen_posture, decided_by_id, decided_by_name, decided_by_role, decided_at, minutes_before_decide_by, identity_verified, content_hash) values (${REPLACEMENT_DECISION_ID}, ${RECOMMENDATION_ID}, ${RECOMMENDATION_HASH}, ${SEEDED_FACILITY_ID}, 'accept', 'delayed_arrival', ${SEEDED_DECISION_MAKER_ID}, ${DECIDER_NAME}, ${DECIDER_ROLE}, ${DECIDED_AT}, ${MINUTES_BEFORE_DECIDE_BY}, 0, ${DECISION_HASH})`,
-      ),
+      store.db
+        .insert(notificationDispatches)
+        .values({
+          decisionId: DECISION_ID,
+          decisionHash: MISMATCHED_HASH,
+          employeeId: SECOND_SEEDED_EMPLOYEE_ID,
+          channel: "email",
+          sendBy: SEND_BY,
+          recordedAt: RECORDED_AT,
+          contentHash: DISPATCH_HASH,
+        })
+        .execute(),
     ).rejects.toMatchObject({
       cause: {
         message: expect.stringContaining(
-          "decisions is add-only: this recommendation already has a decision; supersede it instead",
-        ),
-      },
-    });
-  } finally {
-    store.close();
-  }
-});
-
-it("rejects a second decision that supersedes an already superseded decision", async () => {
-  const store = await createTestDatabase();
-  try {
-    await insertDecisionRecordChain(store.db);
-    const correction = {
-      recommendationId: RECOMMENDATION_ID,
-      recommendationHash: RECOMMENDATION_HASH,
-      facilityId: SEEDED_FACILITY_ID,
-      action: "override",
-      chosenPosture: "full_closure",
-      decidedById: SEEDED_DECISION_MAKER_ID,
-      decidedByName: DECIDER_NAME,
-      decidedByRole: DECIDER_ROLE,
-      decidedAt: DECIDED_AT,
-      minutesBeforeDecideBy: MINUTES_BEFORE_DECIDE_BY,
-      identityVerified: false,
-      reasonCategory: "road_reports",
-      reasonText: "County reports the highway closed.",
-      supersedesDecisionId: DECISION_ID,
-      contentHash: DECISION_HASH,
-    } as const;
-    await store.db.insert(decisions).values(correction);
-
-    await expect(
-      store.db.insert(decisions).values(correction).execute(),
-    ).rejects.toMatchObject({
-      cause: {
-        message: expect.stringContaining(
-          "decisions is add-only: this decision is already superseded; supersede the newest decision instead",
+          "notification_dispatches must copy the referenced decision's content hash",
         ),
       },
     });
