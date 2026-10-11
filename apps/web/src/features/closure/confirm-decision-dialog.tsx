@@ -16,7 +16,7 @@ const TITLE = "Confirm and notify";
 const DESCRIPTION =
   "Recording this decision commits the facility to the notices below.";
 const OVERRIDE_NOTE =
-  "This list is for the recommended posture. The notice for your chosen posture is built after you record the decision.";
+  "This list is for the recommended posture. Your chosen posture's notice is built after you record the decision, and only if the recommendation times it; Notifications says so when it does not.";
 const CONFIRM_LABEL = "Record decision";
 const BACK_LABEL = "Back";
 const DEFER_TEXT =

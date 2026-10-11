@@ -20,7 +20,7 @@ const OVERRIDE: DecisionRequest = {
 };
 const RECORDED: DecideOutcome = { kind: "recorded" };
 const OVERRIDE_NOTE =
-  "This list is for the recommended posture. The notice for your chosen posture is built after you record the decision.";
+  "This list is for the recommended posture. Your chosen posture's notice is built after you record the decision, and only if the recommendation times it; Notifications says so when it does not.";
 
 type Record = (request: DecisionRequest) => Promise<DecideOutcome>;
 
