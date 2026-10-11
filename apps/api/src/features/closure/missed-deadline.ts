@@ -34,6 +34,27 @@ function noDecisionContent(
   };
 }
 
+const recordNoDecision = Effect.fn("recordNoDecision")(function* (
+  recommendation: RecommendationRow,
+  backup: DecisionMaker,
+  decidedAt: string,
+) {
+  yield* insertDecision(
+    noDecisionContent(recommendation, backup, decidedAt),
+    recommendation.decideBy,
+  ).pipe(
+    // A concurrent evaluation may record the missed deadline first; the chain triggers then reject this insert and its row stands.
+    Effect.catchTag("DecisionStorageError", (error) =>
+      Effect.flatMap(findChainTip(recommendation.id), (tip) => {
+        if (Option.isNone(tip)) {
+          return Effect.fail(error);
+        }
+        return Effect.void;
+      }),
+    ),
+  );
+});
+
 const recordMissedDeadline = Effect.fn("recordMissedDeadline")(function* (
   facility: Facility,
   prior: Option.Option<RecommendationRow>,
@@ -50,10 +71,7 @@ const recordMissedDeadline = Effect.fn("recordMissedDeadline")(function* (
   if (Option.isNone(backup)) {
     return yield* Effect.die("facility backup decision maker is missing");
   }
-  yield* insertDecision(
-    noDecisionContent(prior.value, backup.value, evaluatedAt),
-    prior.value.decideBy,
-  );
+  yield* recordNoDecision(prior.value, backup.value, evaluatedAt);
 });
 
-export { recordMissedDeadline };
+export { recordMissedDeadline, recordNoDecision };
