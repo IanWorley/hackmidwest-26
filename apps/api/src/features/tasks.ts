@@ -5,6 +5,7 @@ import { Data, Effect } from "effect";
 import { Elysia, t } from "elysia";
 import {
   Database,
+  HTTP_CREATED,
   HTTP_INTERNAL_SERVER_ERROR,
   HTTP_OK,
   internalServerErrorResponse,
@@ -12,7 +13,6 @@ import {
 } from "../runtime";
 
 const TASKS_PATH = "/api/tasks";
-const HTTP_CREATED = 201;
 
 const { createSelectSchema, createInsertSchema } = createSchemaFactory({
   typeboxInstance: t,
@@ -83,4 +83,4 @@ export function createTasksModule(runRequest: RunRequest) {
     );
 }
 
-export { HTTP_CREATED, TASKS_PATH };
+export { TASKS_PATH };

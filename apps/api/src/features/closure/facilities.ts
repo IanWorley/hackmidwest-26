@@ -16,22 +16,17 @@ import {
   internalServerErrorResponse,
   type RunRequest,
 } from "../../runtime";
+import { decimalIdParams, parseDecimalId } from "../decimal-id";
 
 const FACILITIES_PATH = "/api/facilities";
 const FACILITY_PATH = `${FACILITIES_PATH}/:id`;
 const FACILITY_NOT_FOUND_MESSAGE = "Facility not found";
-/** Decimal digits only, so `0x1` or `1e0` cannot alias facility 1 the way numeric coercion would. */
-const FACILITY_ID_PATTERN = "^[1-9][0-9]*$";
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 
 const facilityResponse = t.Object({
   ...createSelectSchema(facilities).properties,
   hazards: t.Array(createSelectSchema(facilityHazards).properties.hazard),
-});
-
-const facilityParams = t.Object({
-  id: t.String({ pattern: FACILITY_ID_PATTERN }),
 });
 
 const facilityNotFoundResponse = t.Object({
@@ -80,11 +75,11 @@ const listFacilities = Effect.fn("listFacilities")(function* () {
 });
 
 const getFacility = Effect.fn("getFacility")(function* (decimalId: string) {
-  const id = Number(decimalId);
-  // Past the safe range, Number rounds to a different id, so no facility matches.
-  if (!Number.isSafeInteger(id)) {
+  const parsed = parseDecimalId(decimalId);
+  if (Option.isNone(parsed)) {
     return Option.none();
   }
+  const id = parsed.value;
   const db = yield* Database;
   const [rows, hazardRows] = yield* Effect.tryPromise({
     try: () =>
@@ -123,7 +118,7 @@ export function createFacilitiesModule(runRequest: RunRequest) {
           ),
         ),
       {
-        params: facilityParams,
+        params: decimalIdParams,
         response: {
           [HTTP_OK]: facilityResponse,
           [HTTP_NOT_FOUND]: facilityNotFoundResponse,
@@ -133,4 +128,10 @@ export function createFacilitiesModule(runRequest: RunRequest) {
     );
 }
 
-export { FACILITIES_PATH };
+export type { Facility };
+export {
+  FACILITIES_PATH,
+  FACILITY_NOT_FOUND_MESSAGE,
+  facilityNotFoundResponse,
+  getFacility,
+};
