@@ -5,6 +5,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./connection": "./src/client.ts",
+    "./demo-facilities": "./src/demo-facilities.ts",
     "./testing": "./src/testing.ts"
   },
   "scripts": {
