@@ -20,6 +20,7 @@ import {
 } from "../../runtime";
 import {
   decisionBody,
+  rejectUnknownFields,
   type ValidationErrorBody,
   validationErrorResponse,
 } from "./decision-body";
@@ -80,6 +81,7 @@ type RecordDecisionResponse =
 const recordDecisionRoute = {
   params: decimalIdParams,
   body: decisionBody,
+  transform: rejectUnknownFields(decisionBody),
   response: {
     [HTTP_CREATED]: decisionResponse,
     [HTTP_NOT_FOUND]: t.Object({
