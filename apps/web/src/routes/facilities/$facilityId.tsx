@@ -36,8 +36,10 @@ function facilityTitle(
 function FacilityPage(): JSX.Element {
   const screen = Route.useLoaderData();
   const router = useRouter();
+  // `sync` waits for the loader; otherwise the router refetches in the background and a notice
+  // that says the newer data is shown would appear while the old data is still on screen.
   const reload = useCallback(
-    (): Promise<void> => router.invalidate(),
+    (): Promise<void> => router.invalidate({ sync: true }),
     [router],
   );
   return <DecisionScreenView onReload={reload} screen={screen} />;
