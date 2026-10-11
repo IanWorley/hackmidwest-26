@@ -17,6 +17,31 @@ const EDITED_TITLE = "Renamed by a collaborator";
 const EDITED_FACILITY_ID = 1;
 const EDITED_FACILITY_NAME = "Renamed Service Center";
 const SEEDED_EMPLOYEE_COUNT = 29;
+const SEEDED_GAUGE_ID = "KCDM7";
+const CHOSEN_GAUGE_ID = "KCKM7";
+
+async function gaugeOfEditedFacilityAfterReseed(
+  gaugeBeforeReseed: string | null,
+): Promise<string | null> {
+  const store = await createTestDatabase();
+  try {
+    await seedDemoFacilities(store.db);
+    await store.db
+      .update(facilities)
+      .set({ nwpsGaugeId: gaugeBeforeReseed })
+      .where(eq(facilities.id, EDITED_FACILITY_ID));
+
+    await seedDemoFacilities(store.db);
+
+    const [facility] = await store.db
+      .select({ nwpsGaugeId: facilities.nwpsGaugeId })
+      .from(facilities)
+      .where(eq(facilities.id, EDITED_FACILITY_ID));
+    return facility?.nwpsGaugeId ?? null;
+  } finally {
+    store.close();
+  }
+}
 
 it("preserves an edited demo task when the seed runs again", async () => {
   const store = await createTestDatabase();
@@ -81,7 +106,7 @@ it("adds no rows when the facility seed runs a second time", async () => {
     }).toEqual({
       decisionMakers: 5,
       facilities: 4,
-      facilityHazards: 8,
+      facilityHazards: 9,
       buildings: 6,
       employees: 29,
       buildingRosterEntries: 29,
@@ -112,4 +137,14 @@ it("gives every seeded employee exactly one status event", async () => {
   } finally {
     store.close();
   }
+});
+
+it("fills a demo facility's empty gauge when the seed runs again", async () => {
+  expect(await gaugeOfEditedFacilityAfterReseed(null)).toBe(SEEDED_GAUGE_ID);
+});
+
+it("keeps a chosen gauge when the seed runs again", async () => {
+  expect(await gaugeOfEditedFacilityAfterReseed(CHOSEN_GAUGE_ID)).toBe(
+    CHOSEN_GAUGE_ID,
+  );
 });

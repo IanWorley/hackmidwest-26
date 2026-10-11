@@ -1,6 +1,7 @@
 import { createTestDatabase } from "@hackmidwest/db/testing";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app";
+import { makeNwpsClient } from "../clients/nwps";
 import { makeNwsClient } from "../clients/nws";
 import { makeOpenMeteoClient } from "../clients/open-meteo";
 import {
@@ -22,6 +23,7 @@ async function withApp(
   const store = await createTestDatabase();
   const runtime = createApiRuntime(store.db, {
     nws: makeNwsClient({ userAgent: "tasks test, never sent" }),
+    nwps: makeNwpsClient(),
     openMeteo: makeOpenMeteoClient(),
   });
   try {

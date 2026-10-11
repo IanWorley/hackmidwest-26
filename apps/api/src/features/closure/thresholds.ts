@@ -1,5 +1,26 @@
 import type { Hazard, RoadClass } from "@hackmidwest/db";
+import type { FloodCategory } from "../../clients/nwps";
 import type { Posture } from "./postures";
+import {
+  AIRNOW_AQI_SOURCE,
+  AIRNOW_AQI_URL,
+  CAP_V1_2_URL,
+  MNDOT_CLEAR_ROADS_SOURCE,
+  MNDOT_CLEAR_ROADS_URL,
+  NWPS_GAUGE_URL,
+  NWS_AFTER_FLOOD_URL,
+  NWSI_10_513_SOURCE,
+  NWSI_10_513_URL,
+  NWSI_10_515_SOURCE,
+  NWSI_10_515_URL,
+  NWSI_10_922_SOURCE,
+  NWSI_10_922_URL,
+  NWSM_10_950_SOURCE,
+  NWSM_10_950_URL,
+  OPEN_METEO_AIR_QUALITY_URL,
+  OPM_SOURCE,
+  OPM_URL,
+} from "./sources";
 
 const HIGH_WIND_SUSTAINED_MPH = 40;
 const HIGH_WIND_SUSTAINED_DURATION_MINUTES = 60;
@@ -16,36 +37,7 @@ const WIND_POST_HAZARD_BUFFER_MINUTES = 60;
 const CAMS_GLOBAL_TIME_STEP_MINUTES = 180;
 const OPM_LONGEST_ILLUSTRATED_DELAY_HOURS = 4;
 const OPM_STANDARD_DELAY_HOURS = 2;
-const OPM_WHOLE_HOUR_DELAY_MINUTES = 60;
-const QUARTER_HOUR_MINUTES = 15;
-const DISMISSAL_MARGIN_MINUTES = 30;
-const HOURLY_OBSERVATION_STALE_MINUTES = 90;
-const FORECAST_STALE_MINUTES = 360;
-const CAMS_REFRESH_MINUTES = 720;
-
-const NWSI_10_513_SOURCE =
-  "National Weather Service, NWSI 10-513 WFO Winter Weather Products Specification (November 6, 2024), with OASIS CAP v1.2 severity as served by api.weather.gov";
-const NWSI_10_513_URL =
-  "https://www.weather.gov/media/directives/010_pdfs/pd01005013curr.pdf";
-const NWSI_10_515_SOURCE =
-  "National Weather Service, NWSI 10-515 WFO Non-Precipitation Weather Products Specification (May 16, 2025)";
-const NWSI_10_515_URL =
-  "https://www.weather.gov/media/directives/010_pdfs/pd01005015curr.pdf";
-const CAP_V1_2_URL =
-  "https://docs.oasis-open.org/emergency/cap/v1.2/CAP-v1.2-os.html";
-const MNDOT_CLEAR_ROADS_SOURCE =
-  "Minnesota Department of Transportation, Maintenance Manual Chapter 2: Clear Roads (November 15, 2023); Minnesota trunk-highway targets, applied as a proxy for commute roads in other states";
-const MNDOT_CLEAR_ROADS_URL =
-  "https://www.dot.state.mn.us/maintenance/pdf/manual/CHAPTER%202%2011-15-23.pdf";
-const AIRNOW_AQI_SOURCE = "U.S. EPA AirNow, AQI Basics";
-const AIRNOW_AQI_URL = "https://www.airnow.gov/aqi/aqi-basics/";
-const OPM_SOURCE =
-  "U.S. Office of Personnel Management, Governmentwide Dismissal and Closure Procedures (December 2025)";
-const OPM_URL =
-  "https://www.opm.gov/policy-data-oversight/pay-leave/reference-materials/handbooks/dcdismissal.pdf";
-const OPEN_METEO_AIR_QUALITY_URL =
-  "https://open-meteo.com/en/docs/air-quality-api";
-const CLOSURE_CALL_POLICY_SOURCE = "Closure Call policy";
+const NWPS_FORECAST_STEP_MINUTES = 360;
 
 // CAP v1.2 lists these most severe first; ascending order lets an index
 // comparison rank severity, with Unknown lowest.
@@ -81,8 +73,16 @@ export interface WindCutoff extends CitedValue<"mph"> {
   readonly minDurationMinutes: number;
 }
 
+// The category, not a stage: each gauge's NWPS record sets its own stage per category.
+export type GaugeCutoff = CitedValue<"nws_flood_category", FloodCategory>;
+
 /** `value` is an inclusive minimum: a reading at or above it crosses the cutoff. */
-export type Cutoff = (AlertCutoff | WindCutoff | CitedValue<"aqi">) & {
+export type Cutoff = (
+  | AlertCutoff
+  | WindCutoff
+  | GaugeCutoff
+  | CitedValue<"aqi">
+) & {
   readonly posture: Exclude<Posture, "normal">;
 };
 
@@ -225,52 +225,46 @@ export const THRESHOLDS = {
       citation: `Policy choice: §I lists poor air quality among the disruptions the procedures cover, and §IV.B.3 Option 3a, Example 1 illustrates a 2-hour delayed arrival. Smoke rarely clears within a morning, so an event longer than 2 hours calls for telework or closure. ${OPM_URL}`,
     },
   },
+  flood: {
+    cutoffs: {
+      warning: {
+        value: "Severe",
+        unit: "nws_severity",
+        events: ["Flood Warning", "Flash Flood Warning"],
+        posture: "unscheduled_telework",
+        source: NWSI_10_922_SOURCE,
+        citation: `§5: a Flash Flood Warning is issued "when flooding is imminent or likely" for events "which require immediate action to protect life and property". §7 and §9: a Flood Warning covers "high flow, overflow, or inundation" threatening life and property, over an area that "may be all or a portion of one or more counties". Flash Flood Warnings and most Flood Warnings on api.weather.gov carry CAP severity "Severe", which CAP v1.2 §3.2.2 defines as "Significant threat to life or property"; forecast-point Flood Warnings for minor flooding carry "Minor" and stay below this cutoff. A county-wide warning threatens the commute, not necessarily the building, so staff telework. ${NWSI_10_922_URL} ${CAP_V1_2_URL}`,
+      },
+      moderateFlood: {
+        value: "moderate",
+        unit: "nws_flood_category",
+        posture: "unscheduled_telework",
+        source: NWSM_10_950_SOURCE,
+        citation: `§2.8.2 Moderate Flooding: "some inundation of structures and roads near stream, evacuations of people and/or transfer of property to higher elevations." §2.8: flood categories are defined "for each forecast point" because "the severity of flooding at a given stage is not necessarily the same at all locations", so the moderate stage is read at runtime from the facility gauge's NWPS record (flood.categories.moderate.stage). A gauge with no moderate stage never crosses this cutoff. Roads near the river flood, so staff telework. ${NWSM_10_950_URL} ${NWPS_GAUGE_URL}`,
+      },
+      majorFlood: {
+        value: "major",
+        unit: "nws_flood_category",
+        posture: "full_closure",
+        source: NWSM_10_950_SOURCE,
+        citation: `§2.8.3 Major Flooding: "extensive inundation of structures and roads, significant evacuations of people and/or transfer of property to higher elevations." The major stage is read at runtime from the facility gauge's NWPS record (flood.categories.major.stage). Structures near the gauge may flood, so the facility closes. ${NWSM_10_950_URL} ${NWPS_GAUGE_URL}`,
+      },
+    },
+    postHazardBufferMinutes: {
+      value: NWPS_FORECAST_STEP_MINUTES,
+      unit: "minutes",
+      source:
+        "Closure Call policy, with National Weather Service After a Flood safety guidance; no NWS or OPM standard sets a buffer after flooding ends",
+      citation: `Policy choice: NWS warns that "when flood waters recede, the damage left behind can be devastating", including "decimated roadways", and that "the road could have collapsed". NWPS forecasts river stage in 6-hour steps, so the buffer waits one step after the stage falls below the cutoff to confirm the river keeps falling and to give crews time to inspect commute routes. ${NWS_AFTER_FLOOD_URL}`,
+    },
+    maxDelayHours: {
+      value: OPM_STANDARD_DELAY_HOURS,
+      unit: "hours",
+      source: OPM_SOURCE,
+      citation: `Policy choice: OPM sets no cap. §IV.C, Agency-Specific Announcements, names "localized flooding" as an emergency that lets agencies "close individual facilities on a localized, building-by-building basis", and §IV.B.3 Option 3a, Example 1 illustrates a 2-hour delayed arrival. River flooding lasts days rather than hours, so an event longer than 2 hours calls for telework or closure. ${OPM_URL}`,
+    },
+  },
 } as const satisfies Record<Hazard, HazardThresholds>;
-
-/** Policy values that turn a hazard window into an OPM-style status. */
-export const TIMING_POLICY = {
-  delayIncrementMinutes: {
-    value: OPM_WHOLE_HOUR_DELAY_MINUTES,
-    unit: "minutes",
-    source: OPM_SOURCE,
-    citation: `§IV.B.3 Options 3a and 3b illustrate delayed arrivals in whole hours (2 hours, 4 hours), so a partial hour of delay rounds up to the next hour. ${OPM_URL}`,
-  },
-  releaseIncrementMinutes: {
-    value: QUARTER_HOUR_MINUTES,
-    unit: "minutes",
-    source: CLOSURE_CALL_POLICY_SOURCE,
-    citation:
-      "Policy choice: an early-dismissal departure time rounds down to the quarter hour so it reads like an announced time, and rounding down only releases employees earlier.",
-  },
-  dismissalMarginMinutes: {
-    value: DISMISSAL_MARGIN_MINUTES,
-    unit: "minutes",
-    source: CLOSURE_CALL_POLICY_SOURCE,
-    citation:
-      "Policy choice: employees released early should be home 30 minutes before hazard onset, to absorb error in the forecast onset time. This is separate from the post-hazard buffer, which measures road recovery after the event ends.",
-  },
-  observationStaleMinutes: {
-    value: HOURLY_OBSERVATION_STALE_MINUTES,
-    unit: "minutes",
-    source: CLOSURE_CALL_POLICY_SOURCE,
-    citation:
-      "Policy choice: NWS stations report hourly, so an observation older than one report cycle plus 30 minutes of reporting latency has missed an update.",
-  },
-  forecastStaleMinutes: {
-    value: FORECAST_STALE_MINUTES,
-    unit: "minutes",
-    source: CLOSURE_CALL_POLICY_SOURCE,
-    citation:
-      "Policy choice: NWS publishes no staleness limit for the hourly forecast. A forecast more than 6 hours old lowers confidence in the hazard window it supplies.",
-  },
-  airQualityStaleMinutes: {
-    value: CAMS_REFRESH_MINUTES,
-    unit: "minutes",
-    source:
-      "Open-Meteo Air Quality API, CAMS Global Atmospheric Composition Forecasts",
-    citation: `The CAMS global model behind US AQI is refreshed every 12 hours, so an AQI value older than one refresh has missed an update. ${OPEN_METEO_AIR_QUALITY_URL}`,
-  },
-} as const satisfies Record<string, CitedValue<"minutes">>;
 
 export function postHazardBuffer(
   hazard: Hazard,

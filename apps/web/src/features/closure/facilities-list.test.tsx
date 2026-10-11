@@ -16,6 +16,7 @@ const KANSAS_CITY: Facility = {
   longitude: -94.5786,
   nwsZone: "MOZ037",
   timezone: "America/Chicago",
+  nwpsGaugeId: "KCDM7",
   opensAt: "07:30",
   closesAt: "16:30",
   arrivalWindowStart: "06:30",

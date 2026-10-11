@@ -1,4 +1,4 @@
-import { TIMING_POLICY } from "./thresholds";
+import { TIMING_POLICY } from "./timing-policy";
 import { MS_PER_MINUTE, parseInstant } from "./zoned-time";
 
 const STALE_LIMITS = {
