@@ -19,6 +19,7 @@ import {
   useMap,
 } from "react-leaflet";
 import {
+  awaitsDecision,
   DECISION_STATUSES,
   decisionDeadline,
   effectivePosture,
@@ -112,20 +113,23 @@ function DecisionDeadline({
 }: {
   standing: EvaluatedStanding;
 }): JSX.Element {
-  const { decision } = standing;
-  const deadline = decisionDeadline(standing);
-  if (decision === null) {
-    return <DecideByCountdown decideBy={deadline} />;
+  const { currentDecision } = standing;
+  const countdown = <DecideByCountdown decideBy={decisionDeadline(standing)} />;
+  if (currentDecision === null) {
+    return countdown;
   }
-  const { label, awaitsDecision } = DECISION_STATUSES[decision.action];
-  const statusText = <span className="text-xs">{label}</span>;
-  if (!awaitsDecision) {
+  const statusText = (
+    <span className="text-xs">
+      {DECISION_STATUSES[currentDecision.action].label}
+    </span>
+  );
+  if (!awaitsDecision(standing)) {
     return statusText;
   }
   return (
     <>
       {statusText}
-      <DecideByCountdown decideBy={deadline} />
+      {countdown}
     </>
   );
 }

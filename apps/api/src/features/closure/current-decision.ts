@@ -15,7 +15,12 @@ type DecisionRow = typeof decisions.$inferSelect;
 /** The columns a caller needs to name, describe, or act on the current decision. */
 type CurrentDecisionRow = Pick<
   DecisionRow,
-  "id" | "recommendationId" | "action" | "chosenPosture" | "decidedAt"
+  | "id"
+  | "recommendationId"
+  | "action"
+  | "chosenPosture"
+  | "decidedAt"
+  | "recheckAt"
 >;
 
 /** Plain JSON, so a route can return it as is. */
@@ -59,6 +64,7 @@ async function findCurrentDecision(
       action: decisions.action,
       chosenPosture: decisions.chosenPosture,
       decidedAt: decisions.decidedAt,
+      recheckAt: decisions.recheckAt,
     })
     .from(decisions)
     .innerJoin(
