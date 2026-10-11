@@ -142,6 +142,7 @@ function hazardWindow({
 
 export type { ForecastPeriod, GeoPoint, NwsAlert, NwsForecast, NwsObservation };
 export {
+  ALERT_URGENCIES,
   AlertCertaintySchema,
   AlertMessageTypeSchema,
   AlertSeveritySchema,
