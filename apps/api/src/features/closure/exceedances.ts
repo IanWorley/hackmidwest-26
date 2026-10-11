@@ -158,7 +158,6 @@ function marginOver(signal: Signal, cutoff: Cutoff): Margin | null {
   }
 }
 
-/** A cutoff value is an inclusive minimum. */
 function atOrPast(margin: Margin): Margin | null {
   if (margin.by >= 0) {
     return margin;
@@ -179,7 +178,6 @@ function lastsLongEnough(
   return longestRunMinutes(measured) >= cutoff.minDurationMinutes;
 }
 
-/** The longest stretch covered by back-to-back or overlapping spans. */
 function longestRunMinutes(origins: readonly Origin[]): number {
   const spans = origins
     .map(periodOf)

@@ -52,7 +52,6 @@ const EngineInputSchema = t.Object({
     typicalCommuteMinutes: facilityColumns.typicalCommuteMinutes,
     roadClass: facilityColumns.roadClass,
     decisionDeadline: facilityColumns.decisionDeadline,
-    /** Only these hazards are evaluated. */
     hazards: t.Array(t.UnionEnum(HAZARDS)),
   }),
   alerts: t.Object({ asOf: t.String(), items: t.Array(NwsAlertSchema) }),

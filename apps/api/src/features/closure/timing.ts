@@ -15,6 +15,7 @@ import {
   formatDate,
   formatTimeOfDay,
   type Instant,
+  type IsoInstant,
   localInstant,
   MS_PER_MINUTE,
   parseInstant,
@@ -23,9 +24,6 @@ import {
 } from "./zoned-time";
 
 const MS_PER_HOUR = 3_600_000;
-
-/** ISO-8601 instant, as produced by `Date#toISOString`. */
-type IsoInstant = string;
 
 /** Exactly the facility columns timing reads; the engine passes the row unchanged. */
 type FacilitySchedule = Pick<
