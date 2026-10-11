@@ -143,6 +143,7 @@ it("keeps an hourly period whose values NWS reports as missing", async () => {
     pointsResponse(),
     Response.json({
       properties: {
+        updateTime: "2026-10-11T01:43:12+00:00",
         periods: [
           {
             startTime: "2026-10-11T02:00:00-05:00",
@@ -160,7 +161,9 @@ it("keeps an hourly period whose values NWS reports as missing", async () => {
     }),
   ]);
 
-  const periods = await Effect.runPromise(client.hourlyForecast(KANSAS_CITY));
+  const { periods } = await Effect.runPromise(
+    client.hourlyForecast(KANSAS_CITY),
+  );
 
   expect(periods).toEqual([
     {
@@ -175,4 +178,21 @@ it("keeps an hourly period whose values NWS reports as missing", async () => {
       probabilityOfPrecipitation: null,
     },
   ]);
+});
+
+it("keeps the hourly forecast's update time and URL", async () => {
+  const { client } = clientFor([
+    pointsResponse(),
+    Response.json({
+      properties: { updateTime: "2026-10-11T01:43:12+00:00", periods: [] },
+    }),
+  ]);
+
+  const forecast = await Effect.runPromise(client.hourlyForecast(KANSAS_CITY));
+
+  expect(forecast).toEqual({
+    rawRef: "http://nws.test/gridpoints/EAX/44,51/forecast/hourly",
+    updateTime: "2026-10-11T01:43:12+00:00",
+    periods: [],
+  });
 });

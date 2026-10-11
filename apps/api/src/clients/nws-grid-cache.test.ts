@@ -74,7 +74,7 @@ it("looks up a point again after a failed lookup instead of caching the failure"
   );
   const second = await Effect.runPromise(client.forecast(KANSAS_CITY));
 
-  expect([first._tag, second, sent.map(({ url }) => url)]).toEqual([
+  expect([first._tag, second.periods, sent.map(({ url }) => url)]).toEqual([
     "Failure",
     [],
     [
