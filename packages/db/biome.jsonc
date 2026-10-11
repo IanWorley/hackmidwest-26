@@ -36,9 +36,9 @@
       }
     },
     {
-      // The package entry point and the schema index re-export their modules;
+      // The package entry points and the schema index re-export their modules;
       // drizzle-kit and the client read every table through the schema index.
-      "includes": ["src/index.ts", "src/schema/index.ts"],
+      "includes": ["src/index.ts", "src/schema/index.ts", "src/testing.ts"],
       "linter": {
         "rules": {
           "performance": { "noBarrelFile": "off" }

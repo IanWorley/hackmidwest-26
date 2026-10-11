@@ -28,9 +28,12 @@ type DemoStatusEvent = typeof employeeStatusEvents.$inferInsert;
 
 const SEED_INSTANT = "2026-10-01T12:00:00.000Z";
 
+const ESSENTIAL_MAIN_OFFICE_EMPLOYEE_ID = 2;
+const ESSENTIAL_EQUIPMENT_BARN_EMPLOYEE_ID = 3;
 const ALREADY_TELEWORKING_EMPLOYEE_ID = 4;
 const ON_DETAIL_EMPLOYEE_ID = 6;
 const ON_LEAVE_EMPLOYEE_ID = 7;
+const ACCESSIBILITY_NEEDS_EMPLOYEE_ID = 8;
 const UNROSTERED_EMPLOYEE_ID = 12;
 const MISFILED_EMPLOYEE_ID = 13;
 // Matched roster entries reuse their employee's id; this entry sits above that range.
@@ -57,14 +60,14 @@ const KANSAS_CITY_EMPLOYEES: DemoEmployee[] = withEmployeeDefaults([
     name: "Avery Calloway",
   },
   {
-    id: 2,
+    id: ESSENTIAL_MAIN_OFFICE_EMPLOYEE_ID,
     assignedBuildingId: KANSAS_CITY_MAIN_OFFICE_ID,
     name: "Bianca Ferraro",
     essentialPersonnel: true,
     teleworkEligible: false,
   },
   {
-    id: 3,
+    id: ESSENTIAL_EQUIPMENT_BARN_EMPLOYEE_ID,
     assignedBuildingId: KANSAS_CITY_EQUIPMENT_BARN_ID,
     name: "Caleb Mendoza",
     essentialPersonnel: true,
@@ -94,7 +97,7 @@ const KANSAS_CITY_EMPLOYEES: DemoEmployee[] = withEmployeeDefaults([
     name: "Gideon Marsh",
   },
   {
-    id: 8,
+    id: ACCESSIBILITY_NEEDS_EMPLOYEE_ID,
     assignedBuildingId: KANSAS_CITY_MAIN_OFFICE_ID,
     name: "Hana Kowalczyk",
     accessibilityNeeds:
@@ -273,8 +276,22 @@ const DEMO_EMPLOYEE_STATUS_EVENTS: DemoStatusEvent[] = [
   ...initialStatusEvents(LAFAYETTE, LAFAYETTE_EMPLOYEES),
 ];
 
+/** The seeded Kansas City disagreements and special cases, by employee id (or roster entry id where HR has none). */
+const DEMO_ROSTER_CASES = {
+  essentialMainOfficeEmployeeId: ESSENTIAL_MAIN_OFFICE_EMPLOYEE_ID,
+  essentialEquipmentBarnEmployeeId: ESSENTIAL_EQUIPMENT_BARN_EMPLOYEE_ID,
+  alreadyTeleworkingEmployeeId: ALREADY_TELEWORKING_EMPLOYEE_ID,
+  onDetailEmployeeId: ON_DETAIL_EMPLOYEE_ID,
+  onLeaveEmployeeId: ON_LEAVE_EMPLOYEE_ID,
+  accessibilityNeedsEmployeeId: ACCESSIBILITY_NEEDS_EMPLOYEE_ID,
+  unrosteredEmployeeId: UNROSTERED_EMPLOYEE_ID,
+  misfiledEmployeeId: MISFILED_EMPLOYEE_ID,
+  notInHrRosterEntryId: NOT_IN_HR_ROSTER_ENTRY_ID,
+} as const;
+
 export {
   DEMO_BUILDING_ROSTER_ENTRIES,
   DEMO_EMPLOYEE_STATUS_EVENTS,
   DEMO_EMPLOYEES,
+  DEMO_ROSTER_CASES,
 };
