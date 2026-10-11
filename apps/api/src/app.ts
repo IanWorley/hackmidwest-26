@@ -1,6 +1,7 @@
 import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { createFacilitiesModule } from "./features/closure/facilities";
+import { createRecommendationsModule } from "./features/closure/recommendations";
 import { createNwsLiveModule } from "./features/nws-live";
 import { createTasksModule } from "./features/tasks";
 import type { RunRequest } from "./runtime";
@@ -16,6 +17,7 @@ export function createApp({ runRequest, webOrigin }: AppDependencies) {
     .use(cors({ origin: webOrigin }))
     .use(createTasksModule(runRequest))
     .use(createFacilitiesModule(runRequest))
+    .use(createRecommendationsModule(runRequest))
     .use(createNwsLiveModule(runRequest));
 }
 
