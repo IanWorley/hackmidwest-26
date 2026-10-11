@@ -1,7 +1,13 @@
-import { useState } from "react";
-import type { DecideOutcome, DecisionRequest } from "./decision-api";
+import { useEffect, useState } from "react";
+import type {
+  DecideOutcome,
+  DecisionRequest,
+  Recommendation,
+} from "./decision-api";
 
 type Submit = (request: DecisionRequest) => Promise<DecideOutcome>;
+/** The recommendation `submit` records against. */
+type Target = Pick<Recommendation, "id" | "decideBy">;
 
 /** The panel awaits its submit, so a held request keeps the resolver that answers that await. */
 type ConfirmState =
@@ -11,6 +17,8 @@ type ConfirmState =
       readonly request: DecisionRequest;
       /** When the panel built the request, so a deferral keeps its full interval past the review. */
       readonly heldAt: number;
+      /** The recommendation the manager reviewed the request against. */
+      readonly heldFor: number;
       readonly settle: (outcome: DecideOutcome) => void;
     };
 
@@ -28,8 +36,11 @@ interface ConfirmedDecision {
   readonly dialogProps: ConfirmDialogState;
 }
 
+const IDLE: ConfirmState = { kind: "idle" };
 const CANCELLED: DecideOutcome = { kind: "cancelled" };
 const FAILED: DecideOutcome = { kind: "failed" };
+/** The API refuses a re-check at or past the deadline, so the form asks for an earlier one. */
+const RECHECK_TOO_LATE: DecideOutcome = { kind: "invalid", field: "recheckIn" };
 
 /** A deferral's recheck time counts from confirmation, not from when the dialog opened. */
 function confirmedRequest(
@@ -51,46 +62,69 @@ function heldRequest(state: ConfirmState): DecisionRequest | null {
   return state.request;
 }
 
+/** Whether a deferral's shifted re-check still falls before the decision deadline. */
+function fitsDeadline(request: DecisionRequest, decideBy: string): boolean {
+  return (
+    request.action !== "defer" ||
+    Date.parse(request.recheckAt) < Date.parse(decideBy)
+  );
+}
+
 /**
- * `recommendationId` is the recommendation `submit` records against. A reload onto another one
- * drops a request still awaiting confirmation, because the manager reviewed it for the old one.
+ * A reload onto another recommendation drops a request still awaiting confirmation, because the
+ * manager reviewed it for the old one.
  */
 export function useConfirmedDecision(
   submit: Submit,
-  recommendationId: number,
+  { id: recommendationId, decideBy }: Target,
 ): ConfirmedDecision {
   const [state, setState] = useState<ConfirmState>({ kind: "idle" });
-  // Adjusting state during render, as the decision panel does, so the dialog never paints against
-  // the new recommendation. The held promise is left unsettled: the panel resets itself on the
-  // same change, so nothing is waiting on its answer.
-  const [heldFor, setHeldFor] = useState(recommendationId);
-  if (heldFor !== recommendationId) {
-    setHeldFor(recommendationId);
-    if (state.kind === "confirming") {
-      setState({ kind: "idle" });
+  // A request still awaiting confirmation for an older recommendation is hidden at once and
+  // answered as cancelled, so the panel, which waits in `submitting` for that answer, returns to
+  // the new recommendation. Its state is left for the next submit to replace.
+  const stale =
+    state.kind === "confirming" && state.heldFor !== recommendationId;
+  useEffect(() => {
+    if (stale && state.kind === "confirming") {
+      state.settle(CANCELLED);
     }
+  }, [stale, state]);
+  let shown = state;
+  if (stale) {
+    shown = IDLE;
   }
 
   function submitDecision(request: DecisionRequest): Promise<DecideOutcome> {
     return new Promise((settle) => {
-      setState({ kind: "confirming", request, heldAt: Date.now(), settle });
+      setState({
+        kind: "confirming",
+        request,
+        heldAt: Date.now(),
+        heldFor: recommendationId,
+        settle,
+      });
     });
   }
 
   async function onConfirm(): Promise<void> {
-    if (state.kind !== "confirming") {
+    if (state.kind !== "confirming" || stale) {
+      return;
+    }
+    const request = confirmedRequest(state.request, state.heldAt, Date.now());
+    // A long review can push the shifted re-check past the deadline; nothing is sent then.
+    if (!fitsDeadline(request, decideBy)) {
+      setState({ kind: "idle" });
+      state.settle(RECHECK_TOO_LATE);
       return;
     }
     setState({ ...state, kind: "submitting" });
-    const outcome = await submit(
-      confirmedRequest(state.request, state.heldAt, Date.now()),
-    ).catch(() => FAILED);
+    const outcome = await submit(request).catch(() => FAILED);
     setState({ kind: "idle" });
     state.settle(outcome);
   }
 
   function onCancel(): void {
-    if (state.kind !== "confirming") {
+    if (state.kind !== "confirming" || stale) {
       return;
     }
     setState({ kind: "idle" });
@@ -100,9 +134,9 @@ export function useConfirmedDecision(
   return {
     submitDecision,
     dialogProps: {
-      open: state.kind !== "idle",
-      pending: state.kind === "submitting",
-      request: heldRequest(state),
+      open: shown.kind !== "idle",
+      pending: shown.kind === "submitting",
+      request: heldRequest(shown),
       onConfirm,
       onCancel,
     },

@@ -25,11 +25,13 @@ const DEFER: DecisionRequest = {
   decidedById: 1,
   reason: { category: "road_reports", text: "Waiting on the county." },
 };
-/** Any id: these tests never change the recommendation under the dialog. */
-const RECOMMENDATION_ID = 1;
+/** These tests never change the recommendation; its deadline is ten minutes after DEFER's re-check. */
+const TARGET = { id: 1, decideBy: "2026-01-15T11:40:00.000Z" };
 const HELD_AT = "2026-01-15T11:15:00.000Z";
 const MS_PER_MINUTE = 60_000;
 const REVIEW_MINUTES = 5;
+/** Shifts DEFER's re-check onto TARGET's deadline, which the API refuses. */
+const PAST_DEADLINE_REVIEW_MINUTES = 10;
 const RECORDED: DecideOutcome = { kind: "recorded" };
 const OVERRIDE_NOTE =
   "This list is for the recommended posture. Your chosen posture's notice is built after you record the decision, and only if the recommendation times it; Notifications says so when it does not.";
@@ -41,9 +43,7 @@ function startSubmit(
   record: Record,
   request: DecisionRequest,
 ): Promise<DecideOutcome> {
-  const { result } = renderHook(() =>
-    useConfirmedDecision(record, RECOMMENDATION_ID),
-  );
+  const { result } = renderHook(() => useConfirmedDecision(record, TARGET));
   let pending: Promise<DecideOutcome> = Promise.resolve(RECORDED);
   act(() => {
     pending = result.current.submitDecision(request);
@@ -105,6 +105,22 @@ it("counts a deferral's recheck interval from confirmation, not from when the di
     expect(record.mock.calls).toEqual([
       [{ ...DEFER, recheckAt: "2026-01-15T11:35:00.000Z" }],
     ]);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("sends the manager back to the form when the review pushed the re-check past the deadline", async () => {
+  vi.useFakeTimers({ now: Date.parse(HELD_AT) });
+  try {
+    const record = vi.fn<Record>(() => Promise.resolve(RECORDED));
+    const outcome = startSubmit(record, DEFER);
+
+    vi.advanceTimersByTime(PAST_DEADLINE_REVIEW_MINUTES * MS_PER_MINUTE);
+    fireEvent.click(screen.getByRole("button", { name: "Record decision" }));
+
+    expect(await outcome).toEqual({ kind: "invalid", field: "recheckIn" });
+    expect(record).not.toHaveBeenCalled();
   } finally {
     vi.useRealTimers();
   }

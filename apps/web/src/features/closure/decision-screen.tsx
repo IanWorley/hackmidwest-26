@@ -212,7 +212,7 @@ function RecommendationDecision({
   );
   const { submitDecision, dialogProps } = useConfirmedDecision(
     record,
-    recommendation.id,
+    recommendation,
   );
 
   return (

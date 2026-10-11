@@ -184,35 +184,54 @@ it("keeps the standing decision and its directives after a same-day re-evaluatio
   ).toHaveLength(1);
 });
 
-it("closes an open confirmation when a reload brings a different recommendation", () => {
-  const recorders = [
-    { id: 1, name: "Dana Whitfield", role: "County Executive Director" },
-  ];
-  function view(recommendationId: number): JSX.Element {
-    return (
-      <DecisionScreenView
-        notices={NO_NOTICES}
-        onReload={reloadNothing}
-        screen={{
-          ...SCREEN,
-          recorders,
-          latestRecommendation: {
-            ...KANSAS_CITY_RECOMMENDATION,
-            id: recommendationId,
-          },
-        }}
-      />
-    );
-  }
-  const { rerender } = render(view(KANSAS_CITY_RECOMMENDATION.id));
+const RECORDERS = [
+  { id: 1, name: "Dana Whitfield", role: "County Executive Director" },
+];
+
+function decidingOn(recommendationId: number): JSX.Element {
+  return (
+    <DecisionScreenView
+      notices={NO_NOTICES}
+      onReload={reloadNothing}
+      screen={{
+        ...SCREEN,
+        recorders: RECORDERS,
+        latestRecommendation: {
+          ...KANSAS_CITY_RECOMMENDATION,
+          id: recommendationId,
+        },
+      }}
+    />
+  );
+}
+
+/** Opens the confirmation for an accept; the returned call reloads onto the next recommendation. */
+function openConfirmation(): () => void {
+  const { rerender } = render(decidingOn(KANSAS_CITY_RECOMMENDATION.id));
   fireEvent.click(screen.getByRole("button", { name: "Accept" }));
   fireEvent.change(screen.getByRole("combobox", { name: "Recorded by" }), {
     target: { value: "1" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Record acceptance" }));
+  return (): void => rerender(decidingOn(KANSAS_CITY_RECOMMENDATION.id + 1));
+}
+
+it("closes an open confirmation when a reload brings a different recommendation", () => {
+  const reloadOntoNext = openConfirmation();
   expect(screen.getByRole("dialog")).toBeTruthy();
 
-  rerender(view(KANSAS_CITY_RECOMMENDATION.id + 1));
+  reloadOntoNext();
 
   expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("returns the decision panel to work once a dropped confirmation is cancelled", async () => {
+  openConfirmation()();
+
+  await waitFor(() => {
+    expect(screen.getByRole("button", { name: "Accept" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+  });
 });
