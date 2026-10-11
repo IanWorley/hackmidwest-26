@@ -109,6 +109,10 @@ New GitHub packages are private, so log the host in before the first pull: `dock
 
 The web image reads `WEB_PORT`, default 3000. Run `docker compose up -d`, or set `TAG=1.0.0` to pin a release instead of `latest`. The one-shot `migrate` service applies migrations before the API starts, and the API never migrates on its own. Containers never seed.
 
+### Run the stack locally from source
+
+`compose.build.yaml` builds the three images from the local `Dockerfile` instead of pulling them. Run `cp .env.example .env`, set `NWS_USER_AGENT`, then run `docker compose -f compose.yaml -f compose.build.yaml up --build`. The images are tagged `:local`, so a build never replaces a pulled `latest`. The stack uses the same host networking, so the `localhost` defaults in `.env.example` work as-is on Linux.
+
 ## Where things live
 
 - `packages/db/src/schema/` — tables and their shared limits, one file per domain, listed in `schema/index.ts`.
