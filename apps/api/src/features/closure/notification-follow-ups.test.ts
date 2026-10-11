@@ -168,6 +168,35 @@ it("tells an overdue all-clear's recipients to resume now", () => {
   ]);
 });
 
+it.each<[string, string, string]>([
+  [
+    "until the resume date before it",
+    NOW,
+    "Your earlier instructions stay in effect until 2026-10-13.",
+  ],
+  [
+    "no longer once it has come",
+    "2026-10-13T15:00:00.000Z",
+    "Your earlier instructions no longer apply.",
+  ],
+])(
+  "tells all-clear recipients their instructions apply %s",
+  (_case, now, appliesToYou) => {
+    const allClear = buildAllClear({
+      original: decidedPackage({
+        posture: NORMAL,
+        hazard: null,
+        directives: [dismissedAt(RELEASE_AFTER_START)],
+      }),
+      resumesOn: "2026-10-13",
+      now,
+    });
+    expect(allClear.notices.map(({ message }) => message.appliesToYou)).toEqual(
+      [appliesToYou],
+    );
+  },
+);
+
 it("rejects an all-clear for a date that does not exist", () => {
   expect(() =>
     buildAllClear({
