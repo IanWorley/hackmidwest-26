@@ -103,7 +103,11 @@ export function NotificationRecipients({
 }): JSX.Element {
   return (
     <div className="space-y-2">
+      <h3 className="font-medium">{RECIPIENTS_LABEL}</h3>
       <RecipientsTable pkg={pkg} timezone={timezone} />
+      {pkg.exclusions.length > 0 && (
+        <h3 className="font-medium">{EXCLUSIONS_LABEL}</h3>
+      )}
       <Exclusions exclusions={pkg.exclusions} />
     </div>
   );

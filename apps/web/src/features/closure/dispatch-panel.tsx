@@ -16,6 +16,7 @@ import type {
   NotificationConflict,
 } from "./notification-api";
 import { CHANNEL_LABELS } from "./notification-labels";
+import { NotificationRecipients } from "./notification-recipients";
 
 type PanelState =
   | { readonly kind: "ready" }
@@ -147,12 +148,20 @@ export function DispatchPanel({
   }, [dispatch, decisionId]);
 
   let content = (
-    <Button disabled={state.kind === "dispatching"} onClick={onDispatch}>
-      {DISPATCH_LABEL}
-    </Button>
+    <>
+      <NotificationRecipients pkg={view.package} timezone={timezone} />
+      <Button disabled={state.kind === "dispatching"} onClick={onDispatch}>
+        {DISPATCH_LABEL}
+      </Button>
+    </>
   );
   if (view.dispatches.length > 0) {
-    content = <DispatchedTable timezone={timezone} view={view} />;
+    content = (
+      <>
+        <h3 className="font-medium">{DISPATCHED_LABEL}</h3>
+        <DispatchedTable timezone={timezone} view={view} />
+      </>
+    );
   }
   return (
     <div className="space-y-2">

@@ -6,7 +6,6 @@ import {
   type DecisionVerification,
   dispatchDecision,
 } from "./notification-api";
-import { NotificationRecipients } from "./notification-recipients";
 
 const NOTIFICATIONS_HEADING = "Notifications";
 const CHAIN_HEADING = "Record chain";
@@ -29,18 +28,12 @@ export function NotificationsSection({
         <p role="status">{result.conflict.message}</p>
       )}
       {result.kind === "found" && (
-        <>
-          <NotificationRecipients
-            pkg={result.view.package}
-            timezone={timezone}
-          />
-          <DispatchPanel
-            decisionId={decisionId}
-            dispatch={dispatchDecision}
-            initial={result.view}
-            timezone={timezone}
-          />
-        </>
+        <DispatchPanel
+          decisionId={decisionId}
+          dispatch={dispatchDecision}
+          initial={result.view}
+          timezone={timezone}
+        />
       )}
     </section>
   );
