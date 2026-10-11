@@ -10,7 +10,11 @@ import {
 } from "@/components/ui/table";
 import type { MapFacility, Standing } from "@/features/map/load-map";
 import { needsDecision } from "./dashboard";
-import { DECISION_STATUSES, effectivePosture } from "./decision-status";
+import {
+  DECISION_STATUSES,
+  decisionDeadline,
+  effectivePosture,
+} from "./decision-status";
 import {
   AsOfMarker,
   DecideByCountdown,
@@ -37,7 +41,7 @@ function decisionText(standing: Standing): string {
   return DECISION_STATUSES[standing.decision.action].label;
 }
 
-/** The deadline still matters until someone decides, and through a deferral. */
+/** The deadline still matters until someone decides; a deferral counts down to its recheck time. */
 function DecideByCell({ standing }: { standing: Standing }): JSX.Element {
   if (
     standing.posture === "not_evaluated" ||
@@ -46,7 +50,7 @@ function DecideByCell({ standing }: { standing: Standing }): JSX.Element {
   ) {
     return <>{NOTHING_TO_SHOW_TEXT}</>;
   }
-  return <DecideByCountdown decideBy={standing.decideBy} />;
+  return <DecideByCountdown decideBy={decisionDeadline(standing)} />;
 }
 
 function PostureCell({ standing }: { standing: Standing }): JSX.Element {

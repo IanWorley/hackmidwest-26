@@ -31,14 +31,20 @@ function HomePage(): JSX.Element {
   );
 }
 
+/** Keeps refreshing, so the dashboard comes back on its own once the API does. */
+function HomeLoadError(): JSX.Element {
+  useRefreshEvery(REFRESH_INTERVAL_MS);
+  return (
+    <Alert variant="destructive">
+      <AlertTitle>{LOAD_ERROR_TEXT}</AlertTitle>
+    </Alert>
+  );
+}
+
 // Router's generator owns this route identifier; it must remain a file-matching literal.
 export const Route = createFileRoute("/")({
   loader: ({ abortController }) => loadMap({ signal: abortController.signal }),
   component: HomePage,
   pendingComponent: () => <p>{LOADING_TEXT}</p>,
-  errorComponent: () => (
-    <Alert variant="destructive">
-      <AlertTitle>{LOAD_ERROR_TEXT}</AlertTitle>
-    </Alert>
-  ),
+  errorComponent: HomeLoadError,
 });
