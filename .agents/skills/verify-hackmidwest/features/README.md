@@ -49,6 +49,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [Create a task](./create-task.md) covers `POST /api/tasks`, its validation, and seeing the new task on `/tasks`.
 - [Agent API](./agent-api.md) covers the separate agent API: its `GET /health` liveness and its `GET /tasks/summary` read of the tasks API over HTTP.
 - [Recommendations](./recommendations.md) covers `POST /api/facilities/:id/recommendations` (live and as-of), the latest and by-id reads, replay, and the stored add-only row.
+- [Notification preview](./notification-preview.md) covers `GET /api/recommendations/:id/notifications/preview`: the notification package for a stored recommendation's posture, its 404 and 422, and that it writes nothing.
 - [NWS live pull](./nws-live.md) covers the temporary `GET /api/nws/live` route: a live National Weather Service pull for one point, its range validation, and its 500 outside NWS coverage.
 - [Flood live pull](./flood-live.md) covers the temporary `GET /api/flood/live` route: live NWS flood warnings and an optional NWPS river gauge for one point, the flood cutoffs they cross, its gauge validation, and its 500 for an unknown gauge.
 - [Storage invariants](./storage-invariants.md) covers the add-only triggers and `CHECK` constraints, proven with `db-reject` because no route serves those tables yet.
