@@ -126,12 +126,12 @@ async function loadDecisionFacts(
   const [latest] = await reader
     .select({ id: max(decisions.id) })
     .from(decisions)
-    .where(eq(decisions.recommendationId, decision.recommendationId));
+    .where(eq(decisions.facilityId, decision.facilityId));
   return {
     decision,
     snapshot: parseSnapshot(recommendation.snapshot),
     roster: await loadFacilityRoster(reader, decision.facilityId),
-    // A recommendation's decisions form one linear chain, so the highest id is its tip.
+    // Ids only grow, so the facility's highest is the decision in force, whichever recommendation it is on.
     latestDecisionId: latest?.id ?? decision.id,
     directives: (
       await reader
