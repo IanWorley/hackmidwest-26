@@ -3,6 +3,8 @@ import { evaluatePosture } from "./engine";
 import {
   AFTER_GUST,
   AFTERNOON_HOUR,
+  AQI_AT,
+  AQI_READING,
   alerts,
   forecast,
   GUST_AT,
@@ -13,6 +15,7 @@ import {
   OVERNIGHT_END,
   wind,
 } from "./engine-test-fixtures";
+import type { Reading } from "./readings";
 
 it("explains a gust delay in one paragraph with the crossed cutoff and its margin", () => {
   const recommendation = evaluatePosture(
@@ -154,4 +157,48 @@ it("reports what an onset two hours earlier or later would recommend", () => {
   expect(recommendation.rationale).toContain(
     "If onset moves 2 hours earlier, this becomes early dismissal at 09:45.",
   );
+});
+
+it("counts only wind readings as wind observations for confidence", () => {
+  const temperatureOnly: Reading = {
+    ...wind("windSpeed", KMH.mph12, NOW),
+    metric: "temperature",
+    unit: "degC",
+  };
+  expect(
+    evaluatePosture(
+      input(["wind"], {
+        readings: [temperatureOnly],
+        forecast: forecast([...AFTERNOON_HOUR, "10 mph"]),
+      }),
+    ).confidence,
+  ).toEqual({
+    level: "low",
+    reasons: [{ kind: "missing", input: "observations" }],
+  });
+});
+
+it("shifts every finding of the deciding hazard together", () => {
+  const recommendation = evaluatePosture(
+    input(["airQuality"], {
+      now: AQI_AT,
+      readings: [{ ...AQI_READING, value: 201 }],
+    }),
+  );
+  expect(
+    recommendation.sensitivity.filter(
+      (sensitivity) => sensitivity.kind === "onsetShift",
+    ),
+  ).toEqual([
+    {
+      kind: "onsetShift",
+      shiftMinutes: -120,
+      status: { posture: "delayed_arrival", delayHours: 1 },
+    },
+    {
+      kind: "onsetShift",
+      shiftMinutes: 120,
+      status: { posture: "full_closure" },
+    },
+  ]);
 });

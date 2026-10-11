@@ -161,10 +161,13 @@ function inputHealth(input: EngineInput): ConfidenceReason[] {
     ),
   );
   const stamps: { readonly input: InputKind; readonly asOf: string }[] =
-    input.readings.map((reading) => ({
-      input: readingInput(reading.source),
-      asOf: reading.observedAt,
-    }));
+    input.readings.flatMap((reading) => {
+      const kind = readingInput(reading.metric);
+      if (kind === null) {
+        return [];
+      }
+      return [{ input: kind, asOf: reading.observedAt }];
+    });
   if (input.forecast !== null) {
     stamps.push({ input: "forecast", asOf: input.forecast.asOf });
   }
@@ -196,17 +199,22 @@ function sensitivity(
   }
   const shift = TIMING_POLICY.sensitivityShiftMinutes.value;
   const otherStatuses = others.map((finding) => finding.timing.status);
+  // Nested cutoffs of one hazard read the same inputs, so they move together.
   const onsetShifts = [-shift, shift].map(
     (shiftMinutes): Sensitivity => ({
       kind: "onsetShift",
       shiftMinutes,
-      status: otherStatuses.reduce(
-        moreDisruptive,
-        timing(input, {
-          ...deciding,
-          signals: shiftSignals(deciding.signals, shiftMinutes),
-        }).status,
-      ),
+      status: [deciding, ...others]
+        .map((finding) => {
+          if (finding.hazard !== deciding.hazard) {
+            return finding.timing.status;
+          }
+          return timing(input, {
+            ...finding,
+            signals: shiftSignals(finding.signals, shiftMinutes),
+          }).status;
+        })
+        .reduce(moreDisruptive),
     }),
   );
   const without = otherStatuses[0] ?? NORMAL;
@@ -243,14 +251,19 @@ function unitInputs(
   }
 }
 
-function readingInput(source: Reading["source"]): InputKind {
-  switch (source) {
-    case "nws":
+/** `null` for a metric no cutoff reads, so it cannot vouch for an input being present. */
+function readingInput(metric: Reading["metric"]): InputKind | null {
+  switch (metric) {
+    case "windSpeed":
+    case "windGust":
       return "observations";
-    case "open-meteo":
+    case "aqi":
       return "airQuality";
+    case "temperature":
+    case "visibility":
+      return null;
     default:
-      return source satisfies never;
+      return metric satisfies never;
   }
 }
 
