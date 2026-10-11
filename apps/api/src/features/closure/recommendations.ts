@@ -20,6 +20,7 @@ import {
   facilityNotFoundResponse,
   getFacility,
 } from "./facilities";
+import { recordMissedDeadline } from "./missed-deadline";
 import { airQualityReadings, observationReadings } from "./readings";
 import {
   parseAs,
@@ -162,6 +163,7 @@ const evaluateFacility = Effect.fn("evaluateFacility")(function* (
     forecast,
   };
   const snapshot = yield* storableSnapshot(input);
+  yield* recordMissedDeadline(facility, evaluatedAt);
   return yield* insertRecommendation({
     facilityId: facility.id,
     evaluatedAt,
