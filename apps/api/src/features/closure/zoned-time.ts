@@ -116,6 +116,12 @@ function formatDate({ year, month, day }: CalendarDate): string {
   return `${year}-${pad(month)}-${pad(day)}`;
 }
 
+/** The inverse of formatDate. A malformed date yields NaN fields, which localInstant rejects. */
+function parseCalendarDate(text: string): CalendarDate {
+  const [year, month, day] = text.split("-");
+  return { year: Number(year), month: Number(month), day: Number(day) };
+}
+
 /** `HH:MM` on `zone`'s wall clock. */
 function formatTimeOfDay(at: Instant, zone: string): string {
   const { hour, minute } = wallClock(at, zone);
@@ -134,6 +140,7 @@ export {
   formatTimeOfDay,
   localInstant,
   MS_PER_MINUTE,
+  parseCalendarDate,
   parseInstant,
   toInstant,
   toIso,
