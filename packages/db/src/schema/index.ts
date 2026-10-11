@@ -1,4 +1,11 @@
 export {
+  DIRECTIVE_KINDS,
+  DIRECTIVES_WITH_EFFECTIVE_AT,
+  type DirectiveKind,
+  decisionDirectives,
+  SUPERSEDED_DECISION_MESSAGE,
+} from "./decision-directives";
+export {
   ACTIONS_REQUIRING_REASON,
   ACTIONS_WITH_CHOSEN_POSTURE,
   ACTIONS_WITH_RECHECK,
