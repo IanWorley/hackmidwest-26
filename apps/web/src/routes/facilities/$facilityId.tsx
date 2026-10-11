@@ -1,6 +1,7 @@
 import {
   type AnyRouteMatch,
   createFileRoute,
+  Link,
   useRouter,
 } from "@tanstack/react-router";
 import { type JSX, useCallback } from "react";
@@ -10,6 +11,7 @@ import { DecisionScreenView } from "@/features/closure/decision-screen";
 import { loadNoticeScreen } from "@/features/closure/notice-screen";
 import { pageTitle } from "@/lib/page-title";
 
+const PERSONNEL_LINK_TEXT = "People and status";
 const NOT_FOUND_TITLE = "Facility not found";
 const NOT_FOUND_TEXT = `${NOT_FOUND_TITLE}.`;
 const LOADING_TITLE = "Loading facility";
@@ -44,7 +46,20 @@ function FacilityPage(): JSX.Element {
     [router],
   );
   return (
-    <DecisionScreenView notices={notices} onReload={reload} screen={screen} />
+    <DecisionScreenView
+      links={
+        <Link
+          className="underline underline-offset-4"
+          params={{ facilityId: String(screen.facility.id) }}
+          to="/facilities/$facilityId/personnel"
+        >
+          {PERSONNEL_LINK_TEXT}
+        </Link>
+      }
+      notices={notices}
+      onReload={reload}
+      screen={screen}
+    />
   );
 }
 

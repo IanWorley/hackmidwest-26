@@ -1,17 +1,13 @@
 import { api } from "../../lib/api";
 import { controlFor } from "./api-field-controls";
 import type { FormField } from "./decision-form";
-import { loadFacility } from "./load-facilities";
+import { loadFacility, loadFacilityDay } from "./load-facilities";
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_UNPROCESSABLE = 422;
 
 type DecideCall = ReturnType<typeof api.api.recommendations>["decisions"];
 type DirectivesCall = ReturnType<typeof api.api.decisions>["directives"];
-type FacilityDayCall = ReturnType<typeof api.api.facilities>["facility-date"];
-type FacilityDay = NonNullable<
-  Awaited<ReturnType<FacilityDayCall["get"]>>["data"]
->;
 
 type DecisionRequest = Parameters<DecideCall["post"]>[0];
 type DirectiveRequest = Parameters<DirectivesCall["post"]>[0];
@@ -124,21 +120,6 @@ async function loadBuildings(facilityId: number, signal: AbortSignal) {
     .buildings.get({ fetch: { signal } });
   if (result.error !== null) {
     throw new Error("Unable to load the facility's buildings", {
-      cause: result.error.value,
-    });
-  }
-  return result.data;
-}
-
-async function loadFacilityDay(
-  facilityId: number,
-  signal: AbortSignal,
-): Promise<FacilityDay> {
-  const result = await api.api
-    .facilities({ id: facilityId })
-    ["facility-date"].get({ fetch: { signal } });
-  if (result.error !== null) {
-    throw new Error("Unable to load the facility's current day", {
       cause: result.error.value,
     });
   }
