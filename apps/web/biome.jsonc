@@ -150,6 +150,7 @@
               "getRouter",
               "loadFacilities",
               "loadFacility",
+              "loadMap",
               "loadTasks"
             ]
           }
