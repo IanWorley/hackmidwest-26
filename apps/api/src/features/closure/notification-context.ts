@@ -1,10 +1,11 @@
 import type { FacilityPosture } from "./effective-status";
 import type { AlertUrgency, NoticeContext } from "./notification-plan";
 import type { HazardSpan } from "./notification-situation";
-import type { Finding } from "./recommendation";
-import type { Snapshot } from "./recommendation-snapshot";
+import type { Snapshot } from "./recommendation-store";
 
 const NO_ALERT_URGENCY: AlertUrgency = "Unknown";
+
+type StoredFinding = Snapshot["output"]["findings"][number];
 
 interface NoticeContextInput {
   readonly facility: NoticeContext["facility"];
@@ -13,7 +14,7 @@ interface NoticeContextInput {
   readonly now: string;
 }
 
-function hazardOf(deciding: Finding | undefined): HazardSpan | null {
+function hazardOf(deciding: StoredFinding | undefined): HazardSpan | null {
   if (deciding === undefined) {
     return null;
   }
@@ -22,7 +23,7 @@ function hazardOf(deciding: Finding | undefined): HazardSpan | null {
 }
 
 function urgencyOf(
-  deciding: Finding | undefined,
+  deciding: StoredFinding | undefined,
   alerts: Snapshot["input"]["alerts"]["items"],
 ): AlertUrgency {
   const alertIds = new Set(

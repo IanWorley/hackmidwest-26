@@ -9,6 +9,7 @@ import {
 } from "./engine-test-fixtures";
 import { noticeContext } from "./notification-context";
 import { packageInput } from "./notification-test-fixtures";
+import { parseSnapshot } from "./recommendation-store";
 
 it("takes the hazard and urgency from the alert behind the deciding finding", () => {
   const engineInput = input(["winter"], {
@@ -20,7 +21,14 @@ it("takes the hazard and urgency from the alert behind the deciding finding", ()
       },
     ),
   });
-  const snapshot = { input: engineInput, output: evaluatePosture(engineInput) };
+  const snapshot = parseSnapshot(
+    JSON.parse(
+      JSON.stringify({
+        input: engineInput,
+        output: evaluatePosture(engineInput),
+      }),
+    ),
+  );
 
   const context = noticeContext({
     facility: packageInput({}).facility,
