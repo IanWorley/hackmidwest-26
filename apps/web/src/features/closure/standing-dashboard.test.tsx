@@ -64,6 +64,26 @@ const DEFERRED: MapFacility = {
   },
 };
 
+const MISSED: MapFacility = {
+  id: 5,
+  name: "Missed Deadline Service Center",
+  lat: 38.6,
+  lon: -90.2,
+  aqi: null,
+  standing: {
+    posture: "full_closure",
+    recommendationId: 10,
+    decideBy: "2026-01-01T11:00:00.000Z",
+    asOf: "2026-01-01T09:00:00.000Z",
+    decision: {
+      action: "no_decision",
+      chosenPosture: null,
+      decidedAt: "2026-01-01T11:01:00.000Z",
+      recheckAt: null,
+    },
+  },
+};
+
 const NOT_EVALUATED: MapFacility = {
   id: 3,
   name: "Yakima Service Center",
@@ -73,14 +93,24 @@ const NOT_EVALUATED: MapFacility = {
   standing: { posture: "not_evaluated" },
 };
 
-async function renderDashboard(): Promise<void> {
+/** The posture cell's parts, each its own line, as a reader sees them. */
+function postureParts(cell: HTMLElement | undefined): (string | null)[] {
+  return [...(cell?.firstElementChild?.children ?? [])].map(
+    (part) => part.textContent,
+  );
+}
+
+async function renderDashboard(
+  facilities: readonly MapFacility[] = [
+    UNDECIDED,
+    OVERRIDDEN,
+    DEFERRED,
+    NOT_EVALUATED,
+  ],
+): Promise<void> {
   const router = createRouter({
     routeTree: createRootRoute({
-      component: () => (
-        <StandingDashboard
-          facilities={[UNDECIDED, OVERRIDDEN, DEFERRED, NOT_EVALUATED]}
-        />
-      ),
+      component: () => <StandingDashboard facilities={facilities} />,
     }),
     history: createMemoryHistory(),
   });
@@ -102,7 +132,7 @@ it("shows each row's posture in effect, its decision status, and a link to the f
       return [
         link.textContent,
         link.getAttribute("href"),
-        within(row).getAllByRole("cell")[1]?.textContent,
+        postureParts(within(row).getAllByRole("cell")[1]),
         within(row).getAllByRole("cell")[3]?.textContent,
       ];
     }),
@@ -110,21 +140,35 @@ it("shows each row's posture in effect, its decision status, and a link to the f
     [
       "Kansas City Area Service Center",
       "/facilities/1",
-      "Full closureAs of Oct 11, 2026, 8:00 AM UTC",
+      ["Full closure", "As of Oct 11, 2026, 8:00 AM UTC"],
       "Decision needed",
     ],
     [
       "Fargo Service Center",
       "/facilities/2",
-      "Normal operationsRecommended: Full closureAs of Oct 11, 2026, 8:00 AM UTC",
+      [
+        "Normal operations",
+        "Recommended: Full closure",
+        "As of Oct 11, 2026, 8:00 AM UTC",
+      ],
       "Overridden",
     ],
     [
       "Lafayette Service Center",
       "/facilities/4",
-      "Delayed arrivalAs of Oct 11, 2026, 8:00 AM UTC",
+      ["Delayed arrival", "As of Oct 11, 2026, 8:00 AM UTC"],
       "Deferred",
     ],
-    ["Yakima Service Center", "/facilities/3", "Not evaluated", "—"],
+    ["Yakima Service Center", "/facilities/3", ["Not evaluated"], "—"],
   ]);
+});
+
+it("keeps a missed decision in the count and shows its deadline as overdue", async () => {
+  await renderDashboard([MISSED]);
+  const cells = screen.getAllByRole("cell");
+  expect([
+    screen.getByRole("status").textContent,
+    cells[2]?.textContent,
+    cells[3]?.textContent,
+  ]).toEqual(["Decisions needed: 1", "Decision overdue", "Missed decision"]);
 });
