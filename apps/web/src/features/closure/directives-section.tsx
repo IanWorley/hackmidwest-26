@@ -62,6 +62,8 @@ const ISSUED_TEXT = "Directive issued.";
 const SUPERSEDED_TITLE =
   "This decision was changed by someone else. Nothing was saved; the page is reloaded with the current decision.";
 const FAILED_TITLE = "The directive could not be issued. Try again.";
+const RELOAD_FAILED_TITLE =
+  "The page could not be reloaded to show what happened. Reload it before trying again.";
 const DISPATCH_REFUSED_TITLE =
   "This decision's notices were dispatched before your directive arrived, perhaps from another tab. Nothing was saved; the page is reloaded.";
 const DISPATCHED_TEXT =
@@ -75,6 +77,7 @@ const NOTICE_STATUSES: readonly SectionState["status"][] = [
   "issued",
   "superseded",
   "failed",
+  "reloadFailed",
 ];
 
 interface FieldProps {
@@ -94,6 +97,12 @@ function OutcomeAlert({ state }: { state: SectionState }): JSX.Element | null {
       return (
         <Alert role="alert" variant="destructive">
           <AlertTitle>{FAILED_TITLE}</AlertTitle>
+        </Alert>
+      );
+    case "reloadFailed":
+      return (
+        <Alert role="alert" variant="destructive">
+          <AlertTitle>{RELOAD_FAILED_TITLE}</AlertTitle>
         </Alert>
       );
     default:
@@ -250,12 +259,17 @@ function DirectiveForm(props: DirectiveFormProps): JSX.Element {
       if (outcome.kind === "issued") {
         form.reset();
       }
-      if (outcome.kind === "dispatched") {
-        props.onDispatchRefused();
-      }
       // Settle after the reload, so a notice that says the page is reloaded is already true.
       if (outcome.kind !== "invalid" && outcome.kind !== "failed") {
-        await props.onReload();
+        try {
+          await props.onReload();
+        } catch {
+          dispatch({ type: "reloadFailed" });
+          return;
+        }
+      }
+      if (outcome.kind === "dispatched") {
+        props.onDispatchRefused();
       }
       dispatch({ type: "settle", outcome });
     },
