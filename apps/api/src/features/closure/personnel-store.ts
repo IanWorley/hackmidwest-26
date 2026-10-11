@@ -8,7 +8,7 @@ import {
   facilities,
   recommendations,
 } from "@hackmidwest/db";
-import { asc, desc, eq, getTableColumns, or } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, lte, or } from "drizzle-orm";
 import { Data, Effect, Option } from "effect";
 import { Database } from "../../runtime";
 import type { StatusEvent } from "./baseline";
@@ -64,10 +64,14 @@ function statusEventsOf(
     .where(eq(buildings.facilityId, facilityId));
 }
 
-/** Ids only grow, so the highest id is the facility's newest decision. */
+/**
+ * Ids only grow, so the highest id is the facility's newest decision. A decision recorded after
+ * `now` is left for the next read, so the response never applies a decision later than its asOf.
+ */
 function newestDecisionOf(
   db: DrizzleDatabase,
   facilityId: number,
+  now: string,
 ): Promise<NewestDecision[]> {
   return db
     .select({
@@ -83,12 +87,17 @@ function newestDecisionOf(
       recommendations,
       eq(recommendations.id, decisions.recommendationId),
     )
-    .where(eq(decisions.facilityId, facilityId))
+    .where(
+      and(eq(decisions.facilityId, facilityId), lte(decisions.decidedAt, now)),
+    )
     .orderBy(desc(decisions.id))
     .limit(1);
 }
 
-const readFacility = Effect.fn("readFacility")(function* (facilityId: number) {
+const readFacility = Effect.fn("readFacility")(function* (
+  facilityId: number,
+  now: string,
+) {
   const db = yield* Database;
   return yield* Effect.tryPromise({
     try: () =>
@@ -112,7 +121,7 @@ const readFacility = Effect.fn("readFacility")(function* (facilityId: number) {
           .innerJoin(buildings, eq(buildings.id, employees.assignedBuildingId))
           .where(eq(buildings.facilityId, facilityId)),
         statusEventsOf(db, facilityId),
-        newestDecisionOf(db, facilityId),
+        newestDecisionOf(db, facilityId, now),
       ]),
     catch: (cause) => new PersonnelStorageError({ cause }),
   });
@@ -138,7 +147,7 @@ const loadPersonnelRecords = Effect.fn("loadPersonnelRecords")(function* (
     employeeRows,
     statusEvents,
     newest,
-  ] = yield* readFacility(facilityId.value);
+  ] = yield* readFacility(facilityId.value, now);
   const [schedule] = facility;
   if (schedule === undefined) {
     return Option.none<PersonnelRecords>();
