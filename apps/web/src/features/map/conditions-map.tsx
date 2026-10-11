@@ -23,11 +23,12 @@ import {
   decisionDeadline,
   effectivePosture,
 } from "@/features/closure/decision-status";
-import { POSTURE_CLASSES, POSTURE_LABELS } from "@/features/closure/posture";
+import { POSTURE_CLASSES } from "@/features/closure/posture";
 import {
   AsOfMarker,
   DecideByCountdown,
   PostureBadge,
+  RecommendedPosture,
 } from "@/features/closure/posture-fields";
 import { ALERT_SEVERITY_CLASSES } from "./alert-severity";
 import { aqiCategory } from "./aqi";
@@ -54,7 +55,6 @@ const CONTIGUOUS_US_SOUTH_LAT = 24.5;
 const CONTIGUOUS_US_WEST_LON = -125;
 const CONTIGUOUS_US_NORTH_LAT = 49.4;
 const CONTIGUOUS_US_EAST_LON = -66.9;
-const RECOMMENDED_PREFIX = "Recommended:";
 const AQI_PREFIX = "Modeled AQI";
 const OPEN_FACILITY_PREFIX = "Open";
 const AQI_SEPARATOR = " · ";
@@ -99,21 +99,6 @@ function pinPosture(standing: Standing): StandingPosture {
     return standing.posture;
   }
   return effectivePosture(standing);
-}
-
-function RecommendedPosture({
-  standing,
-}: {
-  standing: EvaluatedStanding;
-}): JSX.Element | null {
-  if (effectivePosture(standing) === standing.posture) {
-    return null;
-  }
-  return (
-    <span className="text-muted-foreground text-xs">
-      {`${RECOMMENDED_PREFIX} ${POSTURE_LABELS[standing.posture]}`}
-    </span>
-  );
 }
 
 function DecisionDeadline({

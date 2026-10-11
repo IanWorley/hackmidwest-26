@@ -10,7 +10,13 @@ import {
 } from "@/components/ui/table";
 import type { MapFacility, Standing } from "@/features/map/load-map";
 import { needsDecision } from "./dashboard";
-import { AsOfMarker, DecideByCountdown, PostureBadge } from "./posture-fields";
+import { DECISION_STATUSES, effectivePosture } from "./decision-status";
+import {
+  AsOfMarker,
+  DecideByCountdown,
+  PostureBadge,
+  RecommendedPosture,
+} from "./posture-fields";
 
 const TABLE_NAME = "Facility standing";
 const FACILITY_COLUMN = "Facility";
@@ -20,29 +26,40 @@ const DECISION_COLUMN = "Decision";
 const NOTHING_TO_SHOW_TEXT = "—";
 const DECISIONS_NEEDED_LABEL = "Decisions needed";
 const DECISION_NEEDED_TEXT = "Decision needed";
-const DECISION_RECORDED_TEXT = "Decision recorded";
 
-type DecisionText =
-  | typeof NOTHING_TO_SHOW_TEXT
-  | typeof DECISION_NEEDED_TEXT
-  | typeof DECISION_RECORDED_TEXT;
-
-function decisionText(standing: Standing): DecisionText {
+function decisionText(standing: Standing): string {
   if (standing.posture === "not_evaluated") {
     return NOTHING_TO_SHOW_TEXT;
   }
-  if (needsDecision(standing)) {
+  if (standing.decision === null) {
     return DECISION_NEEDED_TEXT;
   }
-  return DECISION_RECORDED_TEXT;
+  return DECISION_STATUSES[standing.decision.action].label;
 }
 
-/** A recorded decision has no deadline left to count down to. */
+/** The deadline still matters until someone decides, and through a deferral. */
 function DecideByCell({ standing }: { standing: Standing }): JSX.Element {
-  if (!needsDecision(standing)) {
+  if (
+    standing.posture === "not_evaluated" ||
+    (standing.decision !== null &&
+      !DECISION_STATUSES[standing.decision.action].awaitsDecision)
+  ) {
     return <>{NOTHING_TO_SHOW_TEXT}</>;
   }
   return <DecideByCountdown decideBy={standing.decideBy} />;
+}
+
+function PostureCell({ standing }: { standing: Standing }): JSX.Element {
+  if (standing.posture === "not_evaluated") {
+    return <PostureBadge posture={standing.posture} />;
+  }
+  return (
+    <>
+      <PostureBadge posture={effectivePosture(standing)} />
+      <RecommendedPosture standing={standing} />
+      <AsOfMarker asOf={standing.asOf} />
+    </>
+  );
 }
 
 function StandingRow({ facility }: { facility: MapFacility }): JSX.Element {
@@ -59,10 +76,7 @@ function StandingRow({ facility }: { facility: MapFacility }): JSX.Element {
         </Link>
       </TableCell>
       <TableCell>
-        <PostureBadge posture={standing.posture} />
-        {standing.posture !== "not_evaluated" && (
-          <AsOfMarker asOf={standing.asOf} />
-        )}
+        <PostureCell standing={standing} />
       </TableCell>
       <TableCell>
         <DecideByCell standing={standing} />

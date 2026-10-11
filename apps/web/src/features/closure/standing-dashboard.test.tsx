@@ -20,22 +20,45 @@ const UNDECIDED: MapFacility = {
     recommendationId: 7,
     decideBy: "2026-10-11T10:00:00.000Z",
     asOf: "2026-10-11T08:00:00.000Z",
-    decided: false,
+    decision: null,
   },
 };
 
-const DECIDED: MapFacility = {
+const OVERRIDDEN: MapFacility = {
   id: 2,
   name: "Fargo Service Center",
   lat: 46.8772,
   lon: -96.7898,
   aqi: null,
   standing: {
-    posture: "normal",
+    posture: "full_closure",
     recommendationId: 8,
     decideBy: "2026-10-11T10:00:00.000Z",
     asOf: "2026-10-11T08:00:00.000Z",
-    decided: true,
+    decision: {
+      action: "override",
+      chosenPosture: "normal",
+      decidedAt: "2026-10-11T08:30:00.000Z",
+    },
+  },
+};
+
+const DEFERRED: MapFacility = {
+  id: 4,
+  name: "Lafayette Service Center",
+  lat: 30.2241,
+  lon: -92.0198,
+  aqi: null,
+  standing: {
+    posture: "delayed_arrival",
+    recommendationId: 9,
+    decideBy: "2026-10-11T10:00:00.000Z",
+    asOf: "2026-10-11T08:00:00.000Z",
+    decision: {
+      action: "defer",
+      chosenPosture: null,
+      decidedAt: "2026-10-11T08:30:00.000Z",
+    },
   },
 };
 
@@ -52,7 +75,9 @@ async function renderDashboard(): Promise<void> {
   const router = createRouter({
     routeTree: createRootRoute({
       component: () => (
-        <StandingDashboard facilities={[UNDECIDED, DECIDED, NOT_EVALUATED]} />
+        <StandingDashboard
+          facilities={[UNDECIDED, OVERRIDDEN, DEFERRED, NOT_EVALUATED]}
+        />
       ),
     }),
     history: createMemoryHistory(),
@@ -61,12 +86,12 @@ async function renderDashboard(): Promise<void> {
   await screen.findByRole("table", { name: "Facility standing" });
 }
 
-it("counts only evaluated facilities without a recorded decision", async () => {
+it("counts undecided and deferred facilities as needing a decision, not overridden or unevaluated ones", async () => {
   await renderDashboard();
-  expect(screen.getByRole("status").textContent).toBe("Decisions needed: 1");
+  expect(screen.getByRole("status").textContent).toBe("Decisions needed: 2");
 });
 
-it("labels each row's posture and evaluation time and links its name to the facility page", async () => {
+it("shows each row's posture in effect, its decision status, and a link to the facility page", async () => {
   await renderDashboard();
   const rows = screen.getAllByRole("row").slice(1);
   expect(
@@ -76,6 +101,7 @@ it("labels each row's posture and evaluation time and links its name to the faci
         link.textContent,
         link.getAttribute("href"),
         within(row).getAllByRole("cell")[1]?.textContent,
+        within(row).getAllByRole("cell")[3]?.textContent,
       ];
     }),
   ).toEqual([
@@ -83,12 +109,20 @@ it("labels each row's posture and evaluation time and links its name to the faci
       "Kansas City Area Service Center",
       "/facilities/1",
       "Full closureAs of Oct 11, 2026, 8:00 AM UTC",
+      "Decision needed",
     ],
     [
       "Fargo Service Center",
       "/facilities/2",
-      "Normal operationsAs of Oct 11, 2026, 8:00 AM UTC",
+      "Normal operationsRecommended: Full closureAs of Oct 11, 2026, 8:00 AM UTC",
+      "Overridden",
     ],
-    ["Yakima Service Center", "/facilities/3", "Not evaluated"],
+    [
+      "Lafayette Service Center",
+      "/facilities/4",
+      "Delayed arrivalAs of Oct 11, 2026, 8:00 AM UTC",
+      "Deferred",
+    ],
+    ["Yakima Service Center", "/facilities/3", "Not evaluated", "—"],
   ]);
 });
