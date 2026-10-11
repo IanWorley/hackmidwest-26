@@ -48,6 +48,14 @@ function isSha256Hex(column: AnySQLiteColumn): SQL {
   return sql`length(${column}) = ${SHA256_HEX_LENGTH} and ${column} not glob ${ANY_NON_LOWERCASE_HEX_GLOB}`.inlineParams();
 }
 
+// An NWS location identifier as NWPS lists every river gauge, e.g. KCDM7.
+const NWPS_GAUGE_ID_GLOB = "[A-Z][A-Z][A-Z][A-Z][0-9]";
+
+// A NULL glob passes the CHECK, so a facility without a gauge is allowed.
+function isNwpsGaugeId(column: AnySQLiteColumn): SQL {
+  return sql`${column} glob ${NWPS_GAUGE_ID_GLOB}`.inlineParams();
+}
+
 function isJson(column: AnySQLiteColumn): SQL {
   return sql`json_valid(${column})`;
 }
@@ -92,6 +100,7 @@ export {
   isLocalTime,
   isLocalTimeRange,
   isNonBlank,
+  isNwpsGaugeId,
   isPositiveInteger,
   isSha256Hex,
   isUtcInstant,

@@ -6,7 +6,8 @@ import {
   hazardInterval,
 } from "./hazard-window";
 import type { Posture } from "./postures";
-import { postHazardBuffer, THRESHOLDS, TIMING_POLICY } from "./thresholds";
+import { postHazardBuffer, THRESHOLDS } from "./thresholds";
+import { TIMING_POLICY } from "./timing-policy";
 import {
   addDays,
   type CalendarDate,

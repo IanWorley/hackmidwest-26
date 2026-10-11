@@ -10,11 +10,12 @@ import {
 import {
   isLocalTime,
   isLocalTimeRange,
+  isNwpsGaugeId,
   isPositiveInteger,
   nonBlankChecks,
 } from "../checks";
 
-export const HAZARDS = ["winter", "wind", "airQuality"] as const;
+export const HAZARDS = ["winter", "wind", "airQuality", "flood"] as const;
 export type Hazard = (typeof HAZARDS)[number];
 
 // MnDOT Maintenance Manual Ch. 2 Table 2's route classification of the roads staff commute on, busiest first.
@@ -51,6 +52,8 @@ export const facilities = sqliteTable(
     longitude: real("longitude").notNull(),
     nwsZone: text("nws_zone").notNull(),
     timezone: text("timezone").notNull(),
+    /** The NWPS river gauge whose flood stages stand for this facility's flood risk, if one is near. */
+    nwpsGaugeId: text("nwps_gauge_id"),
     opensAt: text("opens_at").notNull(),
     closesAt: text("closes_at").notNull(),
     arrivalWindowStart: text("arrival_window_start").notNull(),
@@ -86,6 +89,7 @@ export const facilities = sqliteTable(
         LONGITUDE_RANGE.max,
       ).inlineParams(),
     ),
+    check("facilities_nwps_gauge_id_format", isNwpsGaugeId(table.nwpsGaugeId)),
     check("facilities_hours", isLocalTimeRange(table.opensAt, table.closesAt)),
     check(
       "facilities_arrival_window",

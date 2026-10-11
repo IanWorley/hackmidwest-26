@@ -81,7 +81,7 @@ it("adds no rows when the facility seed runs a second time", async () => {
     }).toEqual({
       decisionMakers: 5,
       facilities: 4,
-      facilityHazards: 8,
+      facilityHazards: 9,
       buildings: 6,
       employees: 29,
       buildingRosterEntries: 29,

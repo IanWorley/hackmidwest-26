@@ -13,6 +13,8 @@ const PAST_MIDNIGHT = "24:30";
 const MISSING_BUILDING_ID = 999;
 const HOUR_24_INSTANT = "2026-10-02T24:01:00.000Z";
 const BLANK_NOTE = " \t\r\n";
+// NWPS lids are upper case; the API would 404 on this one.
+const LOWERCASE_GAUGE_ID = "kcdm7";
 
 it("rejects an empty title even when a caller bypasses the HTTP validator", async () => {
   const store = await createTestDatabase();
@@ -167,6 +169,29 @@ it("rejects a local time past 23:59", async () => {
       cause: {
         message: expect.stringContaining(
           "CHECK constraint failed: facilities_arrival_window",
+        ),
+      },
+    });
+  } finally {
+    store.close();
+  }
+});
+
+it("rejects a facility gauge id that is not an NWPS location id", async () => {
+  const store = await createTestDatabase();
+  try {
+    await seedDemoFacilities(store.db);
+
+    await expect(
+      store.db
+        .update(facilities)
+        .set({ nwpsGaugeId: LOWERCASE_GAUGE_ID })
+        .where(eq(facilities.id, SEEDED_FACILITY_ID))
+        .execute(),
+    ).rejects.toMatchObject({
+      cause: {
+        message: expect.stringContaining(
+          "CHECK constraint failed: facilities_nwps_gauge_id_format",
         ),
       },
     });

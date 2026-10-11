@@ -1,6 +1,7 @@
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../../app";
+import { makeNwpsClient } from "../../clients/nwps";
 import { makeNwsClient } from "../../clients/nws";
 import { makeOpenMeteoClient } from "../../clients/open-meteo";
 import { createApiRuntime, HTTP_NOT_FOUND, HTTP_OK } from "../../runtime";
@@ -20,6 +21,7 @@ async function getFromSeededApp(path: string): Promise<Response> {
   const runtime = createApiRuntime(store.db, {
     nws: makeNwsClient({ userAgent: "facilities test, never sent" }),
     openMeteo: makeOpenMeteoClient(),
+    nwps: makeNwpsClient(),
   });
   try {
     const app = createApp({
@@ -46,7 +48,7 @@ describe(`GET ${FACILITIES_PATH}`, () => {
       { name: "Fargo Service Center", hazards: ["winter", "wind"] },
       {
         name: "Kansas City Area Service Center",
-        hazards: ["winter", "wind", "airQuality"],
+        hazards: ["winter", "wind", "airQuality", "flood"],
       },
       { name: "Lafayette Service Center", hazards: ["wind"] },
       { name: "Yakima Service Center", hazards: ["winter", "airQuality"] },
@@ -66,6 +68,7 @@ describe(`GET ${FACILITIES_PATH}/:id`, () => {
       longitude: -94.5786,
       nwsZone: "MOZ037",
       timezone: "America/Chicago",
+      nwpsGaugeId: "KCDM7",
       opensAt: "07:30",
       closesAt: "16:30",
       arrivalWindowStart: "06:30",
@@ -78,7 +81,7 @@ describe(`GET ${FACILITIES_PATH}/:id`, () => {
       decisionMakerId: 1,
       backupDecisionMakerId: 2,
       roadClass: "superCommuter",
-      hazards: ["winter", "wind", "airQuality"],
+      hazards: ["winter", "wind", "airQuality", "flood"],
     });
   });
 
