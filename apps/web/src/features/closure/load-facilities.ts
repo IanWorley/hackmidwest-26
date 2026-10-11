@@ -1,8 +1,8 @@
 import { notFound } from "@tanstack/react-router";
 import { api } from "../../lib/api";
+import { parseFacilityId } from "./facility-id";
 
 const HTTP_NOT_FOUND = 404;
-const HTTP_UNPROCESSABLE = 422;
 
 /** Routes receive successful domain data; Eden error envelopes stop at this boundary. */
 export async function loadFacilities({ signal }: { signal: AbortSignal }) {
@@ -13,22 +13,23 @@ export async function loadFacilities({ signal }: { signal: AbortSignal }) {
   return result.data;
 }
 
-/** An id the API rejects as malformed names no facility either, so both read as not found. */
+/** A path segment that is not a facility id names no facility, so it reads as not found. */
 export async function loadFacility({
-  id,
+  facilityId,
   signal,
 }: {
-  id: number;
+  facilityId: string;
   signal: AbortSignal;
 }) {
+  const id = parseFacilityId(facilityId);
+  if (id === undefined) {
+    throw notFound();
+  }
   const result = await api.api.facilities({ id }).get({ fetch: { signal } });
   if (result.error === null) {
     return result.data;
   }
-  if (
-    result.error.status === HTTP_NOT_FOUND ||
-    result.error.status === HTTP_UNPROCESSABLE
-  ) {
+  if (result.error.status === HTTP_NOT_FOUND) {
     throw notFound();
   }
   throw new Error("Unable to load the facility", {

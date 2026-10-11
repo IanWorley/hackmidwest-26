@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { type AnyRouteMatch, createFileRoute } from "@tanstack/react-router";
 import type { JSX } from "react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import {
@@ -15,7 +15,22 @@ const HOURS_LABEL = "Hours";
 const NWS_ZONE_LABEL = "NWS zone";
 const HAZARDS_LABEL = "Hazards";
 const LOADING_TEXT = "Loading facility...";
-const LOAD_ERROR_TEXT = "Facility could not be loaded.";
+const LOAD_ERROR_TITLE = "Facility could not be loaded";
+const LOAD_ERROR_TEXT = `${LOAD_ERROR_TITLE}.`;
+
+/** The title names the outcome the page renders, so a failed load is not called "not found". */
+function facilityTitle(
+  name: string | undefined,
+  status: AnyRouteMatch["status"],
+): string {
+  if (name !== undefined) {
+    return name;
+  }
+  if (status === "notFound") {
+    return NOT_FOUND_TITLE;
+  }
+  return LOAD_ERROR_TITLE;
+}
 
 function FacilityPage(): JSX.Element {
   const facility = Route.useLoaderData();
@@ -44,12 +59,12 @@ function FacilityPage(): JSX.Element {
 export const Route = createFileRoute("/facilities/$facilityId")({
   loader: ({ params, abortController }) =>
     loadFacility({
-      id: Number(params.facilityId),
+      facilityId: params.facilityId,
       signal: abortController.signal,
     }),
   // After loader, so TypeScript infers loaderData from it.
-  head: ({ loaderData }) => ({
-    meta: [{ title: pageTitle(loaderData?.name ?? NOT_FOUND_TITLE) }],
+  head: ({ loaderData, match }) => ({
+    meta: [{ title: pageTitle(facilityTitle(loaderData?.name, match.status)) }],
   }),
   component: FacilityPage,
   pendingComponent: () => <p>{LOADING_TEXT}</p>,
