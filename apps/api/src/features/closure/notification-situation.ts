@@ -86,8 +86,12 @@ function happening(situation: Situation): string {
   return `${HAZARD_LABEL[hazard.kind]} expected ${hazardWindow(hazard, situation)}. ${facility}`;
 }
 
-/** Names only what the original package had: a hazard that ended, a facility that reopens. */
-function allClearHappening(situation: Situation, resumesOn: string): string {
+/** Names only what the original package had: a hazard that ended (or will), a facility that reopens. */
+function allClearHappening(
+  situation: Situation,
+  resumesOn: string,
+  now: Instant,
+): string {
   const { facilityName, hazard, posture } = situation;
   let operations = `${facilityName} resumes normal operations on ${resumesOn}.`;
   if (posture.posture === "normal") {
@@ -95,6 +99,11 @@ function allClearHappening(situation: Situation, resumesOn: string): string {
   }
   if (hazard === null) {
     return operations;
+  }
+  const end = parseInstant(hazard.end);
+  if (now < end) {
+    const endsAt = `${formatDate(calendarDate(end, situation.zone))} ${localTime(end, situation)}`;
+    return `${HAZARD_LABEL[hazard.kind]} is expected to end by ${endsAt}. ${operations}`;
   }
   return `${HAZARD_LABEL[hazard.kind]} has ended. ${operations}`;
 }

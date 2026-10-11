@@ -22,6 +22,8 @@ import {
   dispatchTimeline,
 } from "./notifications";
 
+const AFTER_HAZARD = "2026-10-12T17:00:00.000Z";
+
 it("sends the new instruction to someone the superseding decision no longer notifies", () => {
   const employees = [employee({ id: 1, teleworkEligible: false })];
   const update = buildPostureChangeUpdate({
@@ -107,10 +109,23 @@ it.each<[string, PackageFields, string]>([
   const allClear = buildAllClear({
     original: decidedPackage(fields),
     resumesOn: "2026-10-13",
-    now: NOW,
+    now: AFTER_HAZARD,
   });
   expect(allClear.notices.map(({ message }) => message.whatsHappening)).toEqual(
     [whatsHappening],
+  );
+});
+
+it("does not declare the hazard over in an all-clear drafted before it ends", () => {
+  const allClear = buildAllClear({
+    original: decidedPackage({}),
+    resumesOn: "2026-10-13",
+    now: NOW,
+  });
+  expect(allClear.notices.map(({ message }) => message.whatsHappening)).toEqual(
+    [
+      `Winter weather is expected to end by 2026-10-12 11:00. ${FACILITY_NAME} resumes normal operations on 2026-10-13.`,
+    ],
   );
 });
 
