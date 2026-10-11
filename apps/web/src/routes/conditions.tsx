@@ -16,6 +16,8 @@ const PAGE_TITLE = pageTitle(PAGE_HEADING);
 const LOADING_TEXT = "Loading conditions...";
 const MAP_LOADING_TEXT = "Loading map...";
 const LOAD_ERROR_TEXT = "Conditions could not be loaded.";
+const LIVE_UNAVAILABLE_TEXT =
+  "Live alerts and air quality are unavailable. Facility standings are current.";
 
 const ConditionsMap = lazy(() =>
   import("@/features/map/conditions-map").then((module) => ({
@@ -41,6 +43,11 @@ function ConditionsPage(): JSX.Element {
         <LayerToggles available={available} />
         <PostureLegend />
       </div>
+      {alerts === null && (
+        <Alert>
+          <AlertTitle>{LIVE_UNAVAILABLE_TEXT}</AlertTitle>
+        </Alert>
+      )}
       <ClientOnly fallback={mapFallback}>
         <Suspense fallback={mapFallback}>
           <ConditionsMap
