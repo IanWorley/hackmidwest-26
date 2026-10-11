@@ -197,3 +197,19 @@ it(`POST ${EVALUATE_PATH} rejects an asOf that is not a timestamp`, async () => 
     expect(response.status).toBe(HTTP_UNPROCESSABLE);
   });
 });
+
+it.each([
+  "+275760-09-13T00:00:00.000Z",
+  "-000001-01-01T00:00:00Z",
+  "2026-02-30T10:00:00Z",
+])(`POST ${EVALUATE_PATH} rejects asOf %s with a 422 naming asOf`, async (asOf) => {
+  await withApp(async ({ post }) => {
+    const response = await post(EVALUATE_PATH, { asOf });
+
+    const body = await response.json();
+    expect([response.status, body.property]).toEqual([
+      HTTP_UNPROCESSABLE,
+      "/asOf",
+    ]);
+  });
+});

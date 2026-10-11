@@ -97,6 +97,70 @@ it.each([
   },
 );
 
+const NOT_UTC_INSTANTS = [
+  "+275760-09-13T00:00:00.000Z",
+  "-000001-01-01T00:00:00Z",
+  "2026-02-30T10:00:00Z",
+];
+
+it.each(NOT_UTC_INSTANTS)(
+  `POST ${DECIDE_PATH} rejects recheckAt %s with a 422 naming recheckAt`,
+  async (recheckAt) => {
+    await withDecisionApp(async ({ evaluate, post }) => {
+      await evaluate();
+
+      const response = await post(DECIDE_PATH, {
+        action: "defer",
+        recheckAt,
+        reason: ROAD_REPORTS,
+        decidedById: DANA_WHITFIELD_ID,
+      });
+
+      expect([response.status, await response.json()]).toEqual([
+        HTTP_UNPROCESSABLE,
+        { message: "Invalid decision", field: "recheckAt" },
+      ]);
+    });
+  },
+);
+
+it.each(NOT_UTC_INSTANTS)(
+  `POST ${DECIDE_PATH} rejects a human input reported at %s with a 422 naming its reportedAt`,
+  async (reportedAt) => {
+    await withDecisionApp(async ({ evaluate, post }) => {
+      await evaluate();
+
+      const response = await post(DECIDE_PATH, {
+        action: "accept",
+        humanInputs: [{ reportedBy: NIGHT_SHIFT, reportedAt, text: "Icy" }],
+        decidedById: DANA_WHITFIELD_ID,
+      });
+
+      expect([response.status, await response.json()]).toEqual([
+        HTTP_UNPROCESSABLE,
+        { message: "Invalid decision", field: "humanInputs.0.reportedAt" },
+      ]);
+    });
+  },
+);
+
+it(`POST ${DECIDE_PATH} rejects an unknown key inside reason with a 422 naming it`, async () => {
+  await withDecisionApp(async ({ evaluate, post }) => {
+    await evaluate();
+
+    const response = await post(DECIDE_PATH, {
+      action: "accept",
+      reason: { ...ROAD_REPORTS, severity: "high" },
+      decidedById: DANA_WHITFIELD_ID,
+    });
+
+    expect([response.status, await response.json()]).toEqual([
+      HTTP_UNPROCESSABLE,
+      { message: "Invalid decision", field: "reason.severity" },
+    ]);
+  });
+});
+
 it("POST /api/recommendations/0x1/decisions reports a malformed id as the id field", async () => {
   await withDecisionApp(async ({ post }) => {
     const response = await post("/api/recommendations/0x1/decisions", {
