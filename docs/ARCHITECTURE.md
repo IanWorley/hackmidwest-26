@@ -84,9 +84,10 @@ listTasks(): Effect<Task[], TaskStorageError, Database>
 
 - `Database` (`apps/api/src/runtime.ts`) is a `Context.Service` key for the `@hackmidwest/db` connection. It is a
   token, not a repository: SQL stays in the feature that owns it.
-- `runtime.ts` is the one place services are provided and programs are run. `createApiRuntime(db)` builds a
-  `ManagedRuntime` from `Layer.succeed(Database, db)`. `ApiServices` is derived from that layer, so a new service is
-  added in one place. `runRequest` runs one complete program per request. Any failure or defect is logged and becomes
+- `runtime.ts` is the one place services are provided and programs are run. `createApiRuntime(db, clients)` builds a
+  `ManagedRuntime` from `Layer.succeed(Database, db)` merged with one `Layer.succeed` per outbound client, such as
+  `NwsClient` (`apps/api/src/clients/nws.ts`). `ApiServices` is derived from that layer, so a new service is added in
+  one place. `runRequest` runs one complete program per request. Any failure or defect is logged and becomes
   a declared `500 { message: "Internal server error" }`, so Eden types it and no driver detail reaches a client.
 - Routes declare the 500 response next to their success response. Feature-specific errors (a future 404 or 409)
   are recovered inside the program before `runRequest`'s fallback.

@@ -40,6 +40,16 @@
       }
     },
     {
+      // Effect service keys are classes, and runtime.ts is the one place
+      // every service key is declared and provided.
+      "includes": ["src/runtime.ts"],
+      "linter": {
+        "rules": {
+          "style": { "noExcessiveClassesPerFile": "off" }
+        }
+      }
+    },
+    {
       // The Bun entry point is the one place that reads the environment or
       // loads Bun modules; it passes typed config down.
       "includes": ["src/index.ts"],
