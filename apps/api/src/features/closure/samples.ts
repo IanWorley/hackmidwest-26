@@ -1,5 +1,6 @@
 import type { ForecastPeriod } from "../../clients/nws-model";
 import type { InputKind } from "./freshness";
+import { byText, firstBy } from "./order";
 import type { Reading } from "./readings";
 import { TIMING_POLICY, type WindMetric } from "./thresholds";
 import { type Instant, parseInstant, shiftIso } from "./zoned-time";
@@ -117,15 +118,17 @@ function readingSamples(
   sampler: ReadingSampler,
 ): Sample[] {
   const nowAt = parseInstant(now);
-  const [first, ...rest] = readings.filter(
-    (reading) =>
-      reading.metric === sampler.metric &&
-      parseInstant(reading.observedAt) <= nowAt,
+  const latest = firstBy(
+    readings.filter(
+      (reading) =>
+        reading.metric === sampler.metric &&
+        parseInstant(reading.observedAt) <= nowAt,
+    ),
+    byLatest,
   );
-  if (first === undefined) {
+  if (latest === undefined) {
     return [];
   }
-  const latest = rest.reduce(laterReading, first);
   return [
     {
       value: sampler.toCutoffUnit(latest.value),
@@ -150,7 +153,8 @@ function contiguousRuns<Item extends { readonly period: Period }>(
   const sorted = [...items].sort(
     (left, right) =>
       parseInstant(left.period.startTime) -
-      parseInstant(right.period.startTime),
+        parseInstant(right.period.startTime) ||
+      parseInstant(left.period.endTime) - parseInstant(right.period.endTime),
   );
   const runs: [Item, ...Item[]][] = [];
   for (const item of sorted) {
@@ -167,11 +171,13 @@ function contiguousRuns<Item extends { readonly period: Period }>(
   return runs;
 }
 
-function laterReading(latest: Reading, reading: Reading): Reading {
-  if (parseInstant(reading.observedAt) > parseInstant(latest.observedAt)) {
-    return reading;
-  }
-  return latest;
+/** Latest first; readings stamped at the same instant go larger value first, then by rawRef. */
+function byLatest(left: Reading, right: Reading): number {
+  return (
+    parseInstant(right.observedAt) - parseInstant(left.observedAt) ||
+    right.value - left.value ||
+    byText(left.rawRef, right.rawRef)
+  );
 }
 
 export type {

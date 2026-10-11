@@ -1,7 +1,8 @@
 import type { Hazard } from "@hackmidwest/db";
 import type { NwsAlert } from "../../clients/nws-model";
-import { mostDisruptive } from "./disruption";
+import { byDisruption, mostDisruptive } from "./disruption";
 import type { HazardEvidence } from "./hazard-window";
+import { byText, firstBy } from "./order";
 import type { Posture } from "./postures";
 import {
   contiguousRuns,
@@ -114,7 +115,7 @@ function crossingsOf(
   });
 }
 
-/** Times every crossing and keeps the most disruptive, so input order never decides the outcome. */
+/** Times every crossing and keeps the strongest, so input order never decides the outcome. */
 function assessCutoff(
   hazard: Hazard,
   threshold: Cutoff,
@@ -134,7 +135,7 @@ function assessCutoff(
       }),
     }),
   );
-  const strongest = mostDisruptive(timed, ({ timing }) => timing.status);
+  const strongest = firstBy(timed, byStrongest);
   if (strongest !== undefined) {
     return strongest;
   }
@@ -250,16 +251,22 @@ function reportedMeasurement(
 function highest(
   measurements: readonly Measurement[],
 ): Measurement | undefined {
-  const [first, ...rest] = measurements;
-  if (first === undefined) {
-    return undefined;
-  }
-  return rest.reduce((best, measurement) => {
-    if (measurement.margin > best.margin) {
-      return measurement;
-    }
-    return best;
-  }, first);
+  return firstBy(measurements, byMargin);
+}
+
+/** Largest margin first, then by input ref, so equal alerts resolve the same way in any order. */
+function byMargin(left: Measurement, right: Measurement): number {
+  return right.margin - left.margin || byText(left.input.ref, right.input.ref);
+}
+
+/** Runs from one forecast share a ref, so the earlier window breaks a remaining tie. */
+function byStrongest(left: Crossed, right: Crossed): number {
+  return (
+    byDisruption(left.timing.status, right.timing.status) ||
+    byMargin(left, right) ||
+    parseInstant(left.timing.hazardWindow.start) -
+      parseInstant(right.timing.hazardWindow.start)
+  );
 }
 
 function severityRank(severity: NwsSeverity): number {

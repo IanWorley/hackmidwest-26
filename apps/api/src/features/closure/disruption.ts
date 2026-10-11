@@ -1,4 +1,5 @@
 import { POSTURES } from "@hackmidwest/db";
+import { firstBy } from "./order";
 import type { OpmStatus } from "./timing";
 import { parseInstant } from "./zoned-time";
 
@@ -20,33 +21,25 @@ function disruption(
   }
 }
 
-function isMoreDisruptive(candidate: OpmStatus, current: OpmStatus): boolean {
-  const [candidateRank, candidateDetail] = disruption(candidate);
-  const [currentRank, currentDetail] = disruption(current);
-  return (
-    candidateRank > currentRank ||
-    (candidateRank === currentRank && candidateDetail > currentDetail)
-  );
+/** Most disruptive first: a higher posture, then a longer delay or an earlier departure. */
+function byDisruption(left: OpmStatus, right: OpmStatus): number {
+  const [leftRank, leftDetail] = disruption(left);
+  const [rightRank, rightDetail] = disruption(right);
+  return rightRank - leftRank || rightDetail - leftDetail;
 }
 
 function sameStatus(left: OpmStatus, right: OpmStatus): boolean {
-  return !(isMoreDisruptive(left, right) || isMoreDisruptive(right, left));
+  return byDisruption(left, right) === 0;
 }
 
+/** On a tie the earlier item wins, so callers pass items in a fixed order. */
 function mostDisruptive<Item>(
   items: readonly Item[],
   statusOf: (item: Item) => OpmStatus,
 ): Item | undefined {
-  const [first, ...rest] = items;
-  if (first === undefined) {
-    return undefined;
-  }
-  return rest.reduce((strongest, item) => {
-    if (isMoreDisruptive(statusOf(item), statusOf(strongest))) {
-      return item;
-    }
-    return strongest;
-  }, first);
+  return firstBy(items, (left, right) =>
+    byDisruption(statusOf(left), statusOf(right)),
+  );
 }
 
-export { mostDisruptive, sameStatus };
+export { byDisruption, mostDisruptive, sameStatus };
