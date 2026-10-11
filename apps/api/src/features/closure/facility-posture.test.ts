@@ -10,7 +10,7 @@ import {
   input,
   nwsAlert,
 } from "./engine-test-fixtures";
-import { postureOfDecision } from "./facility-posture";
+import { type PostureTimings, postureOfDecision } from "./facility-posture";
 
 const ADVISORY_DELAY = evaluatePosture(
   input(["winter"], {
@@ -89,4 +89,42 @@ it.each([
   },
 ] as const)("$scenario", ({ decision, recommendation, expected }) => {
   expect(postureOfDecision(decision, recommendation)).toEqual(expected);
+});
+
+it("announces a finding's clamped release, not the passed one its timing case kept", () => {
+  const clampedAt = "2026-01-14T18:00:00.000Z";
+  const recommendation: PostureTimings = {
+    status: { posture: "full_closure" },
+    findings: [
+      {
+        timing: {
+          status: { posture: "full_closure" },
+          timingCase: { kind: "spansOperatingDay" },
+        },
+      },
+      {
+        timing: {
+          status: {
+            posture: "early_dismissal",
+            departAt: clampedAt,
+            departAtLocal: "12:00",
+          },
+          timingCase: {
+            kind: "startsDuringHours",
+            releaseAt: "2026-01-14T16:00:00.000Z",
+          },
+        },
+      },
+    ],
+  };
+
+  expect(
+    postureOfDecision(
+      { action: "override", chosenPosture: "early_dismissal" },
+      recommendation,
+    ),
+  ).toEqual({
+    kind: "decided",
+    posture: { posture: "early_dismissal", releaseAt: clampedAt },
+  });
 });
