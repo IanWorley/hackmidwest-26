@@ -19,7 +19,7 @@ export type DirectiveKind = (typeof DIRECTIVE_KINDS)[number];
 export const DIRECTIVES_WITH_EFFECTIVE_AT = [
   "dismissed",
 ] as const satisfies readonly DirectiveKind[];
-/** Raised by migration 0006's trigger; the API matches it to answer 409 instead of 500. */
+/** Raised by migration 0006's trigger. The API refuses a superseded decision before inserting, so this guards direct writes. */
 export const SUPERSEDED_DECISION_MESSAGE =
   "decision_directives must name the newest decision: this decision is already superseded";
 

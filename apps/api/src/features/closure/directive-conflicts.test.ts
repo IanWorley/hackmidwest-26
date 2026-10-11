@@ -1,20 +1,27 @@
 import {
   decisionDirectives,
-  SUPERSEDED_DECISION_MESSAGE,
+  decisions,
+  recommendations,
 } from "@hackmidwest/db";
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
-import { sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { HTTP_CONFLICT, HTTP_INTERNAL_SERVER_ERROR } from "../../runtime";
+import { HTTP_CONFLICT, HTTP_CREATED } from "../../runtime";
 import {
   ACCEPT,
   appRunner,
+  BEFORE_DECIDED_AT,
+  type Db,
   DECIDER_ID,
+  DEFER,
   decide,
+  FACILITY_ID,
   FIRST_DECISION_ID,
+  NEWER_RECOMMENDATION_ID,
   OVERRIDE,
+  RECOMMENDATION,
   SECOND_DECISION_ID,
 } from "./decision-test-fixtures";
+import { contentHash } from "./records";
 
 const withApp = appRunner(createTestDatabaseWithDemoFacilities);
 
@@ -28,6 +35,74 @@ const ESSENTIAL_REPORT = {
   },
   issuedById: DECIDER_ID,
 } as const;
+const SAME_DAY_REEVALUATION = {
+  ...RECOMMENDATION,
+  evaluatedAt: BEFORE_DECIDED_AT,
+  asOf: BEFORE_DECIDED_AT,
+};
+const YESTERDAY = {
+  ...RECOMMENDATION,
+  evaluatedAt: "2026-10-01T10:00:00.000Z",
+  asOf: "2026-10-01T10:00:00.000Z",
+  decideBy: "2026-10-01T11:00:00.000Z",
+  snapshot: { output: { facilityDate: "2026-10-01" } },
+} as const;
+
+async function stageRecommendation(
+  db: Db,
+  recommendation: typeof RECOMMENDATION,
+): Promise<{ id: number; contentHash: string }> {
+  const [row] = await db
+    .insert(recommendations)
+    .values({ ...recommendation, contentHash: contentHash(recommendation) })
+    .returning();
+  if (row === undefined) {
+    throw new Error("The staged recommendation insert returned no row");
+  }
+  return row;
+}
+
+/** Yesterday's accepted decision, written as the decision route would have written it then. */
+async function stageYesterdaysDecision(db: Db): Promise<void> {
+  const recommendation = await stageRecommendation(db, YESTERDAY);
+  const decision = {
+    recommendationId: recommendation.id,
+    recommendationHash: recommendation.contentHash,
+    facilityId: FACILITY_ID,
+    action: "accept",
+    chosenPosture: YESTERDAY.posture,
+    recheckAt: null,
+    decidedById: DECIDER_ID,
+    decidedByName: "Dana Whitfield",
+    decidedByRole: "County Executive Director",
+    decidedAt: "2026-10-01T10:30:00.000Z",
+    identityVerified: false,
+    reasonCategory: null,
+    reasonText: null,
+    supersedesDecisionId: null,
+  } as const;
+  await db
+    .insert(decisions)
+    .values({ ...decision, contentHash: contentHash(decision) });
+}
+
+it("refuses a directive on yesterday's decision, naming no current decision", async () => {
+  await withApp(async ({ db, request }) => {
+    await stageYesterdaysDecision(db);
+
+    const response = await request(DIRECTIVES_PATH, ESSENTIAL_REPORT);
+
+    expect([
+      response.status,
+      await response.json(),
+      await db.select().from(decisionDirectives),
+    ]).toEqual([
+      HTTP_CONFLICT,
+      { conflict: "not_current_decision", currentDecisionId: null },
+      [],
+    ]);
+  });
+});
 
 it("refuses a directive on a decision that a newer decision supersedes", async () => {
   await withApp(async ({ db, request }) => {
@@ -45,27 +120,66 @@ it("refuses a directive on a decision that a newer decision supersedes", async (
       await db.select().from(decisionDirectives),
     ]).toEqual([
       HTTP_CONFLICT,
-      { conflict: "newer_decision", latestDecisionId: SECOND_DECISION_ID },
+      {
+        conflict: "not_current_decision",
+        currentDecisionId: SECOND_DECISION_ID,
+      },
       [],
     ]);
   });
 });
 
-it("answers 500, not 409, when another insert failure echoes the superseded message in its reason", async () => {
+it("refuses a directive on an older same-day chain once the re-evaluation is decided", async () => {
   await withApp(async ({ db, request }) => {
     await request(decide(), ACCEPT);
-    await db.run(
-      sql`create trigger directive_insert_fails before insert on decision_directives begin select raise(abort, 'storage failure'); end`,
-    );
+    await stageRecommendation(db, SAME_DAY_REEVALUATION);
+    await request(decide(NEWER_RECOMMENDATION_ID), ACCEPT);
 
-    const response = await request(DIRECTIVES_PATH, {
-      ...ESSENTIAL_REPORT,
-      reason: { category: "other", text: SUPERSEDED_DECISION_MESSAGE },
-    });
+    const response = await request(DIRECTIVES_PATH, ESSENTIAL_REPORT);
 
-    expect([response.status, await response.json()]).toEqual([
-      HTTP_INTERNAL_SERVER_ERROR,
-      { message: "Internal server error" },
+    expect([
+      response.status,
+      await response.json(),
+      await db.select().from(decisionDirectives),
+    ]).toEqual([
+      HTTP_CONFLICT,
+      {
+        conflict: "not_current_decision",
+        currentDecisionId: SECOND_DECISION_ID,
+      },
+      [],
+    ]);
+  });
+});
+
+it("refuses a directive on a defer, which chose no posture", async () => {
+  await withApp(async ({ db, request }) => {
+    await request(decide(), DEFER);
+
+    const response = await request(DIRECTIVES_PATH, ESSENTIAL_REPORT);
+
+    expect([
+      response.status,
+      await response.json(),
+      await db.select().from(decisionDirectives),
+    ]).toEqual([
+      HTTP_CONFLICT,
+      { conflict: "no_chosen_posture", currentDecisionId: FIRST_DECISION_ID },
+      [],
+    ]);
+  });
+});
+
+it("records a directive on the standing decision after an undecided same-day re-evaluation", async () => {
+  await withApp(async ({ db, request }) => {
+    await request(decide(), ACCEPT);
+    await stageRecommendation(db, SAME_DAY_REEVALUATION);
+
+    const response = await request(DIRECTIVES_PATH, ESSENTIAL_REPORT);
+
+    expect([response.status, (await response.json()).decisionId]).toEqual([
+      HTTP_CREATED,
+      FIRST_DECISION_ID,
     ]);
   });
 });

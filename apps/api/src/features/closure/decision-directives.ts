@@ -24,8 +24,8 @@ import {
 import { decimalIdParams } from "./facilities";
 import {
   type DirectiveOutcome,
+  directiveConflictResponse,
   recordDirective,
-  supersededDecisionConflict,
 } from "./record-directive";
 
 const DIRECTIVES_PATH = "/api/decisions/:id/directives";
@@ -43,7 +43,7 @@ type RecordDirectiveResponse =
     >
   | ElysiaCustomStatusResponse<
       typeof HTTP_CONFLICT,
-      typeof supersededDecisionConflict.static
+      typeof directiveConflictResponse.static
     >
   | ElysiaCustomStatusResponse<
       typeof HTTP_UNPROCESSABLE_ENTITY,
@@ -89,7 +89,7 @@ function createDirectivesModule(runRequest: RunRequest) {
         response: {
           [HTTP_CREATED]: directiveResponse,
           [HTTP_NOT_FOUND]: decisionNotFoundResponse,
-          [HTTP_CONFLICT]: supersededDecisionConflict,
+          [HTTP_CONFLICT]: directiveConflictResponse,
           [HTTP_UNPROCESSABLE_ENTITY]: validationErrorResponse,
           [HTTP_INTERNAL_SERVER_ERROR]: internalServerErrorResponse,
         },

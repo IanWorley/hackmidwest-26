@@ -7,15 +7,17 @@ import {
   decisions,
   employees,
   formatDirectiveScope,
-  SUPERSEDED_DECISION_MESSAGE,
 } from "@hackmidwest/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { DateTime, Effect, Option } from "effect";
 import { t } from "elysia";
 import { Database } from "../../runtime";
+import {
+  type CurrentDecisionRow,
+  findCurrentDecision,
+} from "./current-decision";
 import { invalidBody, type ValidationErrorBody } from "./decision-body";
 import type { RecordContent } from "./decision-chain";
-import { newerDecisionConflict } from "./decision-plan";
 import { DIRECTIVE_FIELDS, type DirectiveBody } from "./directive-body";
 import {
   type DirectiveRecord,
@@ -29,22 +31,31 @@ import {
   type Transaction,
 } from "./record-decision";
 import { contentHash } from "./records";
+import { toInstant } from "./zoned-time";
 
 type DirectiveContent = RecordContent<DirectiveRow>;
-type DecisionRow = typeof decisions.$inferSelect;
 
-/** #69's newer_decision conflict. A superseded decision always has a successor, so the id is never null here. */
-const supersededDecisionConflict = t.Object({
-  ...newerDecisionConflict.properties,
-  latestDecisionId: t.Integer(),
-});
+/** #69's conflict shape, naming the decision a directive may target instead. */
+const directiveConflictResponse = t.Union([
+  t.Object({
+    conflict: t.Literal("not_current_decision"),
+    // Null when the facility has no current decision, such as after the facility day rolled over.
+    currentDecisionId: t.Nullable(t.Integer()),
+  }),
+  t.Object({
+    // The current decision is a defer or a missed deadline, so there is no posture to qualify.
+    conflict: t.Literal("no_chosen_posture"),
+    currentDecisionId: t.Integer(),
+  }),
+]);
+type DirectiveConflict = typeof directiveConflictResponse.static;
 
 type DirectiveOutcome =
   | { readonly kind: "recorded"; readonly directive: DirectiveRecord }
   | { readonly kind: "decision_not_found" }
   | {
       readonly kind: "conflict";
-      readonly conflict: typeof supersededDecisionConflict.static;
+      readonly conflict: DirectiveConflict;
     }
   | { readonly kind: "rejected"; readonly rejection: ValidationErrorBody };
 
@@ -97,72 +108,35 @@ async function scopeInFacility(
   }
 }
 
-/** The driver's own error at the bottom of the cause chain. Wrappers above it quote the query's params, request text included. */
-function innermostError(error: unknown): unknown {
-  const seen = new Set<unknown>();
-  let current = error;
-  while (
-    current instanceof Error &&
-    current.cause !== undefined &&
-    !seen.has(current)
-  ) {
-    seen.add(current);
-    current = current.cause;
-  }
-  return current;
-}
-
-function isSupersededDecisionAbort(error: unknown): boolean {
-  const innermost = innermostError(error);
-  return (
-    innermost instanceof Error &&
-    innermost.message === SUPERSEDED_DECISION_MESSAGE
-  );
-}
-
-async function newestDecisionId(
-  tx: Transaction,
-  recommendationId: number,
-): Promise<number> {
-  const [newest] = await tx
-    .select({ id: decisions.id })
-    .from(decisions)
-    .where(eq(decisions.recommendationId, recommendationId))
-    .orderBy(desc(decisions.id))
-    .limit(1);
-  if (newest === undefined) {
-    throw new Error(`Recommendation ${recommendationId} has no decision`);
-  }
-  return newest.id;
-}
-
-/** The superseded-decision check lives in migration 0006's trigger alone, so its abort is the 409. */
 async function insertDirective(
   tx: Transaction,
-  decision: DecisionRow,
   content: DirectiveContent,
-): Promise<DirectiveOutcome> {
-  try {
-    const [row] = await tx
-      .insert(decisionDirectives)
-      .values({ ...content, contentHash: contentHash(content) })
-      .returning();
-    if (row === undefined) {
-      throw new Error("The directive insert returned no row");
-    }
-    return { kind: "recorded", directive: directiveRecordOf(row) };
-  } catch (cause) {
-    if (!isSupersededDecisionAbort(cause)) {
-      throw cause;
-    }
+): Promise<DirectiveRecord> {
+  const [row] = await tx
+    .insert(decisionDirectives)
+    .values({ ...content, contentHash: contentHash(content) })
+    .returning();
+  if (row === undefined) {
+    throw new Error("The directive insert returned no row");
+  }
+  return directiveRecordOf(row);
+}
+
+/** A directive takes effect only on the facility's current decision, and only when that decision chose a posture. */
+function directiveConflict(
+  decisionId: number,
+  current: CurrentDecisionRow | null,
+): DirectiveConflict | null {
+  if (current === null || current.id !== decisionId) {
     return {
-      kind: "conflict",
-      conflict: {
-        conflict: "newer_decision",
-        latestDecisionId: await newestDecisionId(tx, decision.recommendationId),
-      },
+      conflict: "not_current_decision",
+      currentDecisionId: current?.id ?? null,
     };
   }
+  if (current.chosenPosture === null) {
+    return { conflict: "no_chosen_posture", currentDecisionId: current.id };
+  }
+  return null;
 }
 
 async function issueInTransaction(
@@ -195,7 +169,16 @@ async function issueInTransaction(
   if (!(await scopeInFacility(tx, body.scope, decision.facilityId))) {
     return rejected(DIRECTIVE_FIELDS.scope, SCOPE_OUTSIDE_FACILITY_MESSAGE);
   }
-  return insertDirective(tx, decision, {
+  const current = await findCurrentDecision(
+    tx,
+    decision.facilityId,
+    toInstant(DateTime.toEpochMillis(issuedAt)),
+  );
+  const conflict = directiveConflict(decision.id, current?.decision ?? null);
+  if (conflict !== null) {
+    return { kind: "conflict", conflict };
+  }
+  const directive = await insertDirective(tx, {
     decisionId: decision.id,
     decisionHash: decision.contentHash,
     scope: formatDirectiveScope(body.scope),
@@ -206,6 +189,7 @@ async function issueInTransaction(
     issuedById: issuer.id,
     issuedAt: DateTime.formatIso(issuedAt),
   });
+  return { kind: "recorded", directive };
 }
 
 const recordDirective = Effect.fn("recordDirective")(function* (
@@ -228,4 +212,4 @@ const recordDirective = Effect.fn("recordDirective")(function* (
 });
 
 export type { DirectiveOutcome };
-export { recordDirective, supersededDecisionConflict };
+export { directiveConflictResponse, recordDirective };
