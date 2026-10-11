@@ -1,7 +1,12 @@
 import { HAZARDS } from "@hackmidwest/db";
 import { describe, expect, it } from "vitest";
 import { POSTURES } from "./postures";
-import { type Cutoff, NWS_SEVERITIES, THRESHOLDS } from "./thresholds";
+import {
+  type Cutoff,
+  NWS_SEVERITIES,
+  THRESHOLDS,
+  TIMING_POLICY,
+} from "./thresholds";
 
 interface CitedEntry {
   readonly path: string;
@@ -31,15 +36,15 @@ function cutoffRank(cutoff: Cutoff): number {
   return cutoff.value;
 }
 
-describe("THRESHOLDS", () => {
-  it.each(collectCitedEntries(THRESHOLDS, "THRESHOLDS"))(
-    "$path cites a source and citation",
-    ({ source, citation }) => {
-      expect(typeof source === "string" && source.trim()).toBeTruthy();
-      expect(typeof citation === "string" && citation.trim()).toBeTruthy();
-    },
-  );
+it.each([
+  ...collectCitedEntries(THRESHOLDS, "THRESHOLDS"),
+  ...collectCitedEntries(TIMING_POLICY, "TIMING_POLICY"),
+])("$path cites a source and citation", ({ source, citation }) => {
+  expect(typeof source === "string" && source.trim()).toBeTruthy();
+  expect(typeof citation === "string" && citation.trim()).toBeTruthy();
+});
 
+describe("THRESHOLDS", () => {
   it.each(HAZARDS)(
     "%s cutoffs escalate posture as the value rises",
     (hazard) => {

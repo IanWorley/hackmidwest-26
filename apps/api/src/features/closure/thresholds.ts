@@ -12,6 +12,13 @@ const WIND_POST_HAZARD_BUFFER_MINUTES = 60;
 const CAMS_GLOBAL_TIME_STEP_MINUTES = 180;
 const OPM_LONGEST_ILLUSTRATED_DELAY_HOURS = 4;
 const OPM_STANDARD_DELAY_HOURS = 2;
+const OPM_WHOLE_HOUR_DELAY_MINUTES = 60;
+const QUARTER_HOUR_MINUTES = 15;
+const DISMISSAL_MARGIN_MINUTES = 30;
+const NOTIFICATION_DELIVERY_MINUTES = 15;
+const HOURLY_OBSERVATION_STALE_MINUTES = 90;
+const FORECAST_STALE_MINUTES = 360;
+const CAMS_REFRESH_MINUTES = 720;
 
 const NWSI_10_513_SOURCE =
   "National Weather Service, NWSI 10-513 WFO Winter Weather Products Specification (November 6, 2024), with OASIS CAP v1.2 severity as served by api.weather.gov";
@@ -29,6 +36,9 @@ const OPM_SOURCE =
   "U.S. Office of Personnel Management, Governmentwide Dismissal and Closure Procedures (December 2025)";
 const OPM_URL =
   "https://www.opm.gov/policy-data-oversight/pay-leave/reference-materials/handbooks/dcdismissal.pdf";
+const OPEN_METEO_AIR_QUALITY_URL =
+  "https://open-meteo.com/en/docs/air-quality-api";
+const CLOSURE_CALL_POLICY_SOURCE = "Closure Call policy";
 
 // CAP v1.2 lists these most severe first; ascending order lets an index
 // comparison rank severity, with Unknown lowest.
@@ -173,8 +183,7 @@ export const THRESHOLDS = {
       unit: "minutes",
       source:
         "Open-Meteo Air Quality API, CAMS Global Atmospheric Composition Forecasts",
-      citation:
-        "US AQI comes from the CAMS global model at 3-hourly resolution, refreshed every 12 hours. The buffer waits one 3-hour model step to confirm AQI stays below the cutoff. https://open-meteo.com/en/docs/air-quality-api",
+      citation: `US AQI comes from the CAMS global model at 3-hourly resolution, refreshed every 12 hours. The buffer waits one 3-hour model step to confirm AQI stays below the cutoff. ${OPEN_METEO_AIR_QUALITY_URL}`,
     },
     maxDelayHours: {
       value: OPM_STANDARD_DELAY_HOURS,
@@ -184,3 +193,55 @@ export const THRESHOLDS = {
     },
   },
 } as const satisfies Record<Hazard, HazardThresholds>;
+
+/** Policy values that turn a hazard window into an OPM-style status and a decide-by time. */
+export const TIMING_POLICY = {
+  delayIncrementMinutes: {
+    value: OPM_WHOLE_HOUR_DELAY_MINUTES,
+    unit: "minutes",
+    source: OPM_SOURCE,
+    citation: `§IV.B.3 Options 3a and 3b illustrate delayed arrivals in whole hours (2 hours, 4 hours), so a partial hour of delay rounds up to the next hour. ${OPM_URL}`,
+  },
+  releaseIncrementMinutes: {
+    value: QUARTER_HOUR_MINUTES,
+    unit: "minutes",
+    source: CLOSURE_CALL_POLICY_SOURCE,
+    citation:
+      "Policy choice: an early-dismissal departure time rounds down to the quarter hour so it reads like an announced time, and rounding down only releases employees earlier.",
+  },
+  dismissalMarginMinutes: {
+    value: DISMISSAL_MARGIN_MINUTES,
+    unit: "minutes",
+    source: CLOSURE_CALL_POLICY_SOURCE,
+    citation:
+      "Policy choice: employees released early should be home 30 minutes before hazard onset, to absorb error in the forecast onset time. This is separate from the post-hazard buffer, which measures road recovery after the event ends.",
+  },
+  notificationDeliveryMinutes: {
+    value: NOTIFICATION_DELIVERY_MINUTES,
+    unit: "minutes",
+    source: CLOSURE_CALL_POLICY_SOURCE,
+    citation:
+      "Policy choice: 15 minutes for an email and SMS fan-out to reach every recipient, counted before the facility's notification lead time.",
+  },
+  observationStaleMinutes: {
+    value: HOURLY_OBSERVATION_STALE_MINUTES,
+    unit: "minutes",
+    source: CLOSURE_CALL_POLICY_SOURCE,
+    citation:
+      "Policy choice: NWS stations report hourly, so an observation older than one report cycle plus 30 minutes of reporting latency has missed an update.",
+  },
+  forecastStaleMinutes: {
+    value: FORECAST_STALE_MINUTES,
+    unit: "minutes",
+    source: CLOSURE_CALL_POLICY_SOURCE,
+    citation:
+      "Policy choice: NWS publishes no staleness limit for the hourly forecast. A forecast more than 6 hours old lowers confidence in the hazard window it supplies.",
+  },
+  airQualityStaleMinutes: {
+    value: CAMS_REFRESH_MINUTES,
+    unit: "minutes",
+    source:
+      "Open-Meteo Air Quality API, CAMS Global Atmospheric Composition Forecasts",
+    citation: `The CAMS global model behind US AQI is refreshed every 12 hours, so an AQI value older than one refresh has missed an update. ${OPEN_METEO_AIR_QUALITY_URL}`,
+  },
+} as const satisfies Record<string, CitedValue<"minutes">>;
