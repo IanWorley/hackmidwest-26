@@ -30,6 +30,7 @@ const KANSAS_CITY_ID = 1;
 const DECISION_MAKER_ID = 1;
 const BACKUP_ID = 2;
 const FIRST_RECOMMENDATION_ID = 1;
+const ACCEPT = { action: "accept", decidedById: DECISION_MAKER_ID } as const;
 const NEXT_MORNING_AS_OF = "2026-01-15T10:30:00.000Z";
 const STORM_START = "2026-01-14T06:00:00.000Z";
 
@@ -205,27 +206,11 @@ it(`POST ${EVALUATE_PATH} after decideBy records that nobody decided the previou
   });
 });
 
-it(`POST ${EVALUATE_PATH} judges the deadline by the clock, so an asOf past decideBy records no missed decision`, async () => {
-  await withApp(async ({ db, post }) => {
-    await post(EVALUATE_PATH);
-
-    const response = await post(EVALUATE_PATH, { asOf: AFTER_DECIDE_BY });
-
-    expect([response.status, await storedDecisions(db)]).toEqual([
-      HTTP_CREATED,
-      [],
-    ]);
-  });
-});
-
 it("an evaluated recommendation can be accepted, and the decision chain verifies intact", async () => {
   await withApp(async ({ get, post }) => {
     const evaluated = await post(EVALUATE_PATH);
     const { id } = await evaluated.json();
-    const decided = await post(`/api/recommendations/${id}/decisions`, {
-      action: "accept",
-      decidedById: DECISION_MAKER_ID,
-    });
+    const decided = await post(`/api/recommendations/${id}/decisions`, ACCEPT);
     const decision = await decided.json();
 
     const verified = await get(`/api/decisions/${decision.id}/verify`);

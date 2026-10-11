@@ -23,6 +23,7 @@ import {
   toDecisionResponse,
 } from "./decision-view";
 import { parseDecimalId } from "./facilities";
+import { LIVE_RECOMMENDATION } from "./recommendation-mode";
 import { contentHash } from "./records";
 
 type DecisionMakerRow = typeof decisionMakers.$inferSelect;
@@ -77,7 +78,12 @@ async function loadDecisionContext(
   const [latestRecommendation] = await tx
     .select({ id: max(recommendations.id) })
     .from(recommendations)
-    .where(eq(recommendations.facilityId, recommendation.facilityId));
+    .where(
+      and(
+        eq(recommendations.facilityId, recommendation.facilityId),
+        LIVE_RECOMMENDATION,
+      ),
+    );
   const [newestDecision] = await tx
     .select({ id: decisions.id })
     .from(decisions)
@@ -87,8 +93,8 @@ async function loadDecisionContext(
   return {
     recommendation,
     decider: await eligibleDecider(tx, recommendation.facilityId, decidedById),
-    // Rows are add-only and ids only grow, so the highest id is the latest evaluation.
-    latestRecommendationId: latestRecommendation?.id ?? recommendation.id,
+    // Rows are add-only and ids only grow, so the highest live id is the current recommendation.
+    latestRecommendationId: latestRecommendation?.id ?? null,
     latestDecisionId: newestDecision?.id ?? null,
   };
 }

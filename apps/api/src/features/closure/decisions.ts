@@ -4,7 +4,7 @@ import {
   facilities,
   recommendations,
 } from "@hackmidwest/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { DateTime, Effect, Option, Semaphore } from "effect";
 import { Elysia, type ElysiaCustomStatusResponse, status, t } from "elysia";
 import {
@@ -45,6 +45,7 @@ import {
   FACILITY_NOT_FOUND_MESSAGE,
   facilityNotFoundResponse,
 } from "./facilities";
+import { LIVE_RECOMMENDATION } from "./recommendation-mode";
 import {
   DecisionWriteError,
   insertDecision,
@@ -130,7 +131,7 @@ function toHttpResponse(outcome: DecisionOutcome): RecordDecisionResponse {
   }
 }
 
-/** The no_decision row to write, or undefined when a decision exists or decideBy has not passed. */
+/** The no_decision row to write, or undefined when the recommendation is a preview, a decision exists, or decideBy has not passed. */
 async function missedDecisionInTransaction(
   tx: Transaction,
   recommendationId: number,
@@ -144,7 +145,7 @@ async function missedDecisionInTransaction(
       decisionMakers,
       eq(decisionMakers.id, facilities.backupDecisionMakerId),
     )
-    .where(eq(recommendations.id, recommendationId));
+    .where(and(eq(recommendations.id, recommendationId), LIVE_RECOMMENDATION));
   const [existing] = await tx
     .select({ id: decisions.id })
     .from(decisions)
@@ -174,7 +175,7 @@ async function missedDecisionInTransaction(
 }
 
 /**
- * When decideBy has passed and nobody decided, record a no_decision row naming the facility's
+ * When decideBy has passed on a live recommendation and nobody decided, record a no_decision row naming the facility's
  * backup decision maker. Returns none when a decision exists or decideBy has not passed, so a
  * second run writes nothing, even when both run at once.
  */

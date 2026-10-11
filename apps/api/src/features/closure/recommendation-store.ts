@@ -1,6 +1,6 @@
 import { HAZARDS, recommendations } from "@hackmidwest/db";
 import { Value } from "@sinclair/typebox/value";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { createSchemaFactory } from "drizzle-typebox";
 import { Data, Effect, Option } from "effect";
 import { t } from "elysia";
@@ -8,12 +8,16 @@ import { Database } from "../../runtime";
 import type { RecordContent } from "./decision-chain";
 import type { InputKind } from "./freshness";
 import type { Reading } from "./readings";
+import {
+  EVALUATION_MODES,
+  LIVE_RECOMMENDATION,
+  modeOf,
+} from "./recommendation-mode";
 import { type Snapshot, SnapshotSchema } from "./recommendation-snapshot";
 import { type ContentHash, contentHash, type JsonValue } from "./records";
 import { parseInstant } from "./zoned-time";
 
 const MAX_SHAPE_ERRORS = 5;
-const EVALUATION_MODES = ["live", "as_of"] as const;
 const INSTANT_EVENTS = ["evaluated", "asOf", "decideBy"] as const;
 const HAZARD_EVENTS = ["hazardStart", "hazardEnd", "roadsClear"] as const;
 const TIMELINE_INPUTS = [
@@ -29,7 +33,6 @@ const READING_INPUT = {
   "open-meteo": "airQuality",
 } as const satisfies Record<Reading["source"], InputKind>;
 
-type EvaluationMode = (typeof EVALUATION_MODES)[number];
 type TimelineInput = (typeof TIMELINE_INPUTS)[number];
 type RecommendationRow = typeof recommendations.$inferSelect;
 type RecommendationContent = RecordContent<RecommendationRow>;
@@ -101,13 +104,6 @@ function recommendationHash({
     decideBy,
     snapshot,
   });
-}
-
-function modeOf({ asOf, evaluatedAt }: RecommendationContent): EvaluationMode {
-  if (asOf === evaluatedAt) {
-    return "live";
-  }
-  return "as_of";
 }
 
 function inputEntries({ input }: Snapshot): TimelineEntry[] {
@@ -210,6 +206,7 @@ const findRecommendation = Effect.fn("findRecommendation")(function* (
   return Option.fromNullishOr(row);
 });
 
+/** The facility's newest live recommendation, the one a decision is about. */
 const findLatestRecommendation = Effect.fn("findLatestRecommendation")(
   function* (facilityId: number) {
     const db = yield* Database;
@@ -218,7 +215,12 @@ const findLatestRecommendation = Effect.fn("findLatestRecommendation")(
         db
           .select()
           .from(recommendations)
-          .where(eq(recommendations.facilityId, facilityId))
+          .where(
+            and(
+              eq(recommendations.facilityId, facilityId),
+              LIVE_RECOMMENDATION,
+            ),
+          )
           .orderBy(desc(recommendations.id))
           .limit(1),
       catch: (cause) =>

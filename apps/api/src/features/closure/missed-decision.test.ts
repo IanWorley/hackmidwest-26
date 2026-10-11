@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { recommendations } from "@hackmidwest/db";
 import { openDatabase } from "@hackmidwest/db/connection";
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { DateTime, Effect, Option } from "effect";
@@ -16,18 +17,27 @@ import {
   decide,
   FACILITY_ID,
   FIRST_DECISION_ID,
+  RECOMMENDATION,
   RECOMMENDATION_HASH,
   RECOMMENDATION_ID,
   SHA256_HEX,
   storedDecisions,
 } from "./decision-test-fixtures";
 import { recordMissedDecision } from "./decisions";
+import { contentHash } from "./records";
+
+const PREVIEW_ID = 2;
+const PREVIEW = { ...RECOMMENDATION, asOf: "2026-10-02T09:00:00.000Z" };
 
 const withApp = appRunner(createTestDatabaseWithDemoFacilities);
 
-function runMissed(db: Db, now: string): Promise<Option.Option<number>> {
+function runMissed(
+  db: Db,
+  now: string,
+  recommendationId: number = RECOMMENDATION_ID,
+): Promise<Option.Option<number>> {
   return Effect.runPromise(
-    recordMissedDecision(RECOMMENDATION_ID, DateTime.makeUnsafe(now)).pipe(
+    recordMissedDecision(recommendationId, DateTime.makeUnsafe(now)).pipe(
       Effect.map(Option.map(({ id }) => id)),
       Effect.provideService(Database, db),
     ),
@@ -84,6 +94,18 @@ it("writes nothing when someone already decided", async () => {
       result,
       (await storedDecisions(db)).map(({ action }) => action),
     ]).toEqual([Option.none(), ["accept"]]);
+  });
+});
+
+it("writes nothing for a preview, which never enters a decision chain", async () => {
+  await withApp(async ({ db }) => {
+    await db
+      .insert(recommendations)
+      .values({ ...PREVIEW, contentHash: contentHash(PREVIEW) });
+
+    const result = await runMissed(db, AFTER_DECIDE_BY, PREVIEW_ID);
+
+    expect([result, await storedDecisions(db)]).toEqual([Option.none(), []]);
   });
 });
 

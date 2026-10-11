@@ -23,6 +23,7 @@ import { RECOMMENDATIONS_PATH } from "./recommendations";
 
 const FACILITY_WITHOUT_RECOMMENDATIONS_ID = 4;
 const HEX_ID = "0x1";
+const NEWEST_LIVE_ID = 2;
 const { output: STORED_OUTPUT } = parseSnapshot({
   input: EXPECTED_INPUT,
   output: evaluatePosture(EXPECTED_INPUT),
@@ -32,15 +33,30 @@ function withApp(run: (app: TestApp) => Promise<void>): Promise<void> {
   return withStormAppOn(createTestDatabaseWithDemoFacilities, run);
 }
 
-it(`GET ${LATEST_PATH} returns the facility's newest evaluation`, async () => {
+it(`GET ${LATEST_PATH} returns the facility's newest live evaluation, skipping later previews`, async () => {
   await withApp(async ({ get, post }) => {
-    await post(EVALUATE_PATH, { asOf: AS_OF });
+    await post(EVALUATE_PATH);
+    await post(EVALUATE_PATH);
     await post(EVALUATE_PATH, { asOf: LATER_AS_OF });
 
     const response = await get(LATEST_PATH);
 
-    const { id, asOf } = await response.json();
-    expect([response.status, id, asOf]).toEqual([HTTP_OK, 2, LATER_AS_OF]);
+    const { id, mode } = await response.json();
+    expect([response.status, id, mode]).toEqual([
+      HTTP_OK,
+      NEWEST_LIVE_ID,
+      "live",
+    ]);
+  });
+});
+
+it(`GET ${LATEST_PATH} returns 404 for a facility evaluated only as previews`, async () => {
+  await withApp(async ({ get, post }) => {
+    await post(EVALUATE_PATH, { asOf: AS_OF });
+
+    const response = await get(LATEST_PATH);
+
+    expect(response.status).toBe(HTTP_NOT_FOUND);
   });
 });
 

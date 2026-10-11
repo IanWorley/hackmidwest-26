@@ -23,6 +23,7 @@ import {
   parseDecimalId,
 } from "./facilities";
 import { pullInput } from "./recommendation-input";
+import { modeOf } from "./recommendation-mode";
 import { RecommendationSchema } from "./recommendation-snapshot";
 import {
   findLatestRecommendation,
@@ -42,10 +43,9 @@ const RECOMMENDATIONS_PATH = "/api/recommendations";
 const RECOMMENDATION_PATH = `${RECOMMENDATIONS_PATH}/:id`;
 const REPLAY_PATH = `${RECOMMENDATION_PATH}/replay`;
 const RECOMMENDATION_NOT_FOUND_MESSAGE = "Recommendation not found";
-
 const evaluateFields = t.Object(
   {
-    /** Evaluate the data pulled now as of this instant instead of the clock reading. A future instant previews a later call, such as tomorrow morning's. */
+    /** Evaluate the data pulled now as of this instant instead of the clock reading, as a preview. A future instant previews a later call, such as tomorrow morning's. */
     asOf: t.Optional(t.String({ format: "date-time" })),
   },
   CLOSED,
@@ -115,24 +115,17 @@ function evaluateSnapshot(input: EngineInput): Snapshot {
   return parseSnapshot({ input, output: evaluatePosture(input) });
 }
 
+/** A preview stores its recommendation and nothing else. Only a live call settles the previous recommendation's missed deadline. */
 const evaluateFacility = Effect.fn("evaluateFacility")(function* (
   facility: Facility,
-  requestedAsOf: string | undefined,
+  clockReading: DateTime.Utc,
+  asOf: string,
 ) {
-  const clockReading = yield* DateTime.now;
   const evaluatedAt = DateTime.formatIso(clockReading);
-  let asOf = evaluatedAt;
-  if (requestedAsOf !== undefined) {
-    asOf = new Date(requestedAsOf).toISOString();
-  }
   const snapshot = evaluateSnapshot(
     yield* pullInput(facility, asOf, evaluatedAt),
   );
-  const previous = yield* findLatestRecommendation(facility.id);
-  if (Option.isSome(previous)) {
-    yield* recordMissedDecision(previous.value.id, clockReading);
-  }
-  const row = yield* insertRecommendation({
+  const content = {
     facilityId: facility.id,
     evaluatedAt,
     asOf,
@@ -140,8 +133,14 @@ const evaluateFacility = Effect.fn("evaluateFacility")(function* (
     confidence: snapshot.output.confidence.level,
     decideBy: snapshot.output.decideBy.at,
     snapshot,
-  });
-  return toRecord(row);
+  };
+  if (modeOf(content) === "live") {
+    const previous = yield* findLatestRecommendation(facility.id);
+    if (Option.isSome(previous)) {
+      yield* recordMissedDecision(previous.value.id, clockReading);
+    }
+  }
+  return toRecord(yield* insertRecommendation(content));
 });
 
 function replay(row: RecommendationRow): typeof replayResponse.static {
@@ -163,7 +162,15 @@ const evaluateRequest = Effect.fn("evaluateRequest")(function* (
   if (Option.isNone(facility)) {
     return status(HTTP_NOT_FOUND, { message: FACILITY_NOT_FOUND_MESSAGE });
   }
-  return status(HTTP_CREATED, yield* evaluateFacility(facility.value, asOf));
+  const clockReading = yield* DateTime.now;
+  let instant = DateTime.formatIso(clockReading);
+  if (asOf !== undefined) {
+    instant = new Date(asOf).toISOString();
+  }
+  return status(
+    HTTP_CREATED,
+    yield* evaluateFacility(facility.value, clockReading, instant),
+  );
 });
 
 const latestRequest = Effect.fn("latestRequest")(function* (
