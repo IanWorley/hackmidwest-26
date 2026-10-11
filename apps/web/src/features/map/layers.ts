@@ -35,6 +35,14 @@ function encodeLayers(layers: readonly string[]): string | undefined {
   return canonical.join(LAYER_SEPARATOR);
 }
 
+/** The `layers` search value with one layer switched off. */
+function withoutLayer(
+  raw: string | undefined,
+  layer: MapLayer,
+): string | undefined {
+  return encodeLayers(parseLayers(raw).filter((name) => name !== layer));
+}
+
 /** The router serializes what this returns, so `?layers=` stays a readable comma-separated string, rewritten to canonical form. */
 function validateLayersSearch(search: Record<string, unknown>): {
   layers?: string | undefined;
@@ -58,4 +66,5 @@ export {
   parseLayers,
   useMapLayers,
   validateLayersSearch,
+  withoutLayer,
 };

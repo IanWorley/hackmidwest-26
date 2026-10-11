@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import type { StandingPosture } from "@/features/map/load-map";
 import { POSTURE_CLASSES, POSTURE_LABELS } from "./posture";
 
+const MS_PER_SECOND = 1000;
 const MS_PER_MINUTE = 60_000;
 const MINUTES_PER_HOUR = 60;
 const OVERDUE_TEXT = "Decision overdue";
@@ -18,27 +19,19 @@ const AS_OF_FORMAT = new Intl.DateTimeFormat("en-US", {
   timeZoneName: "short",
 });
 
-/** Ticks on wall-clock minute boundaries, so the countdown turns over with the clock. */
-function subscribeToMinutes(onMinute: () => void): () => void {
-  let interval: ReturnType<typeof setInterval> | undefined;
-  const untilNextMinute = MS_PER_MINUTE - (Date.now() % MS_PER_MINUTE);
-  const timeout = setTimeout((): void => {
-    onMinute();
-    interval = setInterval(onMinute, MS_PER_MINUTE);
-  }, untilNextMinute);
-  return (): void => {
-    clearTimeout(timeout);
-    clearInterval(interval);
-  };
+/** Ticks every second, so a deadline at any instant, such as a deferral's mid-minute recheck, turns over within a second. */
+function subscribeToSeconds(onSecond: () => void): () => void {
+  const interval = setInterval(onSecond, MS_PER_SECOND);
+  return (): void => clearInterval(interval);
 }
 
-/** Floored to the minute, so the snapshot stays stable between ticks. */
-function currentMinute(): number {
-  return Math.floor(Date.now() / MS_PER_MINUTE) * MS_PER_MINUTE;
+/** Floored to the second, so the snapshot stays stable between ticks. */
+function currentSecond(): number {
+  return Math.floor(Date.now() / MS_PER_SECOND) * MS_PER_SECOND;
 }
 
 /** The server has no "now" that matches the browser's, so it renders none. */
-function noMinute(): null {
+function noNow(): null {
   return null;
 }
 
@@ -66,9 +59,9 @@ function PostureBadge({ posture }: { posture: StandingPosture }): JSX.Element {
 
 function DecideByCountdown({ decideBy }: { decideBy: string }): JSX.Element {
   const now = useSyncExternalStore<number | null>(
-    subscribeToMinutes,
-    currentMinute,
-    noMinute,
+    subscribeToSeconds,
+    currentSecond,
+    noNow,
   );
   return (
     <time className="text-xs" dateTime={decideBy}>

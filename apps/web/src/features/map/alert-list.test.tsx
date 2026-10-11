@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { expect, it } from "vitest";
+import { AlertList } from "./alert-list";
 import type { AlertFeature } from "./load-map";
-import { UnmappedAlerts } from "./unmapped-alerts";
 
 const PROPERTIES = {
   headline: null,
@@ -26,13 +26,14 @@ const UNMAPPED: AlertFeature = {
   properties: { ...PROPERTIES, event: "Winter Storm Warning" },
 };
 
-it("lists only the alerts that have no mapped area, with their hazard window", () => {
-  render(<UnmappedAlerts alerts={[MAPPED, UNMAPPED]} />);
+it("lists every alert with its hazard window and marks one without a mapped area", () => {
+  render(<AlertList alerts={[MAPPED, UNMAPPED]} />);
 
-  const list = screen.getByRole("list", {
-    name: "Alerts without a mapped area",
-  });
-  expect(list.textContent).toBe(
-    "Winter Storm Warning, Jan 14, 2026, 6:00 AM UTC → Jan 15, 2026, 3:00 AM UTC",
-  );
+  const list = screen.getByRole("list", { name: "Active alerts" });
+  expect(
+    [...list.querySelectorAll("li")].map((item) => item.textContent),
+  ).toEqual([
+    "Tornado Warning, Jan 14, 2026, 6:00 AM UTC → Jan 15, 2026, 3:00 AM UTC",
+    "Winter Storm Warning, Jan 14, 2026, 6:00 AM UTC → Jan 15, 2026, 3:00 AM UTC (no mapped area)",
+  ]);
 });
