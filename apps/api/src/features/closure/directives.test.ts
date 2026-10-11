@@ -17,7 +17,7 @@ function directive(
 ): Directive {
   return {
     effectiveAt: null,
-    reasonCategory: "weather",
+    reasonCategory: "local_conditions",
     reasonText: "Ice on the access road.",
     issuedById: MANAGER_ID,
     issuedAt: "2026-10-12T10:00:00.000Z",

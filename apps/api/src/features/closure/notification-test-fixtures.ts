@@ -1,6 +1,10 @@
-import type { EmployeeStatus } from "@hackmidwest/db";
+import type {
+  DirectiveKind,
+  DirectiveScope,
+  EmployeeStatus,
+} from "@hackmidwest/db";
 import type { StatusEvent } from "./baseline";
-import type { Directive, DirectiveKind, DirectiveScope } from "./directives";
+import type { Directive } from "./directives";
 import type { Employee, FacilityPosture } from "./effective-status";
 import {
   buildNotificationPackage,

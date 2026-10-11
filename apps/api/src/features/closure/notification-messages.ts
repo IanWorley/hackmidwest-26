@@ -1,4 +1,4 @@
-import type { DirectiveScopeKind } from "./directives";
+import type { DirectiveScopeKind } from "@hackmidwest/db";
 import type {
   Cause,
   EffectiveStatus,

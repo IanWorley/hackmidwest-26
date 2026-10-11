@@ -1,10 +1,6 @@
-import type { EmployeeStatus, employees } from "@hackmidwest/db";
+import type { DirectiveKind, EmployeeStatus, employees } from "@hackmidwest/db";
 import { type Baseline, baselineStatus, type StatusEvent } from "./baseline";
-import {
-  type Directive,
-  type DirectiveKind,
-  winningDirective,
-} from "./directives";
+import { type Directive, winningDirective } from "./directives";
 import type { Posture } from "./postures";
 
 type Employee = typeof employees.$inferSelect;
