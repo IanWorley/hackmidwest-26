@@ -29,10 +29,11 @@ import { contentHash } from "./records";
 type DecisionMakerRow = typeof decisionMakers.$inferSelect;
 type HumanInputContent = Omit<typeof humanInputs.$inferInsert, "decisionId">;
 
-// libsql opens a connection per transaction and sets no busy timeout, so two decision writes
-// started together, such as a human's and a missed deadline's, fight over SQLite's write lock. The
-// loser fails and leaves its connection unable to commit again. Every decision write queues here.
-const decisionWrites = Semaphore.makeUnsafe(1);
+// libsql opens a connection per transaction and sets no busy timeout, so two writes started
+// together, such as a human's decision and a missed deadline's, fight over SQLite's write lock. The
+// loser fails and leaves its connection unable to commit again. Every write on the decision chain
+// (decisions, directives, notification dispatches) queues here.
+const decisionChainWrites = Semaphore.makeUnsafe(1);
 
 class DecisionWriteError extends Data.TaggedError("DecisionWriteError")<{
   readonly cause: unknown;
@@ -181,8 +182,13 @@ const recordDecision = Effect.fn("recordDecision")(function* (
         decideInTransaction(tx, recommendationId.value, body, decidedAt),
       ),
     catch: (cause) => new DecisionWriteError({ cause }),
-  }).pipe(Semaphore.withPermit(decisionWrites));
+  }).pipe(Semaphore.withPermit(decisionChainWrites));
 });
 
 export type { Transaction };
-export { DecisionWriteError, decisionWrites, insertDecision, recordDecision };
+export {
+  DecisionWriteError,
+  decisionChainWrites,
+  insertDecision,
+  recordDecision,
+};

@@ -49,7 +49,7 @@ import {
 import { LIVE_RECOMMENDATION } from "./recommendation-mode";
 import {
   DecisionWriteError,
-  decisionWrites,
+  decisionChainWrites,
   insertDecision,
   recordDecision,
   type Transaction,
@@ -209,7 +209,7 @@ const recordMissedDecision = Effect.fn("recordMissedDecision")(function* (
         missedDecisionInTransaction(tx, recommendationId, now),
       ),
     catch: (cause) => new DecisionWriteError({ cause }),
-  }).pipe(Semaphore.withPermit(decisionWrites));
+  }).pipe(Semaphore.withPermit(decisionChainWrites));
   return Option.fromNullishOr(missed);
 });
 
