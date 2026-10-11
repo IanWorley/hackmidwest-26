@@ -53,6 +53,22 @@ function errorId(formId: string, field: FormField): string {
   return `${formId}-${field}-error`;
 }
 
+function controlId(formId: string, field: FormField): string {
+  return `${formId}-${field}`;
+}
+
+/**
+ * A refused submit moves focus to the control at fault, which reads its error through `aria-describedby`.
+ * A refusal no control owns has only its message to focus.
+ */
+function focusFieldError(formId: string, field: FormField): void {
+  let target = controlId(formId, field);
+  if (field === "form") {
+    target = errorId(formId, field);
+  }
+  document.querySelector<HTMLElement>(`[id="${target}"]`)?.focus();
+}
+
 function textOf(data: FormData, name: string): string {
   const value = data.get(name);
   if (typeof value === "string") {
@@ -107,10 +123,20 @@ function reasonRequired(
   return action !== "accept" || supersedesDecisionId !== undefined;
 }
 
+interface SharedFields {
+  readonly decidedById: number;
+  readonly supersedesDecisionId?: number;
+}
+
+/** `Omit` over a union collapses it; this keeps each action's variant. */
+type DistributiveOmit<Union, Key extends PropertyKey> = Union extends unknown
+  ? Omit<Union, Key>
+  : never;
+
 function sharedFields(
   decidedById: number,
   supersedesDecisionId: number | undefined,
-): { decidedById: number; supersedesDecisionId?: number } {
+): SharedFields {
   if (supersedesDecisionId === undefined) {
     return { decidedById };
   }
@@ -163,17 +189,12 @@ function readDefer(
   };
 }
 
-/** The form is a boundary: its strings become one typed request or the first field at fault. */
-function readDecisionForm(
+/** What each action's own controls contribute, before the recorder every action shares. */
+function readActionFields(
   action: HumanAction,
   data: FormData,
   { supersedesDecisionId, submittedAt }: DecisionContext,
-): FormRead<DecisionRequest> {
-  const decidedById = readDecisionMakerId(data);
-  if (decidedById === undefined) {
-    return { kind: "invalid", field: "recordedBy" };
-  }
-  const shared = sharedFields(decidedById, supersedesDecisionId);
+): FormRead<DistributiveOmit<DecisionRequest, keyof SharedFields>> {
   switch (action) {
     case "accept": {
       const read = readAccept(data, supersedesDecisionId);
@@ -181,37 +202,62 @@ function readDecisionForm(
         return read;
       }
       if (read.request === undefined) {
-        return { kind: "ok", request: { action, ...shared } };
+        return { kind: "ok", request: { action } };
       }
-      return {
-        kind: "ok",
-        request: { action, reason: read.request, ...shared },
-      };
+      return { kind: "ok", request: { action, reason: read.request } };
     }
     case "override": {
       const read = readOverride(data);
       if (read.kind === "invalid") {
         return read;
       }
-      return { kind: "ok", request: { action, ...read.request, ...shared } };
+      return { kind: "ok", request: { action, ...read.request } };
     }
     case "defer": {
       const read = readDefer(data, submittedAt);
       if (read.kind === "invalid") {
         return read;
       }
-      return { kind: "ok", request: { action, ...read.request, ...shared } };
+      return { kind: "ok", request: { action, ...read.request } };
     }
     default:
       return action satisfies never;
   }
 }
 
+/**
+ * The form is a boundary: its strings become one typed request or the first field at fault.
+ * Fields are checked in the order they appear, so the reported field is the top-most one to fix.
+ */
+function readDecisionForm(
+  action: HumanAction,
+  data: FormData,
+  context: DecisionContext,
+): FormRead<DecisionRequest> {
+  const fields = readActionFields(action, data, context);
+  if (fields.kind === "invalid") {
+    return fields;
+  }
+  const decidedById = readDecisionMakerId(data);
+  if (decidedById === undefined) {
+    return { kind: "invalid", field: "recordedBy" };
+  }
+  return {
+    kind: "ok",
+    request: {
+      ...fields.request,
+      ...sharedFields(decidedById, context.supersedesDecisionId),
+    },
+  };
+}
+
 export type { FormField, FormRead, Reason };
 export {
+  controlId,
   errorId,
   FIELD_ERRORS,
   FIELD_NAMES,
+  focusFieldError,
   readDecisionForm,
   readDecisionMakerId,
   readReason,

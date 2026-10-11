@@ -46,8 +46,11 @@ function settle(action: HumanAction, outcome: DecideOutcome): PanelState {
   }
 }
 
-/** Events that need an open form leave a closed panel as it is. */
+/** A submit in flight keeps its form until it settles, and events that need an open form leave a closed panel as it is. */
 function panelReducer(state: PanelState, event: PanelEvent): PanelState {
+  if (state.status === "submitting" && event.type !== "settle") {
+    return state;
+  }
   if (event.type === "choose") {
     return { status: "deciding", action: event.action };
   }

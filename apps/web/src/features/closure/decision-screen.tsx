@@ -1,4 +1,11 @@
-import { type JSX, useCallback, useState } from "react";
+import {
+  type JSX,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DecideByCountdown } from "./decide-by-countdown";
@@ -29,7 +36,7 @@ const REEVALUATE_LABEL = "Re-evaluate";
 const EVALUATING_LABEL = "Evaluating…";
 const EVALUATED_TEXT = "New recommendation loaded.";
 const EVALUATE_FAILED_TEXT =
-  "Re-evaluation failed. The weather services may be unavailable; try again.";
+  "Re-evaluation failed. The recommendation shown is unchanged; try again.";
 
 /** A deferral or a missed deadline sets no posture, so only these take directives. */
 const ACTIONS_TAKING_DIRECTIVES: readonly string[] = ["accept", "override"];
@@ -64,13 +71,17 @@ function FacilityDetails({
   );
 }
 
+/** Disabling the button while it works drops focus, so a finished run puts it on the new recommendation or back on the button. */
 function ReevaluateButton({
   facilityId,
   onReload,
+  headingRef,
 }: {
   facilityId: number;
   onReload: () => Promise<void>;
+  headingRef: RefObject<HTMLHeadingElement | null>;
 }): JSX.Element {
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [state, setState] = useState<EvaluateState>("idle");
   let label = REEVALUATE_LABEL;
   if (state === "evaluating") {
@@ -86,21 +97,32 @@ function ReevaluateButton({
     setState("failed");
   }, [facilityId, onReload]);
 
+  useEffect(() => {
+    if (state === "evaluated") {
+      headingRef.current?.focus();
+    } else if (state === "failed") {
+      buttonRef.current?.focus();
+    }
+  }, [state, headingRef]);
+
+  let statusText = "";
+  if (state === "evaluated") {
+    statusText = EVALUATED_TEXT;
+  }
   return (
     <>
       <Button
         disabled={state === "evaluating"}
         onClick={reevaluate}
+        ref={buttonRef}
         type="button"
         variant="outline"
       >
         {label}
       </Button>
-      {state === "evaluated" && (
-        <p className="basis-full" role="status">
-          {EVALUATED_TEXT}
-        </p>
-      )}
+      <p className="basis-full" role="status">
+        {statusText}
+      </p>
       {state === "failed" && (
         <Alert className="basis-full" role="alert" variant="destructive">
           <AlertTitle>{EVALUATE_FAILED_TEXT}</AlertTitle>
@@ -116,13 +138,22 @@ function RecommendationSection({
   now,
 }: ScreenProps & { readonly now: number }): JSX.Element {
   const { facility, latestRecommendation } = screen;
+  const headingRef = useRef<HTMLHeadingElement>(null);
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-heading font-semibold text-xl">
+        <h2
+          className="font-heading font-semibold text-xl"
+          ref={headingRef}
+          tabIndex={-1}
+        >
           {RECOMMENDATION_HEADING}
         </h2>
-        <ReevaluateButton facilityId={facility.id} onReload={onReload} />
+        <ReevaluateButton
+          facilityId={facility.id}
+          headingRef={headingRef}
+          onReload={onReload}
+        />
       </div>
       {latestRecommendation === null && <p>{NO_RECOMMENDATION_TEXT}</p>}
       {latestRecommendation !== null && (

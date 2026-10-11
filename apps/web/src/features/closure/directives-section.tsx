@@ -1,9 +1,12 @@
 import {
   type JSX,
+  type RefObject,
   type SubmitEvent,
   useCallback,
+  useEffect,
   useId,
   useReducer,
+  useRef,
 } from "react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -18,7 +21,7 @@ import type {
   DirectiveRequest,
   Recorder,
 } from "./decision-api";
-import { FIELD_NAMES, type FormField } from "./decision-form";
+import { FIELD_NAMES, type FormField, focusFieldError } from "./decision-form";
 import {
   readDirectiveForm,
   type ScopeOption,
@@ -50,15 +53,20 @@ const GROUPS_LABEL = "Groups";
 const BUILDINGS_LABEL = "Buildings";
 const EMPLOYEES_IN = "Employees in";
 
+/** Outcomes with nothing to fix in a field, so focus moves to the notice that explains them. */
+const NOTICE_STATUSES: readonly SectionState["status"][] = [
+  "issued",
+  "superseded",
+  "failed",
+];
+
 interface FieldProps {
   readonly formId: string;
   readonly invalidField: FormField | undefined;
 }
 
-function SectionNotice({ state }: { state: SectionState }): JSX.Element | null {
+function OutcomeAlert({ state }: { state: SectionState }): JSX.Element | null {
   switch (state.status) {
-    case "issued":
-      return <p role="status">{ISSUED_TEXT}</p>;
     case "superseded":
       return (
         <Alert role="alert">
@@ -74,6 +82,26 @@ function SectionNotice({ state }: { state: SectionState }): JSX.Element | null {
     default:
       return null;
   }
+}
+
+/** The status line stays mounted and only its text changes, so screen readers announce it reliably. */
+function SectionNotice({
+  state,
+  ref,
+}: {
+  readonly state: SectionState;
+  readonly ref: RefObject<HTMLDivElement | null>;
+}): JSX.Element {
+  let statusText = "";
+  if (state.status === "issued") {
+    statusText = ISSUED_TEXT;
+  }
+  return (
+    <div className="space-y-4" ref={ref} tabIndex={-1}>
+      <p role="status">{statusText}</p>
+      <OutcomeAlert state={state} />
+    </div>
+  );
 }
 
 function ScopeOptionList({
@@ -152,10 +180,19 @@ function DirectiveForm(props: DirectivesSectionProps): JSX.Element {
     invalidField = state.field;
   }
   const fieldProps = { formId, invalidField };
+  const noticeRef = useRef<HTMLDivElement>(null);
   let submitLabel = SUBMIT_LABEL;
   if (state.status === "submitting") {
     submitLabel = SUBMITTING_LABEL;
   }
+
+  useEffect(() => {
+    if (state.status === "invalid") {
+      focusFieldError(formId, state.field);
+    } else if (NOTICE_STATUSES.includes(state.status)) {
+      noticeRef.current?.focus();
+    }
+  }, [formId, state]);
 
   const submit = useCallback(
     async (event: SubmitEvent<HTMLFormElement>): Promise<void> => {
@@ -168,13 +205,14 @@ function DirectiveForm(props: DirectivesSectionProps): JSX.Element {
       }
       dispatch({ type: "submit" });
       const outcome = await props.submitDirective(read.request);
-      dispatch({ type: "settle", outcome });
       if (outcome.kind === "issued") {
         form.reset();
       }
+      // Settle after the reload, so a notice that says the page is reloaded is already true.
       if (outcome.kind === "issued" || outcome.kind === "superseded") {
         await props.onReload();
       }
+      dispatch({ type: "settle", outcome });
     },
     [props],
   );
@@ -186,7 +224,7 @@ function DirectiveForm(props: DirectivesSectionProps): JSX.Element {
       noValidate={true}
       onSubmit={submit}
     >
-      <SectionNotice state={state} />
+      <SectionNotice ref={noticeRef} state={state} />
       <ScopeField buildings={props.buildings} {...fieldProps} />
       <KindField {...fieldProps} />
       <ReasonFields required={true} {...fieldProps} />

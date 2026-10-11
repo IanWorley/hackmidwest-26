@@ -1,10 +1,13 @@
 import {
   type ActionDispatch,
   type JSX,
+  type RefObject,
   type SubmitEvent,
   useCallback,
+  useEffect,
   useId,
   useReducer,
+  useRef,
 } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -19,6 +22,7 @@ import type {
 } from "./decision-api";
 import {
   type FormField,
+  focusFieldError,
   readDecisionForm,
   reasonRequired,
 } from "./decision-form";
@@ -39,11 +43,24 @@ const SUBMITTING_LABEL = "Recording…";
 const RECORDED_TEXT = "Decision recorded.";
 const FAILED_TITLE = "The decision could not be recorded.";
 const FAILED_TEXT = "Nothing was saved. Try again.";
+const DIRECTIVES_NOTE =
+  "Directives belong to the decision they were issued on. A new decision starts with none.";
+
+/** Outcomes with nothing to fix in a field, so focus moves to the notice that explains them. */
+const NOTICE_STATUSES: readonly PanelState["status"][] = [
+  "recorded",
+  "stale",
+  "failed",
+];
 
 const CONFLICT_NOTICES: Record<
   Conflict,
   { readonly title: string; readonly text: string }
 > = {
+  previewRecommendation: {
+    title: "That recommendation was a preview, not the live one.",
+    text: "Nothing was saved. The page is reloaded with the live recommendation, if there is one; review it before you decide.",
+  },
   newerRecommendation: {
     title: "A newer recommendation exists.",
     text: "Nothing was saved. The newer recommendation is now shown above; review it before you decide.",
@@ -83,10 +100,8 @@ interface FormStateProps {
   readonly dispatch: ActionDispatch<[PanelEvent]>;
 }
 
-function StatusNotice({ state }: { state: PanelState }): JSX.Element | null {
+function OutcomeAlert({ state }: { state: PanelState }): JSX.Element | null {
   switch (state.status) {
-    case "recorded":
-      return <p role="status">{RECORDED_TEXT}</p>;
     case "stale":
       return (
         <Alert role="alert">
@@ -106,6 +121,26 @@ function StatusNotice({ state }: { state: PanelState }): JSX.Element | null {
     default:
       return null;
   }
+}
+
+/** The status line stays mounted and only its text changes, so screen readers announce it reliably. */
+function StatusNotice({
+  state,
+  ref,
+}: {
+  readonly state: PanelState;
+  readonly ref: RefObject<HTMLDivElement | null>;
+}): JSX.Element {
+  let statusText = "";
+  if (state.status === "recorded") {
+    statusText = RECORDED_TEXT;
+  }
+  return (
+    <div className="space-y-4" ref={ref} tabIndex={-1}>
+      <p role="status">{statusText}</p>
+      <OutcomeAlert state={state} />
+    </div>
+  );
 }
 
 function ActionButton({
@@ -184,6 +219,12 @@ function DecisionForm({
   }
   const fieldProps = { formId, invalidField };
 
+  useEffect(() => {
+    if (state.status === "invalid") {
+      focusFieldError(formId, state.field);
+    }
+  }, [formId, state]);
+
   const submit = useCallback(
     async (event: SubmitEvent<HTMLFormElement>): Promise<void> => {
       event.preventDefault();
@@ -197,10 +238,11 @@ function DecisionForm({
       }
       dispatch({ type: "submit" });
       const outcome = await panel.submitDecision(read.request);
-      dispatch({ type: "settle", outcome });
+      // Settle after the reload, so a notice that says the page now shows something is already true.
       if (outcome.kind === "recorded" || outcome.kind === "conflict") {
         await panel.onReload();
       }
+      dispatch({ type: "settle", outcome });
     },
     [action, dispatch, panel],
   );
@@ -242,13 +284,24 @@ function DecisionForm({
 export function DecisionPanel(props: DecisionPanelProps): JSX.Element {
   const [state, dispatch] = useReducer(panelReducer, INITIAL_PANEL_STATE);
   const headingId = useId();
+  const noticeRef = useRef<HTMLDivElement>(null);
   const action = openAction(state);
+
+  useEffect(() => {
+    if (NOTICE_STATUSES.includes(state.status)) {
+      noticeRef.current?.focus();
+    }
+  }, [state]);
+
   return (
     <section aria-labelledby={headingId} className="space-y-4">
       <h2 className="font-heading font-semibold text-xl" id={headingId}>
         {PANEL_HEADING}
       </h2>
-      <StatusNotice state={state} />
+      {props.currentDecisionId !== undefined && (
+        <p className="text-muted-foreground">{DIRECTIVES_NOTE}</p>
+      )}
+      <StatusNotice ref={noticeRef} state={state} />
       <fieldset className="flex gap-2">
         <legend className="sr-only">{ACTIONS_LABEL}</legend>
         {labeledOptions(ACTION_BUTTON_LABELS).map(({ value, label }) => (
