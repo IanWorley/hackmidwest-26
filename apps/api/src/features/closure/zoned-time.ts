@@ -37,6 +37,10 @@ function toIso(at: Instant): string {
   return new Date(at).toISOString();
 }
 
+function shiftIso(iso: string, minutes: number): string {
+  return toIso(toInstant(parseInstant(iso) + minutes * MS_PER_MINUTE));
+}
+
 /**
  * A `HH:MM` wall time on `date` in `zone`, as an instant. The offset is sampled twice because a
  * DST transition can lie between the wall time read as UTC and the true instant. A wall time the
@@ -135,6 +139,7 @@ export {
   localInstant,
   MS_PER_MINUTE,
   parseInstant,
+  shiftIso,
   toInstant,
   toIso,
 };

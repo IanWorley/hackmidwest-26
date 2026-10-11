@@ -22,6 +22,7 @@ const DISMISSAL_MARGIN_MINUTES = 30;
 const HOURLY_OBSERVATION_STALE_MINUTES = 90;
 const FORECAST_STALE_MINUTES = 360;
 const CAMS_REFRESH_MINUTES = 720;
+const SENSITIVITY_SHIFT_MINUTES = 120;
 
 const NWSI_10_513_SOURCE =
   "National Weather Service, NWSI 10-513 WFO Winter Weather Products Specification (November 6, 2024), with OASIS CAP v1.2 severity as served by api.weather.gov";
@@ -269,6 +270,20 @@ export const TIMING_POLICY = {
     source:
       "Open-Meteo Air Quality API, CAMS Global Atmospheric Composition Forecasts",
     citation: `The CAMS global model behind US AQI is refreshed every 12 hours, so an AQI value older than one refresh has missed an update. ${OPEN_METEO_AIR_QUALITY_URL}`,
+  },
+  airQualityHoldMinutes: {
+    value: CAMS_REFRESH_MINUTES,
+    unit: "minutes",
+    source:
+      "Open-Meteo Air Quality API, CAMS Global Atmospheric Composition Forecasts",
+    citation: `Policy choice: Closure Call reads only the current US AQI, not the hourly AQI forecast, so a reading is taken to hold until the CAMS model's next 12-hour refresh replaces it. ${OPEN_METEO_AIR_QUALITY_URL}`,
+  },
+  sensitivityShiftMinutes: {
+    value: SENSITIVITY_SHIFT_MINUTES,
+    unit: "minutes",
+    source: CLOSURE_CALL_POLICY_SOURCE,
+    citation:
+      "Policy choice: the sensitivity statement moves every hazard window 2 hours earlier and 2 hours later to show how an error in forecast timing would change the recommendation.",
   },
 } as const satisfies Record<string, CitedValue<"minutes">>;
 

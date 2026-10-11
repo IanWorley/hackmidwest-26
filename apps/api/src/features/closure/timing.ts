@@ -235,4 +235,4 @@ export type {
   TimingInput,
   TimingResult,
 };
-export { evaluateTiming };
+export { evaluateTiming, facilityDay };
