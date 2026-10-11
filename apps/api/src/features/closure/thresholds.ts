@@ -8,7 +8,7 @@ const AQI_UNHEALTHY = 151;
 const AQI_VERY_UNHEALTHY = 201;
 const URBAN_COMMUTER_BARE_LANE_REGAIN_MINUTES = 300;
 const WIND_POST_HAZARD_BUFFER_MINUTES = 60;
-const AIRNOW_UPDATE_INTERVAL_MINUTES = 60;
+const CAMS_GLOBAL_TIME_STEP_MINUTES = 180;
 const OPM_LONGEST_ILLUSTRATED_DELAY_HOURS = 4;
 const OPM_STANDARD_DELAY_HOURS = 2;
 
@@ -172,11 +172,12 @@ export const THRESHOLDS = {
       },
     },
     postHazardBufferMinutes: {
-      value: AIRNOW_UPDATE_INTERVAL_MINUTES,
+      value: CAMS_GLOBAL_TIME_STEP_MINUTES,
       unit: "minutes",
-      source: "U.S. EPA AirNow API, Hourly AQ Obs Fact Sheet (March 2023)",
+      source:
+        "Open-Meteo Air Quality API, CAMS Global Atmospheric Composition Forecasts",
       citation:
-        "The data file is updated once per hour (at ~:35 minutes past the hour). The buffer waits one hourly update to confirm AQI stays below the cutoff. https://docs.airnowapi.org/docs/HourlyAQObsFactSheet.pdf",
+        "US AQI comes from the CAMS global model at 3-hourly resolution, refreshed every 12 hours. The buffer waits one 3-hour model step to confirm AQI stays below the cutoff. https://open-meteo.com/en/docs/air-quality-api",
     },
     maxDelayHours: {
       value: OPM_STANDARD_DELAY_HOURS,

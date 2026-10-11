@@ -4,7 +4,8 @@ import { type Static, t } from "elysia";
 import type { GeoPoint } from "./nws-model";
 
 const AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality";
-const CURRENT_VARIABLES = "us_aqi";
+// One name for both the requested variable and the response key it comes back under.
+const US_AQI = "us_aqi";
 const TIME_FORMAT = "unixtime";
 const REQUEST_TIMEOUT_MS = 10_000;
 const RETRY_BASE_DELAY_MS = 200;
@@ -17,8 +18,7 @@ const ResponseSchema = t.Object({
   current: t.Object({
     time: t.Integer(),
     // Null where CAMS has no coverage for the point.
-    // biome-ignore lint/style/useNamingConvention: Open-Meteo wire field name.
-    us_aqi: t.Union([t.Integer({ minimum: 0 }), t.Null()]),
+    [US_AQI]: t.Union([t.Integer({ minimum: 0 }), t.Null()]),
   }),
 });
 type AirQualityResponse = Static<typeof ResponseSchema>;
@@ -79,7 +79,7 @@ function airQualityUrl({ lat, lon }: GeoPoint): URL {
   const url = new URL(AIR_QUALITY_URL);
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lon));
-  url.searchParams.set("current", CURRENT_VARIABLES);
+  url.searchParams.set("current", US_AQI);
   url.searchParams.set("timeformat", TIME_FORMAT);
   return url;
 }
@@ -96,11 +96,12 @@ function toObservation(
   { current }: AirQualityResponse,
   url: URL,
 ): AirQualityObservation | undefined {
-  if (current.us_aqi === null) {
+  const aqi = current[US_AQI];
+  if (aqi === null) {
     return undefined;
   }
   return {
-    aqi: current.us_aqi,
+    aqi,
     observedAt: new Date(current.time * MILLIS_PER_SECOND).toISOString(),
     rawRef: url.href,
   };
