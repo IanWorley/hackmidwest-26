@@ -6,6 +6,7 @@ import {
   NWS_SEVERITIES,
   postHazardBuffer,
   THRESHOLDS,
+  TIMING_POLICY,
 } from "./thresholds";
 
 interface CitedEntry {
@@ -36,15 +37,15 @@ function cutoffRank(cutoff: Cutoff): number {
   return cutoff.value;
 }
 
-describe("THRESHOLDS", () => {
-  it.each(collectCitedEntries(THRESHOLDS, "THRESHOLDS"))(
-    "$path cites a source and citation",
-    ({ source, citation }) => {
-      expect(typeof source === "string" && source.trim()).toBeTruthy();
-      expect(typeof citation === "string" && citation.trim()).toBeTruthy();
-    },
-  );
+it.each([
+  ...collectCitedEntries(THRESHOLDS, "THRESHOLDS"),
+  ...collectCitedEntries(TIMING_POLICY, "TIMING_POLICY"),
+])("$path cites a source and citation", ({ source, citation }) => {
+  expect(typeof source === "string" && source.trim()).toBeTruthy();
+  expect(typeof citation === "string" && citation.trim()).toBeTruthy();
+});
 
+describe("THRESHOLDS", () => {
   it.each(HAZARDS)(
     "%s cutoffs escalate posture as the value rises",
     (hazard) => {
