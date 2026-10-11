@@ -70,6 +70,16 @@ function ConditionsPage(): JSX.Element {
   );
 }
 
+/** Keeps refreshing, so the page comes back on its own once the API does. */
+function ConditionsLoadError(): JSX.Element {
+  useRefreshEvery(REFRESH_INTERVAL_MS);
+  return (
+    <Alert variant="destructive">
+      <AlertTitle>{LOAD_ERROR_TEXT}</AlertTitle>
+    </Alert>
+  );
+}
+
 // Router's generator owns this route identifier; it must remain a file-matching literal.
 export const Route = createFileRoute("/conditions")({
   validateSearch: validateLayersSearch,
@@ -77,9 +87,5 @@ export const Route = createFileRoute("/conditions")({
   loader: ({ abortController }) => loadMap({ signal: abortController.signal }),
   component: ConditionsPage,
   pendingComponent: () => <p>{LOADING_TEXT}</p>,
-  errorComponent: () => (
-    <Alert variant="destructive">
-      <AlertTitle>{LOAD_ERROR_TEXT}</AlertTitle>
-    </Alert>
-  ),
+  errorComponent: ConditionsLoadError,
 });

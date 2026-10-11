@@ -20,6 +20,7 @@ import {
 } from "react-leaflet";
 import {
   DECISION_STATUSES,
+  decisionDeadline,
   effectivePosture,
 } from "@/features/closure/decision-status";
 import { POSTURE_CLASSES, POSTURE_LABELS } from "@/features/closure/posture";
@@ -112,9 +113,10 @@ function DecisionDeadline({
 }: {
   standing: EvaluatedStanding;
 }): JSX.Element {
-  const { decideBy, decision } = standing;
+  const { decision } = standing;
+  const deadline = decisionDeadline(standing);
   if (decision === null) {
-    return <DecideByCountdown decideBy={decideBy} />;
+    return <DecideByCountdown decideBy={deadline} />;
   }
   const { label, awaitsDecision } = DECISION_STATUSES[decision.action];
   const statusText = <span className="text-xs">{label}</span>;
@@ -124,7 +126,7 @@ function DecisionDeadline({
   return (
     <>
       {statusText}
-      <DecideByCountdown decideBy={decideBy} />
+      <DecideByCountdown decideBy={deadline} />
     </>
   );
 }
