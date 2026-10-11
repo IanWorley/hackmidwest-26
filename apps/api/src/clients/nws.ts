@@ -1,6 +1,6 @@
 import type { Static, TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
-import { Data, Duration, Effect, Schedule } from "effect";
+import { Clock, Data, Duration, Effect, Schedule } from "effect";
 import type {
   ForecastPeriod,
   GeoPoint,
@@ -23,9 +23,14 @@ const GEOJSON_MEDIA_TYPE = "application/geo+json";
 /** api.weather.gov redirects coordinates with more precision than this. */
 const COORDINATE_DECIMALS = 4;
 const REQUEST_TIMEOUT_SECONDS = 10;
-const RETRY_BASE_DELAY_MILLIS = 250;
+/** Backoff of 1s, 2s, 4s outlasts the roughly 5s NWS documents for a rate limit to clear. */
+const RETRY_BASE_DELAY_MILLIS = 1000;
 const MAX_RETRIES = 3;
+/** NWS signals rate limiting with 403 rather than 429. */
+const HTTP_FORBIDDEN = 403;
 const HTTP_TOO_MANY_REQUESTS = 429;
+/** Matches the s-maxage NWS sends on /points; grid mappings occasionally change. */
+const GRID_POINT_TTL_MILLIS = Duration.toMillis(Duration.hours(24));
 const HTTP_SERVER_ERROR_MIN = 500;
 
 type NwsErrorReason =
@@ -90,6 +95,7 @@ function isRetryable({ reason }: NwsError): boolean {
       return true;
     case "status":
       return (
+        reason.status === HTTP_FORBIDDEN ||
         reason.status === HTTP_TOO_MANY_REQUESTS ||
         reason.status >= HTTP_SERVER_ERROR_MIN
       );
@@ -208,18 +214,29 @@ function makeNwsClient({
   baseUrl = DEFAULT_BASE_URL,
 }: NwsClientOptions): NwsClientShape {
   const getJson = makeGetJson(fetch, userAgent);
-  const gridPoints = new Map<string, GridPoint>();
+  const gridPoints = new Map<
+    string,
+    { readonly grid: GridPoint; readonly expiresAt: number }
+  >();
 
   function gridPoint(point: GeoPoint): Effect.Effect<GridPoint, NwsError> {
-    const path = pointPath(point);
-    const cached = gridPoints.get(path);
-    if (cached !== undefined) {
-      return Effect.succeed(cached);
-    }
-    return getJson(`${baseUrl}/points/${path}`, PointsResponse).pipe(
-      Effect.map(({ properties }) => properties),
-      Effect.tap((grid) => Effect.sync(() => gridPoints.set(path, grid))),
-    );
+    return Effect.gen(function* () {
+      const path = pointPath(point);
+      const now = yield* Clock.currentTimeMillis;
+      const cached = gridPoints.get(path);
+      if (cached !== undefined && now < cached.expiresAt) {
+        return cached.grid;
+      }
+      const { properties } = yield* getJson(
+        `${baseUrl}/points/${path}`,
+        PointsResponse,
+      );
+      gridPoints.set(path, {
+        grid: properties,
+        expiresAt: now + GRID_POINT_TTL_MILLIS,
+      });
+      return properties;
+    });
   }
 
   return {

@@ -30,7 +30,7 @@ Preconditions:
 ## Gotchas
 
 - The data is live. Alerts, forecasts, and readings change between runs, so assert shapes and units, never values.
-- api.weather.gov rate-limits by User-Agent and sometimes answers `5xx`. The client retries those, so a slow `200` is normal; a `500` for a US point after retries means NWS stayed down, not that the route broke. Rerun before reporting a failure.
+- api.weather.gov rate-limits by User-Agent with a `403` and sometimes answers `5xx`. The client retries both, backing off up to about 7 s, so a slow `200` is normal; a `500` for a US point after retries means NWS stayed down, not that the route broke. Rerun before reporting a failure.
 - NWS covers US states and territories only. Any other point is the outside-coverage `500`, not a bug.
 - `up` sets `NWS_USER_AGENT` to the verify contact string. Outside `verify.sh`, an `.env` without it stops the API during `bun run dev`.
 - A station sometimes reports a null value or an unfamiliar unit. That reading is left out, so `readings` can hold fewer than four entries or none.

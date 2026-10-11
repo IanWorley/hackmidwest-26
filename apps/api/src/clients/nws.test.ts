@@ -1,4 +1,5 @@
-import { Effect } from "effect";
+import { Duration, Effect } from "effect";
+import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
 import { makeNwsClient, type NwsClientShape } from "./nws";
 import { hazardWindow } from "./nws-model";
@@ -6,6 +7,7 @@ import { hazardWindow } from "./nws-model";
 const BASE_URL = "http://nws.test";
 const USER_AGENT = "hackmidwest-26 test (ops@example.com)";
 const KANSAS_CITY = { lat: 39.099_712, lon: -94.578_561 };
+const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 const HTTP_SERVICE_UNAVAILABLE = 503;
 
@@ -57,6 +59,23 @@ function clientFor(responses: Response[]): {
 
 function alertsResponse(properties: object): Response {
   return Response.json({ features: [{ properties }] });
+}
+
+function pointsResponse(): Response {
+  return Response.json({
+    properties: {
+      gridId: "EAX",
+      gridX: 44,
+      gridY: 51,
+      forecast: "http://nws.test/gridpoints/EAX/44,51/forecast",
+      forecastHourly: "http://nws.test/gridpoints/EAX/44,51/forecast/hourly",
+      observationStations: "http://nws.test/gridpoints/EAX/44,51/stations",
+    },
+  });
+}
+
+function emptyForecastResponse(): Response {
+  return Response.json({ properties: { periods: [] } });
 }
 
 describe("hazardWindow", () => {
@@ -138,19 +157,22 @@ it("fails with a schema error when a payload lacks a required field", async () =
   });
 });
 
-it("retries a 503 and returns the next successful response", async () => {
-  const { client, sent } = clientFor([
-    new Response(null, { status: HTTP_SERVICE_UNAVAILABLE }),
-    alertsResponse(ALERT),
-  ]);
+it.each([HTTP_FORBIDDEN, HTTP_SERVICE_UNAVAILABLE])(
+  "retries a %i and returns the next successful response",
+  async (status) => {
+    const { client, sent } = clientFor([
+      new Response(null, { status }),
+      alertsResponse(ALERT),
+    ]);
 
-  const alerts = await Effect.runPromise(client.activeAlerts(KANSAS_CITY));
+    const alerts = await Effect.runPromise(client.activeAlerts(KANSAS_CITY));
 
-  expect([sent.length, alerts.map(({ id }) => id)]).toEqual([
-    2,
-    ["urn:oid:alert-2"],
-  ]);
-});
+    expect([sent.length, alerts.map(({ id }) => id)]).toEqual([
+      2,
+      ["urn:oid:alert-2"],
+    ]);
+  },
+);
 
 it("fails a 404 with its status after one request", async () => {
   const { client, sent } = clientFor([
@@ -165,5 +187,32 @@ it("fails a 404 with its status after one request", async () => {
     1,
     { kind: "status", status: 404 },
     "NWS request failed (HTTP 404): http://nws.test/points/39.0997,-94.5786",
+  ]);
+});
+
+it("looks up a point's grid again once the cached mapping is a day old", async () => {
+  const { client, sent } = clientFor([
+    pointsResponse(),
+    emptyForecastResponse(),
+    emptyForecastResponse(),
+    pointsResponse(),
+    emptyForecastResponse(),
+  ]);
+
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      yield* client.forecast(KANSAS_CITY);
+      yield* client.forecast(KANSAS_CITY);
+      yield* TestClock.adjust(Duration.hours(24));
+      yield* client.forecast(KANSAS_CITY);
+    }).pipe(Effect.provide(TestClock.layer())),
+  );
+
+  expect(sent.map(({ url }) => url)).toEqual([
+    "http://nws.test/points/39.0997,-94.5786",
+    "http://nws.test/gridpoints/EAX/44,51/forecast",
+    "http://nws.test/gridpoints/EAX/44,51/forecast",
+    "http://nws.test/points/39.0997,-94.5786",
+    "http://nws.test/gridpoints/EAX/44,51/forecast",
   ]);
 });
