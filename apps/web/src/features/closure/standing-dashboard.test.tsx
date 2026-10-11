@@ -20,7 +20,7 @@ const UNDECIDED: MapFacility = {
     recommendationId: 7,
     decideBy: "2026-10-11T10:00:00.000Z",
     asOf: "2026-10-11T08:00:00.000Z",
-    decision: null,
+    currentDecision: null,
   },
 };
 
@@ -35,7 +35,8 @@ const OVERRIDDEN: MapFacility = {
     recommendationId: 8,
     decideBy: "2026-10-11T10:00:00.000Z",
     asOf: "2026-10-11T08:00:00.000Z",
-    decision: {
+    currentDecision: {
+      recommendationId: 8,
       action: "override",
       chosenPosture: "normal",
       decidedAt: "2026-10-11T08:30:00.000Z",
@@ -55,7 +56,8 @@ const DEFERRED: MapFacility = {
     recommendationId: 9,
     decideBy: "2026-10-11T10:00:00.000Z",
     asOf: "2026-10-11T08:00:00.000Z",
-    decision: {
+    currentDecision: {
+      recommendationId: 9,
       action: "defer",
       chosenPosture: null,
       decidedAt: "2026-10-11T08:30:00.000Z",
@@ -75,10 +77,33 @@ const MISSED: MapFacility = {
     recommendationId: 10,
     decideBy: "2026-01-01T11:00:00.000Z",
     asOf: "2026-01-01T09:00:00.000Z",
-    decision: {
+    currentDecision: {
+      recommendationId: 10,
       action: "no_decision",
       chosenPosture: null,
       decidedAt: "2026-01-01T11:01:00.000Z",
+      recheckAt: null,
+    },
+  },
+};
+
+/** Accepted this morning, then re-evaluated the same facility day with nobody deciding on the new recommendation yet. */
+const ACCEPTED_THEN_REEVALUATED: MapFacility = {
+  id: 6,
+  name: "Omaha Service Center",
+  lat: 41.2565,
+  lon: -95.9345,
+  aqi: null,
+  standing: {
+    posture: "full_closure",
+    recommendationId: 12,
+    decideBy: "2026-10-11T12:00:00.000Z",
+    asOf: "2026-10-11T10:00:00.000Z",
+    currentDecision: {
+      recommendationId: 11,
+      action: "accept",
+      chosenPosture: "delayed_arrival",
+      decidedAt: "2026-10-11T08:30:00.000Z",
       recheckAt: null,
     },
   },
@@ -171,4 +196,24 @@ it("keeps a missed decision in the count and shows its deadline as overdue", asy
     cells[2]?.textContent,
     cells[3]?.textContent,
   ]).toEqual(["Decisions needed: 1", "Decision overdue", "Missed decision"]);
+});
+
+it("keeps an earlier same-day decision in effect while a re-evaluation awaits its own decision", async () => {
+  await renderDashboard([ACCEPTED_THEN_REEVALUATED]);
+  const cells = screen.getAllByRole("cell");
+  expect([
+    screen.getByRole("status").textContent,
+    postureParts(cells[1]),
+    cells[2]?.querySelector("time")?.getAttribute("dateTime"),
+    cells[3]?.textContent,
+  ]).toEqual([
+    "Decisions needed: 1",
+    [
+      "Delayed arrival",
+      "Recommended: Full closure",
+      "As of Oct 11, 2026, 10:00 AM UTC",
+    ],
+    "2026-10-11T12:00:00.000Z",
+    "Decision needed",
+  ]);
 });

@@ -49,5 +49,6 @@ export {
   awaitsDecision,
   DECISION_STATUSES,
   decisionDeadline,
+  decisionOnRecommendation,
   effectivePosture,
 };

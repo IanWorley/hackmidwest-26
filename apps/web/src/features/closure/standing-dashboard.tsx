@@ -9,10 +9,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { MapFacility, Standing } from "@/features/map/load-map";
-import { needsDecision } from "./dashboard";
 import {
+  awaitsDecision,
   DECISION_STATUSES,
   decisionDeadline,
+  decisionOnRecommendation,
   effectivePosture,
 } from "./decision-status";
 import {
@@ -31,23 +32,29 @@ const NOTHING_TO_SHOW_TEXT = "—";
 const DECISIONS_NEEDED_LABEL = "Decisions needed";
 const DECISION_NEEDED_TEXT = "Decision needed";
 
+/** A recommendation exists and nobody has settled it: no decision on it yet, a deferral, or a missed deadline. */
+function needsDecision(standing: Standing): boolean {
+  return standing.posture !== "not_evaluated" && awaitsDecision(standing);
+}
+
+/**
+ * The status of the shown recommendation, not of the facility's current decision: after a same-day re-evaluation the
+ * earlier decision still sets the posture, but the new recommendation still needs its own.
+ */
 function decisionText(standing: Standing): string {
   if (standing.posture === "not_evaluated") {
     return NOTHING_TO_SHOW_TEXT;
   }
-  if (standing.decision === null) {
+  const decision = decisionOnRecommendation(standing);
+  if (decision === null) {
     return DECISION_NEEDED_TEXT;
   }
-  return DECISION_STATUSES[standing.decision.action].label;
+  return DECISION_STATUSES[decision.action].label;
 }
 
 /** The deadline still matters until someone decides; a deferral counts down to its recheck time. */
 function DecideByCell({ standing }: { standing: Standing }): JSX.Element {
-  if (
-    standing.posture === "not_evaluated" ||
-    (standing.decision !== null &&
-      !DECISION_STATUSES[standing.decision.action].awaitsDecision)
-  ) {
+  if (standing.posture === "not_evaluated" || !awaitsDecision(standing)) {
     return <>{NOTHING_TO_SHOW_TEXT}</>;
   }
   return <DecideByCountdown decideBy={decisionDeadline(standing)} />;
