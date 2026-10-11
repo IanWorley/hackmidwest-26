@@ -34,8 +34,11 @@ it("pulls live NWS data for Kansas City and normalizes it", {
     );
 
   expect({
-    hasForecast: forecast.length > 0,
-    hasHourlyForecast: hourlyForecast.length > 0,
+    hasForecast: forecast.periods.length > 0,
+    hasHourlyForecast: hourlyForecast.periods.length > 0,
+    hourlyUpdateTimeIsDate: !Number.isNaN(
+      Date.parse(hourlyForecast.updateTime),
+    ),
     readingsMatchSchema: Value.Check(
       t.Array(ReadingSchema),
       observationReadings(observation),
@@ -49,6 +52,7 @@ it("pulls live NWS data for Kansas City and normalizes it", {
   }).toEqual({
     hasForecast: true,
     hasHourlyForecast: true,
+    hourlyUpdateTimeIsDate: true,
     readingsMatchSchema: true,
     alertEndsAreDates: true,
     observationFromItsStation: true,

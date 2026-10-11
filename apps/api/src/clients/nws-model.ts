@@ -52,6 +52,14 @@ const ForecastPeriodSchema = t.Object({
   probabilityOfPrecipitation: NullableNumber,
 });
 
+const ForecastSchema = t.Object({
+  /** The forecast's own URL, for tracing it back to its source. */
+  rawRef: t.String(),
+  /** When NWS last updated the forecast; staleness is measured from here. */
+  updateTime: t.String(),
+  periods: t.Array(ForecastPeriodSchema),
+});
+
 /**
  * When the hazard applies. `start` is the alert's onset, else its effective time. `end` is its
  * `ends` time, else its `expires` time; `endBasis: "expires"` marks that weaker estimate, so a
@@ -83,6 +91,7 @@ const QuantitySchema = t.Object({
 
 type GeoPoint = Static<typeof GeoPointSchema>;
 type ForecastPeriod = Static<typeof ForecastPeriodSchema>;
+type NwsForecast = Static<typeof ForecastSchema>;
 type HazardWindow = Static<typeof HazardWindowSchema>;
 type NwsAlert = Static<typeof NwsAlertSchema>;
 type Quantity = Static<typeof QuantitySchema>;
@@ -118,13 +127,14 @@ function hazardWindow({
   return { start, end: ends, endBasis: "ends" };
 }
 
-export type { ForecastPeriod, GeoPoint, NwsAlert, NwsObservation };
+export type { ForecastPeriod, GeoPoint, NwsAlert, NwsForecast, NwsObservation };
 export {
   AlertCertaintySchema,
   AlertMessageTypeSchema,
   AlertSeveritySchema,
   AlertUrgencySchema,
   ForecastPeriodSchema,
+  ForecastSchema,
   GeoPointSchema,
   hazardWindow,
   NullableNumber,

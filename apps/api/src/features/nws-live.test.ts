@@ -19,6 +19,8 @@ const HTTP_UNPROCESSABLE = 422;
 const OBSERVATION_URL =
   "https://api.weather.gov/stations/KMKC/observations/2026-10-11T00:30:00+00:00";
 
+const FORECAST_URL = "https://api.weather.gov/gridpoints/EAX/44,51/forecast";
+
 const PERIOD = {
   startTime: "2026-10-10T18:00:00-05:00",
   endTime: "2026-10-11T06:00:00-05:00",
@@ -35,8 +37,18 @@ const NO_VALUE = { value: null, unitCode: "wmoUnit:km_h-1" };
 
 const quietWeather: NwsClientShape = {
   activeAlerts: () => Effect.succeed([]),
-  forecast: () => Effect.succeed([PERIOD]),
-  hourlyForecast: () => Effect.succeed([]),
+  forecast: () =>
+    Effect.succeed({
+      rawRef: FORECAST_URL,
+      updateTime: "2026-10-10T22:00:00+00:00",
+      periods: [PERIOD],
+    }),
+  hourlyForecast: () =>
+    Effect.succeed({
+      rawRef: `${FORECAST_URL}/hourly`,
+      updateTime: "2026-10-10T22:00:00+00:00",
+      periods: [],
+    }),
   latestObservation: () =>
     Effect.succeed({
       stationId: "KMKC",
