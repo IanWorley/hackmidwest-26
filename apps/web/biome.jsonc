@@ -92,6 +92,9 @@
         }
       },
       "nursery": {
+        // Tailwind generates utility classes at build time, so no stylesheet
+        // declares them.
+        "noUndeclaredClasses": "off",
         // TanStack registers the router and loader data by their inferred types.
         "useExplicitReturnType": {
           "level": "error",

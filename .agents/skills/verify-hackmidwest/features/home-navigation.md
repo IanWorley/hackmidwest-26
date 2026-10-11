@@ -1,16 +1,18 @@
 # Home page
 
-The home page is a single link that takes the user to the project task list without a full page reload; the browser itself then fetches tasks from the API.
+The home page shows one link that takes the user to the project task list without a full page reload; the browser itself then fetches tasks from the API. Every page has a header whose `Hack Midwest` link returns home.
 
 ## Sub-features
 
 - `home-link` shows the `Open the project tasks` link on `/`.
 - `home-client-nav` follows the link client-side to `/tasks`, and the browser fetches `GET /api/tasks` across origins (CORS).
+- `home-header-link` returns to `/` from any page through the header link `Hack Midwest`.
 
 ## How to get to it (user POV)
 
 - Open the web root `$WEB_URL/`.
 - Choose `Open the project tasks`.
+- Choose `Hack Midwest` in the header from any page.
 
 ## Driving it with verify.sh
 
@@ -18,9 +20,10 @@ Preconditions:
 
 - Baseline state from the index (seed task only).
 
-- **Open home.** Load the root page. Run `RUN_ID=<id> $V browser goto / expect link "Open the project tasks" snap home-before`. `home-before.aria.yml` shows exactly one link, `Open the project tasks`, with `/url: /tasks`.
-- **Follow the link.** In the same browser session, choose the link and wait for the list. Run `RUN_ID=<id> $V browser goto / click link "Open the project tasks" expect list "Tasks" snap home-after`. Exit code `0`; `home-after.aria.yml` has header `# url: …/tasks` and checkbox `Build the Hack Midwest demo`.
+- **Open home.** Load the root page. Run `RUN_ID=<id> $V browser goto / expect link "Open the project tasks" snap home-before`. `home-before.aria.yml` shows navigation `Main` with links `Hack Midwest` and `Tasks`, and a main region whose only content is link `Open the project tasks`, with `/url: /tasks`.
+- **Follow the link.** In the same browser session, choose the link and wait for the list. Run `RUN_ID=<id> $V browser goto / click link "Open the project tasks" expect table "Tasks" snap home-after`. Exit code `0`; `home-after.aria.yml` has header `# url: …/tasks` and checkbox `Build the Hack Midwest demo`.
 - **Proof of client-side fetch.** Inspect the log. Run `grep -E 'step click|net GET' /tmp/verify-hackmidwest/artifacts/<id>/browser.log`. A `net GET <API_URL>/api/tasks -> 200` line follows the `step click` line, which proves the browser (not SSR) loaded the data and CORS allowed it.
+- **Header link.** Start on the task list and choose the brand link. Run `RUN_ID=<id> $V browser goto /tasks click link "Hack Midwest" expect link "Open the project tasks" snap home-from-header`. Exit code `0`; `home-from-header.aria.yml` has header `# url: …/` and title `Hack Midwest tasks`.
 
 ## Gotchas
 
