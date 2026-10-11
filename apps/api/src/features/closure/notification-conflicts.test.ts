@@ -66,10 +66,9 @@ it("refuses to dispatch a decision a later decision supersedes", async () => {
     ]).toEqual([
       HTTP_CONFLICT,
       {
-        conflict: "decision_superseded",
-        message:
-          "A later decision supersedes this one, so only the latest can be dispatched",
-        latestDecisionId: SECOND_DECISION_ID,
+        conflict: "not_current_decision",
+        message: "Only the facility's current decision can be dispatched",
+        currentDecisionId: SECOND_DECISION_ID,
       },
       0,
     ]);
@@ -92,10 +91,9 @@ it("refuses to dispatch a decision once the facility has decided on a newer reco
     ]).toEqual([
       HTTP_CONFLICT,
       {
-        conflict: "decision_superseded",
-        message:
-          "A later decision supersedes this one, so only the latest can be dispatched",
-        latestDecisionId: SECOND_DECISION_ID,
+        conflict: "not_current_decision",
+        message: "Only the facility's current decision can be dispatched",
+        currentDecisionId: SECOND_DECISION_ID,
       },
       0,
     ]);

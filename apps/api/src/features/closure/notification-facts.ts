@@ -1,6 +1,7 @@
 import {
   buildingRosterEntries,
   buildings,
+  type Database as DrizzleDatabase,
   decisionDirectives,
   decisions,
   employeeStatusEvents,
@@ -9,8 +10,9 @@ import {
   notificationDispatches,
   recommendations,
 } from "@hackmidwest/db";
-import { asc, eq, getTableColumns, max } from "drizzle-orm";
+import { asc, eq, getTableColumns } from "drizzle-orm";
 import type { StatusEvent } from "./baseline";
+import { findCurrentDecision } from "./current-decision";
 import { storedHash } from "./decision-chain";
 import type { DecisionRow } from "./decision-view";
 import { directiveRecordOf } from "./directive-history";
@@ -32,13 +34,14 @@ import {
 import { parseSnapshot, type Snapshot } from "./recommendation-store";
 import type { Transaction } from "./record-decision";
 import type { RosterEntry } from "./roster";
+import { parseInstant } from "./zoned-time";
 
 type FacilityRow = typeof facilities.$inferSelect;
 type RecommendationRow = typeof recommendations.$inferSelect;
 type DispatchRow = typeof notificationDispatches.$inferSelect;
 
 /** Reads run inside a dispatch's transaction or straight against the database. */
-type Reader = Pick<Transaction, "select">;
+type Reader = DrizzleDatabase | Transaction;
 
 /** Who works at the facility and how its buildings list them. */
 interface FacilityRoster {
@@ -52,7 +55,8 @@ interface DecisionFacts {
   readonly decision: DecisionRow;
   readonly snapshot: Snapshot;
   readonly roster: FacilityRoster;
-  readonly latestDecisionId: number;
+  /** The facility's current decision at `now`, which may be another one, or none at all. */
+  readonly currentDecisionId: number | null;
   readonly directives: readonly Directive[];
   readonly dispatches: readonly DispatchRow[];
 }
@@ -108,6 +112,7 @@ async function loadRecommendation(
 async function loadDecisionFacts(
   reader: Reader,
   decisionId: number,
+  now: string,
 ): Promise<DecisionFacts | undefined> {
   const [decision] = await reader
     .select()
@@ -123,16 +128,16 @@ async function loadDecisionFacts(
   if (recommendation === undefined) {
     throw new Error(`Recommendation ${decision.recommendationId} is missing`);
   }
-  const [latest] = await reader
-    .select({ id: max(decisions.id) })
-    .from(decisions)
-    .where(eq(decisions.facilityId, decision.facilityId));
+  const current = await findCurrentDecision(
+    reader,
+    decision.facilityId,
+    parseInstant(now),
+  );
   return {
     decision,
     snapshot: parseSnapshot(recommendation.snapshot),
     roster: await loadFacilityRoster(reader, decision.facilityId),
-    // Ids only grow, so the facility's highest is the decision in force, whichever recommendation it is on.
-    latestDecisionId: latest?.id ?? decision.id,
+    currentDecisionId: current?.decision?.id ?? null,
     directives: (
       await reader
         .select()
