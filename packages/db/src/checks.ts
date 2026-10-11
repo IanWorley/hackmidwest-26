@@ -41,8 +41,18 @@ function isBoolean(column: AnySQLiteColumn): SQL {
   return sql`${column} in (0, 1)`;
 }
 
+// One-argument trim strips only U+0020, so tabs and line breaks are named too.
+const ASCII_WHITESPACE_CODE_POINTS = {
+  space: 32,
+  tab: 9,
+  lineFeed: 10,
+  verticalTab: 11,
+  formFeed: 12,
+  carriageReturn: 13,
+} as const;
+
 function isNonBlank(column: AnySQLiteColumn): SQL {
-  return sql`trim(${column}) <> ''`;
+  return sql`trim(${column}, char(${sql.raw(Object.values(ASCII_WHITESPACE_CODE_POINTS).join(", "))})) <> ''`;
 }
 
 // Required free text must say something; NOT NULL alone admits "" and "  ".

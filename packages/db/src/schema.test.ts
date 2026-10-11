@@ -12,7 +12,7 @@ const SEEDED_FACILITY_ID = 1;
 const PAST_MIDNIGHT = "24:30";
 const MISSING_BUILDING_ID = 999;
 const HOUR_24_INSTANT = "2026-10-02T24:01:00.000Z";
-const BLANK_NOTE = "   ";
+const BLANK_NOTE = " \t\r\n";
 
 it("rejects an empty title even when a caller bypasses the HTTP validator", async () => {
   const store = await createTestDatabase();

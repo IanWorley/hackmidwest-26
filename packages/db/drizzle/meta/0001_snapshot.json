@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4d6bd7b3-020b-4cd8-8f7e-48bca6226164",
+  "id": "afd4268a-b374-43a2-94cc-ac98cefaece5",
   "prevId": "24930990-4aa4-4235-a01c-5ce37ece7f71",
   "tables": {
     "building_roster_entries": {
@@ -62,7 +62,7 @@
       "checkConstraints": {
         "building_roster_entries_listed_name_not_blank": {
           "name": "building_roster_entries_listed_name_not_blank",
-          "value": "trim(\"building_roster_entries\".\"listed_name\") <> ''"
+          "value": "trim(\"building_roster_entries\".\"listed_name\", char(32, 9, 10, 11, 12, 13)) <> ''"
         }
       }
     },
@@ -108,7 +108,7 @@
       "checkConstraints": {
         "buildings_name_not_blank": {
           "name": "buildings_name_not_blank",
-          "value": "trim(\"buildings\".\"name\") <> ''"
+          "value": "trim(\"buildings\".\"name\", char(32, 9, 10, 11, 12, 13)) <> ''"
         }
       }
     },
@@ -151,15 +151,15 @@
       "checkConstraints": {
         "decision_makers_name_not_blank": {
           "name": "decision_makers_name_not_blank",
-          "value": "trim(\"decision_makers\".\"name\") <> ''"
+          "value": "trim(\"decision_makers\".\"name\", char(32, 9, 10, 11, 12, 13)) <> ''"
         },
         "decision_makers_role_not_blank": {
           "name": "decision_makers_role_not_blank",
-          "value": "trim(\"decision_makers\".\"role\") <> ''"
+          "value": "trim(\"decision_makers\".\"role\", char(32, 9, 10, 11, 12, 13)) <> ''"
         },
         "decision_makers_email_not_blank": {
           "name": "decision_makers_email_not_blank",
-          "value": "trim(\"decision_makers\".\"email\") <> ''"
+          "value": "trim(\"decision_makers\".\"email\", char(32, 9, 10, 11, 12, 13)) <> ''"
         }
       }
     },
@@ -246,7 +246,7 @@
         },
         "employee_status_events_not_working_requires_note": {
           "name": "employee_status_events_not_working_requires_note",
-          "value": "not (\"employee_status_events\".\"status\" = 'not_working') or \"employee_status_events\".\"note\" is not null and trim(\"employee_status_events\".\"note\") <> ''"
+          "value": "not (\"employee_status_events\".\"status\" = 'not_working') or \"employee_status_events\".\"note\" is not null and trim(\"employee_status_events\".\"note\", char(32, 9, 10, 11, 12, 13)) <> ''"
         },
         "employee_status_events_reported_at_format": {
           "name": "employee_status_events_reported_at_format",
@@ -363,11 +363,11 @@
       "checkConstraints": {
         "employees_name_not_blank": {
           "name": "employees_name_not_blank",
-          "value": "trim(\"employees\".\"name\") <> ''"
+          "value": "trim(\"employees\".\"name\", char(32, 9, 10, 11, 12, 13)) <> ''"
         },
         "employees_email_not_blank": {
           "name": "employees_email_not_blank",
-          "value": "trim(\"employees\".\"email\") <> ''"
+          "value": "trim(\"employees\".\"email\", char(32, 9, 10, 11, 12, 13)) <> ''"
         },
         "employees_preferred_channel": {
           "name": "employees_preferred_channel",
@@ -383,7 +383,7 @@
         },
         "employees_sms_requires_mobile_phone": {
           "name": "employees_sms_requires_mobile_phone",
-          "value": "not (\"employees\".\"preferred_channel\" = 'sms') or \"employees\".\"mobile_phone\" is not null and trim(\"employees\".\"mobile_phone\") <> ''"
+          "value": "not (\"employees\".\"preferred_channel\" = 'sms') or \"employees\".\"mobile_phone\" is not null and trim(\"employees\".\"mobile_phone\", char(32, 9, 10, 11, 12, 13)) <> ''"
         },
         "employees_shift": {
           "name": "employees_shift",
@@ -544,15 +544,15 @@
       "checkConstraints": {
         "facilities_name_not_blank": {
           "name": "facilities_name_not_blank",
-          "value": "trim(\"facilities\".\"name\") <> ''"
+          "value": "trim(\"facilities\".\"name\", char(32, 9, 10, 11, 12, 13)) <> ''"
         },
         "facilities_nws_zone_not_blank": {
           "name": "facilities_nws_zone_not_blank",
-          "value": "trim(\"facilities\".\"nws_zone\") <> ''"
+          "value": "trim(\"facilities\".\"nws_zone\", char(32, 9, 10, 11, 12, 13)) <> ''"
         },
         "facilities_timezone_not_blank": {
           "name": "facilities_timezone_not_blank",
-          "value": "trim(\"facilities\".\"timezone\") <> ''"
+          "value": "trim(\"facilities\".\"timezone\", char(32, 9, 10, 11, 12, 13)) <> ''"
         },
         "facilities_latitude_range": {
           "name": "facilities_latitude_range",

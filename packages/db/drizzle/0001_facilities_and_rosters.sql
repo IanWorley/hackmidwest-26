@@ -5,7 +5,7 @@ CREATE TABLE `building_roster_entries` (
 	`employee_id` integer,
 	FOREIGN KEY (`building_id`) REFERENCES `buildings`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "building_roster_entries_listed_name_not_blank" CHECK(trim("building_roster_entries"."listed_name") <> '')
+	CONSTRAINT "building_roster_entries_listed_name_not_blank" CHECK(trim("building_roster_entries"."listed_name", char(32, 9, 10, 11, 12, 13)) <> '')
 );
 --> statement-breakpoint
 CREATE TABLE `buildings` (
@@ -13,7 +13,7 @@ CREATE TABLE `buildings` (
 	`facility_id` integer NOT NULL,
 	`name` text NOT NULL,
 	FOREIGN KEY (`facility_id`) REFERENCES `facilities`(`id`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "buildings_name_not_blank" CHECK(trim("buildings"."name") <> '')
+	CONSTRAINT "buildings_name_not_blank" CHECK(trim("buildings"."name", char(32, 9, 10, 11, 12, 13)) <> '')
 );
 --> statement-breakpoint
 CREATE TABLE `decision_makers` (
@@ -21,9 +21,9 @@ CREATE TABLE `decision_makers` (
 	`name` text NOT NULL,
 	`role` text NOT NULL,
 	`email` text NOT NULL,
-	CONSTRAINT "decision_makers_name_not_blank" CHECK(trim("decision_makers"."name") <> ''),
-	CONSTRAINT "decision_makers_role_not_blank" CHECK(trim("decision_makers"."role") <> ''),
-	CONSTRAINT "decision_makers_email_not_blank" CHECK(trim("decision_makers"."email") <> '')
+	CONSTRAINT "decision_makers_name_not_blank" CHECK(trim("decision_makers"."name", char(32, 9, 10, 11, 12, 13)) <> ''),
+	CONSTRAINT "decision_makers_role_not_blank" CHECK(trim("decision_makers"."role", char(32, 9, 10, 11, 12, 13)) <> ''),
+	CONSTRAINT "decision_makers_email_not_blank" CHECK(trim("decision_makers"."email", char(32, 9, 10, 11, 12, 13)) <> '')
 );
 --> statement-breakpoint
 CREATE TABLE `employee_status_events` (
@@ -37,7 +37,7 @@ CREATE TABLE `employee_status_events` (
 	FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`reported_by_id`) REFERENCES `decision_makers`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "employee_status_events_status" CHECK("employee_status_events"."status" in ('working_onsite', 'teleworking', 'not_working')),
-	CONSTRAINT "employee_status_events_not_working_requires_note" CHECK(not ("employee_status_events"."status" = 'not_working') or "employee_status_events"."note" is not null and trim("employee_status_events"."note") <> ''),
+	CONSTRAINT "employee_status_events_not_working_requires_note" CHECK(not ("employee_status_events"."status" = 'not_working') or "employee_status_events"."note" is not null and trim("employee_status_events"."note", char(32, 9, 10, 11, 12, 13)) <> ''),
 	CONSTRAINT "employee_status_events_reported_at_format" CHECK("employee_status_events"."reported_at" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday("employee_status_events"."reported_at"))),
 	CONSTRAINT "employee_status_events_effective_from_format" CHECK("employee_status_events"."effective_from" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday("employee_status_events"."effective_from")))
 );
@@ -56,12 +56,12 @@ CREATE TABLE `employees` (
 	`shift_end` text,
 	`commute_minutes` integer,
 	FOREIGN KEY (`assigned_building_id`) REFERENCES `buildings`(`id`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "employees_name_not_blank" CHECK(trim("employees"."name") <> ''),
-	CONSTRAINT "employees_email_not_blank" CHECK(trim("employees"."email") <> ''),
+	CONSTRAINT "employees_name_not_blank" CHECK(trim("employees"."name", char(32, 9, 10, 11, 12, 13)) <> ''),
+	CONSTRAINT "employees_email_not_blank" CHECK(trim("employees"."email", char(32, 9, 10, 11, 12, 13)) <> ''),
 	CONSTRAINT "employees_preferred_channel" CHECK("employees"."preferred_channel" in ('email', 'sms')),
 	CONSTRAINT "employees_essential_personnel_boolean" CHECK("employees"."essential_personnel" in (0, 1)),
 	CONSTRAINT "employees_telework_eligible_boolean" CHECK("employees"."telework_eligible" in (0, 1)),
-	CONSTRAINT "employees_sms_requires_mobile_phone" CHECK(not ("employees"."preferred_channel" = 'sms') or "employees"."mobile_phone" is not null and trim("employees"."mobile_phone") <> ''),
+	CONSTRAINT "employees_sms_requires_mobile_phone" CHECK(not ("employees"."preferred_channel" = 'sms') or "employees"."mobile_phone" is not null and trim("employees"."mobile_phone", char(32, 9, 10, 11, 12, 13)) <> ''),
 	CONSTRAINT "employees_shift" CHECK(("employees"."shift_start" is null) = ("employees"."shift_end" is null) and "employees"."shift_start" is strftime('%H:%M', julianday("employees"."shift_start")) and "employees"."shift_end" is strftime('%H:%M', julianday("employees"."shift_end")) and "employees"."shift_start" < "employees"."shift_end"),
 	CONSTRAINT "employees_commute_minutes_positive" CHECK("employees"."commute_minutes" is null or typeof("employees"."commute_minutes") = 'integer' and "employees"."commute_minutes" > 0)
 );
@@ -86,9 +86,9 @@ CREATE TABLE `facilities` (
 	`backup_decision_maker_id` integer NOT NULL,
 	FOREIGN KEY (`decision_maker_id`) REFERENCES `decision_makers`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`backup_decision_maker_id`) REFERENCES `decision_makers`(`id`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "facilities_name_not_blank" CHECK(trim("facilities"."name") <> ''),
-	CONSTRAINT "facilities_nws_zone_not_blank" CHECK(trim("facilities"."nws_zone") <> ''),
-	CONSTRAINT "facilities_timezone_not_blank" CHECK(trim("facilities"."timezone") <> ''),
+	CONSTRAINT "facilities_name_not_blank" CHECK(trim("facilities"."name", char(32, 9, 10, 11, 12, 13)) <> ''),
+	CONSTRAINT "facilities_nws_zone_not_blank" CHECK(trim("facilities"."nws_zone", char(32, 9, 10, 11, 12, 13)) <> ''),
+	CONSTRAINT "facilities_timezone_not_blank" CHECK(trim("facilities"."timezone", char(32, 9, 10, 11, 12, 13)) <> ''),
 	CONSTRAINT "facilities_latitude_range" CHECK("facilities"."latitude" between -90 and 90),
 	CONSTRAINT "facilities_longitude_range" CHECK("facilities"."longitude" between -180 and 180),
 	CONSTRAINT "facilities_hours" CHECK("facilities"."opens_at" is strftime('%H:%M', julianday("facilities"."opens_at")) and "facilities"."closes_at" is strftime('%H:%M', julianday("facilities"."closes_at")) and "facilities"."opens_at" < "facilities"."closes_at"),
