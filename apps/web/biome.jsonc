@@ -175,6 +175,7 @@
               "loadDirectives",
               "loadFacilities",
               "loadFacility",
+              "loadFacilityDate",
               "loadHistory",
               "loadLatestRecommendation",
               "loadRecorders",

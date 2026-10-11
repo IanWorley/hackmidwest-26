@@ -21,7 +21,9 @@ import {
 import { BackupNotice, DecisionHistory } from "./decision-history";
 import { DecisionPanel } from "./decision-panel";
 import { DirectivesSection } from "./directives-section";
+import { isForFacilityDay } from "./facility-day";
 import { FacilityHours, HazardBadges } from "./facility-fields";
+import { formatFacilityDate } from "./format-time";
 import { RecommendationView } from "./recommendation-view";
 import { useNow } from "./use-now";
 
@@ -35,6 +37,8 @@ const NO_RECOMMENDATION_TEXT =
 const REEVALUATE_LABEL = "Re-evaluate";
 const EVALUATING_LABEL = "Evaluating…";
 const EVALUATED_TEXT = "New recommendation loaded.";
+const EARLIER_DAY_PREFIX = "This recommendation is for";
+const EARLIER_DAY_SUFFIX = "Re-evaluate for today.";
 const EVALUATE_FAILED_TEXT =
   "Re-evaluation failed. The recommendation shown is unchanged; try again.";
 
@@ -156,6 +160,14 @@ function RecommendationSection({
         />
       </div>
       {latestRecommendation === null && <p>{NO_RECOMMENDATION_TEXT}</p>}
+      {latestRecommendation !== null &&
+        !isForFacilityDay(latestRecommendation, screen.facilityDate) && (
+          <Alert>
+            <AlertTitle>
+              {`${EARLIER_DAY_PREFIX} ${formatFacilityDate(latestRecommendation.snapshot.output.facilityDate)}. ${EARLIER_DAY_SUFFIX}`}
+            </AlertTitle>
+          </Alert>
+        )}
       {latestRecommendation !== null && (
         <>
           <DecideByCountdown
@@ -239,14 +251,15 @@ export function DecisionScreenView({
       </div>
       <BackupNotice history={history} />
       <RecommendationSection now={now} onReload={onReload} screen={screen} />
-      {latestRecommendation !== null && (
-        <RecommendationDecision
-          now={now}
-          onReload={onReload}
-          recommendation={latestRecommendation}
-          screen={screen}
-        />
-      )}
+      {latestRecommendation !== null &&
+        isForFacilityDay(latestRecommendation, screen.facilityDate) && (
+          <RecommendationDecision
+            now={now}
+            onReload={onReload}
+            recommendation={latestRecommendation}
+            screen={screen}
+          />
+        )}
       {currentDecision !== null &&
         ACTIONS_TAKING_DIRECTIVES.includes(currentDecision.action) && (
           <CurrentDirectives

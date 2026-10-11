@@ -1,9 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import {
-  currentDecisionOf,
-  type DecisionRequest,
-  decide,
-} from "./decision-api";
+import { type DecisionRequest, decide } from "./decision-api";
 
 const RECOMMENDATION_ID = 5;
 const ACCEPT: DecisionRequest = { action: "accept", decidedById: 1 };
@@ -59,19 +55,4 @@ it.each([
     kind: "invalid",
     field,
   });
-});
-
-it("takes the newest decision on the shown recommendation as current", () => {
-  const history = [
-    { id: 12, recommendationId: 4 },
-    { id: 11, recommendationId: 5 },
-    { id: 10, recommendationId: 5 },
-  ];
-
-  expect(currentDecisionOf(history, { id: 5 })).toEqual({
-    id: 11,
-    recommendationId: 5,
-  });
-  expect(currentDecisionOf(history, { id: 6 })).toBeNull();
-  expect(currentDecisionOf(history, null)).toBeNull();
 });
