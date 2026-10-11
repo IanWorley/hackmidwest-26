@@ -17,6 +17,8 @@ import { parseDecimalId } from "./facilities";
 import { postureOfDecision } from "./facility-posture";
 import type { CurrentPosture, PersonnelRecords } from "./personnel-view";
 import { parseSnapshot } from "./recommendation-store";
+import { facilityDate } from "./timing";
+import { formatDate, parseInstant } from "./zoned-time";
 
 type DecisionMakerRow = typeof decisionMakers.$inferSelect;
 type DecisionRow = typeof decisions.$inferSelect;
@@ -92,7 +94,10 @@ const readFacility = Effect.fn("readFacility")(function* (facilityId: number) {
     try: () =>
       Promise.all([
         db
-          .select({ id: facilities.id })
+          .select({
+            timezone: facilities.timezone,
+            closesAt: facilities.closesAt,
+          })
           .from(facilities)
           .where(eq(facilities.id, facilityId)),
         db
@@ -113,9 +118,14 @@ const readFacility = Effect.fn("readFacility")(function* (facilityId: number) {
   });
 });
 
-/** Everything the personnel view needs, or none for an unknown facility. */
+/**
+ * Everything the personnel view needs at `now`, or none for an unknown facility. The newest
+ * decision applies only when its recommendation is about the facility day `now` falls in, so
+ * tonight's decision for tomorrow and yesterday's closure both leave today undecided.
+ */
 const loadPersonnelRecords = Effect.fn("loadPersonnelRecords")(function* (
   decimalId: string,
+  now: string,
 ) {
   const facilityId = parseDecimalId(decimalId);
   if (Option.isNone(facilityId)) {
@@ -129,7 +139,8 @@ const loadPersonnelRecords = Effect.fn("loadPersonnelRecords")(function* (
     statusEvents,
     newest,
   ] = yield* readFacility(facilityId.value);
-  if (facility.length === 0) {
+  const [schedule] = facility;
+  if (schedule === undefined) {
     return Option.none<PersonnelRecords>();
   }
   const records = {
@@ -139,19 +150,25 @@ const loadPersonnelRecords = Effect.fn("loadPersonnelRecords")(function* (
     employees: employeeRows,
     statusEvents,
   };
+  const undecided = Option.some<PersonnelRecords>({
+    ...records,
+    decision: null,
+    posture: { kind: "none" },
+    directives: [],
+  });
   const [current] = newest;
   if (current === undefined) {
-    return Option.some<PersonnelRecords>({
-      ...records,
-      decision: null,
-      posture: { kind: "none" },
-      directives: [],
-    });
+    return undecided;
   }
   const { snapshot, chosenPosture, ...decision } = current;
+  const recommendation = parseSnapshot(snapshot).output;
+  const today = formatDate(facilityDate(schedule, parseInstant(now)));
+  if (recommendation.facilityDate !== today) {
+    return undecided;
+  }
   const posture: CurrentPosture = postureOfDecision(
     { action: decision.action, chosenPosture },
-    parseSnapshot(snapshot).output,
+    recommendation,
   );
   return Option.some<PersonnelRecords>({
     ...records,

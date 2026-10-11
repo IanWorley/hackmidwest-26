@@ -36,8 +36,8 @@ const FACILITY_PERSONNEL_PATH = `${FACILITIES_PATH}/:id/personnel`;
 const facilityPersonnel = Effect.fn("facilityPersonnel")(function* (
   decimalId: string,
 ) {
-  const records = yield* loadPersonnelRecords(decimalId);
   const now = DateTime.formatIso(yield* DateTime.now);
+  const records = yield* loadPersonnelRecords(decimalId, now);
   return Option.match(records, {
     onNone: () =>
       status(HTTP_NOT_FOUND, { message: FACILITY_NOT_FOUND_MESSAGE }),

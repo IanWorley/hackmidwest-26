@@ -1,4 +1,4 @@
-import { recommendations } from "@hackmidwest/db";
+import { employeeStatusEvents, recommendations } from "@hackmidwest/db";
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { expect, it } from "vitest";
 import { HTTP_CREATED, HTTP_NOT_FOUND, HTTP_OK } from "../../runtime";
@@ -33,6 +33,10 @@ const BIANCA_ESSENTIAL = 2;
 const DELIA_ALREADY_TELEWORKING = 4;
 const HANA_ACCESSIBILITY_NEEDS = 8;
 const LATER = "2026-10-02T14:00:00.000Z";
+/** 03:00 in Kansas City on the engine fixtures' facility day, 2026-01-14. */
+const ON_FIXTURE_DAY = "2026-01-14T09:00:00.000Z";
+/** After Kansas City closes on 2026-01-14, when decisions are about 2026-01-15. */
+const AFTER_FIXTURE_DAY_CLOSE = "2026-01-14T23:00:00.000Z";
 const WIND_RELEASE_AT = "2026-01-14T17:45:00.000Z";
 const EARLIER_RELEASE_AT = "2026-01-14T16:30:00.000Z";
 const SUSTAINED_WIND_DISMISSAL = input(["wind"], {
@@ -157,6 +161,10 @@ it("takes the latest event in effect as baseline and shows a future-dated one on
 
 it("resolves an accepted early dismissal per person", async () => {
   await withApp(async ({ db, request }) => {
+    await request(`/api/employees/${DELIA_ALREADY_TELEWORKING}/status`, {
+      status: "teleworking",
+      reportedById: DECIDER_ID,
+    });
     const recommendationId = await stageRecommendation(
       db,
       SUSTAINED_WIND_DISMISSAL,
@@ -190,7 +198,7 @@ it("resolves an accepted early dismissal per person", async () => {
     expect(person(body, DELIA_ALREADY_TELEWORKING)).toMatchObject({
       effective: { kind: "teleworking", cause: { source: "baseline" } },
     });
-  });
+  }, ON_FIXTURE_DAY);
 });
 
 it("applies a directive on the current decision over the facility posture", async () => {
@@ -228,7 +236,7 @@ it("applies a directive on the current decision over the facility posture", asyn
     expect(person(body, BIANCA_ESSENTIAL)).toMatchObject({
       effective: { kind: "report_required", cause: { source: "posture" } },
     });
-  });
+  }, ON_FIXTURE_DAY);
 });
 
 it("leaves people at their baseline while the current decision is a deferral", async () => {
@@ -250,7 +258,7 @@ it("leaves people at their baseline while the current decision is a deferral", a
     expect(person(body, AVERY_TELEWORK_ELIGIBLE)).toMatchObject({
       effective: { kind: "working_onsite", cause: { source: "baseline" } },
     });
-  });
+  }, ON_FIXTURE_DAY);
 });
 
 it("returns people without an effective status when the override has no time to resolve against", async () => {
@@ -275,5 +283,45 @@ it("returns people without an effective status when the override has no time to 
     expect(person(body, AVERY_TELEWORK_ELIGIBLE)).not.toHaveProperty(
       "effective",
     );
+  }, ON_FIXTURE_DAY);
+});
+
+it("leaves today undecided when the newest decision is about another facility day", async () => {
+  await withApp(async ({ db, request }) => {
+    const recommendationId = await stageRecommendation(
+      db,
+      SUSTAINED_WIND_DISMISSAL,
+    );
+    const decided = await request(
+      `/api/recommendations/${recommendationId}/decisions`,
+      { action: "accept", decidedById: DECIDER_ID },
+    );
+    expect(decided.status).toBe(HTTP_CREATED);
+
+    const body = await personnel(request);
+
+    expect(body).toMatchObject({ decision: null, posture: { kind: "none" } });
+    expect(person(body, AVERY_TELEWORK_ELIGIBLE)).toMatchObject({
+      effective: { kind: "working_onsite", cause: { source: "baseline" } },
+    });
+  }, AFTER_FIXTURE_DAY_CLOSE);
+});
+
+it("leaves an event reported after asOf out of latestEvent", async () => {
+  await withApp(async ({ db, request }) => {
+    await db.insert(employeeStatusEvents).values({
+      employeeId: AVERY_TELEWORK_ELIGIBLE,
+      status: "teleworking",
+      reportedById: DECIDER_ID,
+      reportedAt: LATER,
+      effectiveFrom: LATER,
+    });
+
+    const avery = person(await personnel(request), AVERY_TELEWORK_ELIGIBLE);
+
+    expect(avery).toMatchObject({
+      baseline: { status: "working_onsite" },
+      latestEvent: { reportedAt: "2026-10-01T12:00:00.000Z" },
+    });
   });
 });
