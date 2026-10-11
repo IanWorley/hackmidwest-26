@@ -1,7 +1,7 @@
 import type { DecisionAction, Posture } from "@hackmidwest/db";
 import type { FacilityPosture } from "./effective-status";
 import type { Recommendation } from "./recommendation";
-import type { OpmStatus, TimingCase } from "./timing";
+import type { OpmStatus, TimingCase, TimingResult } from "./timing";
 
 const MINUTES_PER_HOUR = 60;
 
@@ -15,6 +15,14 @@ type DecidedPosture =
   | { readonly kind: "decided"; readonly posture: FacilityPosture }
   | { readonly kind: "undecided"; readonly action: "defer" | "no_decision" }
   | { readonly kind: "untimed"; readonly posture: TimedPosture };
+
+/** The recommendation fields a posture reads, so a stored snapshot's arrays fit as well as the engine's tuples. */
+interface PostureTimings {
+  readonly status: Recommendation["status"];
+  readonly findings: readonly {
+    readonly timing: Pick<TimingResult, "timingCase">;
+  }[];
+}
 
 interface DecisionPostureFacts {
   readonly action: DecisionAction;
@@ -63,7 +71,7 @@ function fromTimingCase(
  */
 function timedPosture(
   posture: TimedPosture,
-  recommendation: Recommendation,
+  recommendation: PostureTimings,
 ): DecidedPosture {
   if (recommendation.status.posture === posture) {
     return { kind: "decided", posture: fromStatus(recommendation.status) };
@@ -79,7 +87,7 @@ function timedPosture(
 
 function postureOfDecision(
   decision: DecisionPostureFacts,
-  recommendation: Recommendation,
+  recommendation: PostureTimings,
 ): DecidedPosture {
   if (decision.action === "defer" || decision.action === "no_decision") {
     return { kind: "undecided", action: decision.action };
@@ -94,5 +102,5 @@ function postureOfDecision(
   }
 }
 
-export type { DecidedPosture, DecisionPostureFacts };
+export type { DecidedPosture, DecisionPostureFacts, PostureTimings };
 export { postureOfDecision };
