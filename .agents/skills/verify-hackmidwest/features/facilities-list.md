@@ -35,6 +35,7 @@ Preconditions:
 - **API list.** Run `RUN_ID=<id> $V api facilities-api-list GET /api/facilities`. `200` with 4 objects in name order; the Kansas City object has `"hazards":["winter","wind","airQuality"]`.
 - **API detail.** Run `RUN_ID=<id> $V api facilities-api-detail GET /api/facilities/1`. `200` with `"name":"Kansas City Area Service Center"` and `"nwsZone":"MOZ037"`.
 - **API not found.** Run `RUN_ID=<id> $V api facilities-api-404 GET /api/facilities/999`. `404` with body `{"message":"Facility not found"}`.
+- **API large id.** Run `RUN_ID=<id> $V api facilities-api-large-id GET /api/facilities/1000000000000000`. `404` with body `{"message":"Facility not found"}`, not `422`.
 - **API malformed id.** Run `RUN_ID=<id> $V api facilities-api-malformed GET /api/facilities/0x1`. `422`, not facility 1.
 - **Stored state.** Run `RUN_ID=<id> $V db facilities-rows "select f.id, f.name, group_concat(h.hazard) from facilities f left join facility_hazards h on h.facility_id = f.id group by f.id order by f.name"`. Rows match the rendered names in order, and each row holds the same hazards as the page, in storage order rather than display order.
 

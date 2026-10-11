@@ -20,11 +20,8 @@ import {
 const FACILITIES_PATH = "/api/facilities";
 const FACILITY_PATH = `${FACILITIES_PATH}/:id`;
 const FACILITY_NOT_FOUND_MESSAGE = "Facility not found";
-/**
- * Decimal digits only, so `0x1` or `1e0` cannot alias facility 1 the way
- * numeric coercion would. Fifteen digits keeps every match a safe integer.
- */
-const FACILITY_ID_PATTERN = "^[1-9][0-9]{0,14}$";
+/** Decimal digits only, so `0x1` or `1e0` cannot alias facility 1 the way numeric coercion would. */
+const FACILITY_ID_PATTERN = "^[1-9][0-9]*$";
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 
@@ -82,7 +79,12 @@ const listFacilities = Effect.fn("listFacilities")(function* () {
   return withHazards(rows, hazardRows);
 });
 
-const getFacility = Effect.fn("getFacility")(function* (id: number) {
+const getFacility = Effect.fn("getFacility")(function* (decimalId: string) {
+  const id = Number(decimalId);
+  // Past the safe range, Number rounds to a different id, so no facility matches.
+  if (!Number.isSafeInteger(id)) {
+    return Option.none();
+  }
   const db = yield* Database;
   const [rows, hazardRows] = yield* Effect.tryPromise({
     try: () =>
@@ -110,7 +112,7 @@ export function createFacilitiesModule(runRequest: RunRequest) {
       FACILITY_PATH,
       ({ params, status }) =>
         runRequest(
-          getFacility(Number(params.id)).pipe(
+          getFacility(params.id).pipe(
             Effect.map(
               Option.getOrElse(() =>
                 status(HTTP_NOT_FOUND, {
