@@ -1,10 +1,16 @@
-import type { EvaluatedStanding, Standing } from "@/features/map/load-map";
+import type { DecisionAction, Standing } from "@/features/map/load-map";
 
-type UndecidedStanding = EvaluatedStanding & { decided: false };
+/** Only these settle a facility; a deferral or a lapsed deadline still leaves it waiting on someone. */
+const SETTLING_ACTIONS: ReadonlySet<DecisionAction> = new Set([
+  "accept",
+  "override",
+]);
 
-/** A recommendation exists and no one has recorded a decision on it yet. */
-export function needsDecision(
-  standing: Standing,
-): standing is UndecidedStanding {
-  return standing.posture !== "not_evaluated" && !standing.decided;
+/** A recommendation exists and no one has accepted or overridden it yet. */
+export function needsDecision(standing: Standing): boolean {
+  return (
+    standing.posture !== "not_evaluated" &&
+    (standing.decision === null ||
+      !SETTLING_ACTIONS.has(standing.decision.action))
+  );
 }

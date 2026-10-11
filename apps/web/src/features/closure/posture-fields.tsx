@@ -1,12 +1,17 @@
 import { type JSX, useSyncExternalStore } from "react";
 import { Badge } from "@/components/ui/badge";
-import type { StandingPosture } from "@/features/map/load-map";
+import type {
+  EvaluatedStanding,
+  StandingPosture,
+} from "@/features/map/load-map";
+import { effectivePosture } from "./decision-status";
 import { POSTURE_CLASSES, POSTURE_LABELS } from "./posture";
 
 const MS_PER_MINUTE = 60_000;
 const MINUTES_PER_HOUR = 60;
 const OVERDUE_TEXT = "Decision overdue";
 const AS_OF_PREFIX = "As of";
+const RECOMMENDED_PREFIX = "Recommended:";
 /** A fixed zone, so the server and the browser format the same text. */
 const AS_OF_FORMAT = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
@@ -87,4 +92,19 @@ function AsOfMarker({ asOf }: { asOf: string }): JSX.Element {
   );
 }
 
-export { AsOfMarker, DecideByCountdown, PostureBadge };
+function RecommendedPosture({
+  standing,
+}: {
+  standing: EvaluatedStanding;
+}): JSX.Element | null {
+  if (effectivePosture(standing) === standing.posture) {
+    return null;
+  }
+  return (
+    <span className="text-muted-foreground text-xs">
+      {`${RECOMMENDED_PREFIX} ${POSTURE_LABELS[standing.posture]}`}
+    </span>
+  );
+}
+
+export { AsOfMarker, DecideByCountdown, PostureBadge, RecommendedPosture };
