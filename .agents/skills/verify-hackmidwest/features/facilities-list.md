@@ -8,6 +8,7 @@ The `/facilities` page shows every facility in name order as a row of the `Facil
 - `facilities-row-link` follows a facility name client-side to `/facilities/<id>`, and the browser fetches `GET /api/facilities/<id>`.
 - `facilities-detail` shows the facility name as the heading, plus its time zone, hours, NWS zone, and hazards.
 - `facilities-not-found` shows `Facility not found.` for an id no facility has, or a path segment that is not a decimal positive integer (`0x1`, `1e0`, `abc`). Malformed ids never reach the API.
+- `facilities-list-error` shows the alert `Facilities could not be loaded.` on `/facilities` when the API fails.
 - `facilities-load-error` shows `Facility could not be loaded.` with a matching title when the API fails.
 - `facilities-api` answers `GET /api/facilities` with every facility in name order, `GET /api/facilities/:id` with one facility, `404 {"message":"Facility not found"}` for an unknown id, and `422` for an id that is not a decimal positive integer (`0x1`, `1e0`, `01`).
 
@@ -31,6 +32,7 @@ Preconditions:
 - **Direct detail load.** Open a facility by URL. Run `RUN_ID=<id> $V browser goto /facilities/1 expect heading "Kansas City Area Service Center" snap facilities-detail-direct`. The snapshot matches `facilities-detail`, and `browser.log` has no `net GET` line between this run's `step goto "/facilities/1"` and `step snap` lines, which proves SSR served it.
 - **Unknown id.** Open an id no facility has. Run `RUN_ID=<id> $V browser goto /facilities/999 expect-text "Facility not found." snap facilities-not-found`. The snapshot has title `Facility not found · Hack Midwest` and no table or heading.
 - **Malformed id.** Open an id that `Number` would read as 1. Run `RUN_ID=<id> $V browser goto /facilities/0x1 expect-text "Facility not found." snap facilities-malformed-id`. The snapshot has title `Facility not found · Hack Midwest` and no heading `Kansas City Area Service Center`.
+- **List load error.** On a `STORAGE=broken` instance, run `RUN_ID=<id> $V browser goto /facilities expect-text "Facilities could not be loaded." snap facilities-list-error`. The snapshot has the alert and no table `Facilities`.
 - **Load error.** On a `STORAGE=broken` instance, run `RUN_ID=<id> $V browser goto /facilities/1 expect-text "Facility could not be loaded." snap facilities-detail-error`. The snapshot has title `Facility could not be loaded · Hack Midwest`, not the not-found title.
 - **API list.** Run `RUN_ID=<id> $V api facilities-api-list GET /api/facilities`. `200` with 4 objects in name order; the Kansas City object has `"hazards":["winter","wind","airQuality"]`.
 - **API detail.** Run `RUN_ID=<id> $V api facilities-api-detail GET /api/facilities/1`. `200` with `"name":"Kansas City Area Service Center"` and `"nwsZone":"MOZ037"`.
