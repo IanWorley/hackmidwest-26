@@ -65,6 +65,11 @@ const LOW_RIVER = { stageFt: LOW_RIVER_FT, validTime: RIVER_AT };
 
 const stormNws: NwsClientShape = {
   activeAlerts: () => Effect.succeed([WINTER_STORM]),
+  activeAlertAreas: () =>
+    Effect.succeed([
+      { alert: WINTER_STORM, geometry: null, affectedZones: [] },
+    ]),
+  zoneGeometry: () => Effect.succeed(null),
   forecast: () => Effect.succeed(FORECAST),
   hourlyForecast: () => Effect.succeed(FORECAST),
   latestObservation: () =>
@@ -77,6 +82,8 @@ const stormNws: NwsClientShape = {
       windGust: { value: CALM_GUST_KMH, unitCode: "wmoUnit:km_h-1" },
       visibility: { value: null, unitCode: "wmoUnit:m" },
     }),
+  activeAlertAreas: () => Effect.succeed([]),
+  zoneGeometry: () => Effect.succeed(null),
 };
 
 const cleanAir: OpenMeteoClientShape = {

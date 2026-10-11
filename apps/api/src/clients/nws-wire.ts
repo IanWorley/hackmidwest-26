@@ -4,11 +4,13 @@ import {
   AlertMessageTypeSchema,
   AlertSeveritySchema,
   AlertUrgencySchema,
+  AreaGeometrySchema,
   type ForecastPeriod,
   hazardWindow,
   NullableNumber,
   NullableString,
   type NwsAlert,
+  type NwsAlertArea,
   QuantitySchema,
 } from "./nws-model";
 
@@ -61,6 +63,23 @@ const AlertsResponse = t.Object({
   features: t.Array(t.Object({ properties: AlertWire })),
 });
 
+const NullableAreaGeometry = t.Union([AreaGeometrySchema, t.Null()]);
+
+/** The same /alerts/active payload read with each alert's area. A separate schema, so geometry NWS ships in a shape we don't model fails only the map, not the engine's alerts. */
+const AlertAreasResponse = t.Object({
+  features: t.Array(
+    t.Object({
+      geometry: NullableAreaGeometry,
+      properties: t.Object({
+        ...AlertWire.properties,
+        affectedZones: t.Array(t.String()),
+      }),
+    }),
+  ),
+});
+
+const ZoneResponse = t.Object({ geometry: NullableAreaGeometry });
+
 const StationsResponse = t.Object({
   features: t.Array(
     t.Object({
@@ -112,8 +131,20 @@ function toNwsAlert(alert: Static<typeof AlertWire>): NwsAlert {
   };
 }
 
+function toNwsAlertArea({
+  geometry,
+  properties,
+}: Static<typeof AlertAreasResponse>["features"][number]): NwsAlertArea {
+  return {
+    alert: toNwsAlert(properties),
+    geometry,
+    affectedZones: properties.affectedZones,
+  };
+}
+
 export type { GridPoint };
 export {
+  AlertAreasResponse,
   AlertsResponse,
   ForecastResponse,
   ObservationResponse,
@@ -121,4 +152,6 @@ export {
   StationsResponse,
   toForecastPeriod,
   toNwsAlert,
+  toNwsAlertArea,
+  ZoneResponse,
 };
