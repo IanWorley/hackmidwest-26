@@ -1,5 +1,6 @@
 import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
+import { createFloodLiveModule } from "./features/flood-live";
 import { createNwsLiveModule } from "./features/nws-live";
 import { createTasksModule } from "./features/tasks";
 import type { RunRequest } from "./runtime";
@@ -14,7 +15,8 @@ export function createApp({ runRequest, webOrigin }: AppDependencies) {
   return new Elysia()
     .use(cors({ origin: webOrigin }))
     .use(createTasksModule(runRequest))
-    .use(createNwsLiveModule(runRequest));
+    .use(createNwsLiveModule(runRequest))
+    .use(createFloodLiveModule(runRequest));
 }
 
 export type App = ReturnType<typeof createApp>;
