@@ -1,3 +1,4 @@
+import { ALERT_URGENCIES } from "../../clients/nws-model";
 import type { FacilityPosture } from "./effective-status";
 import type { AlertUrgency, NoticeContext } from "./notification-plan";
 import type { HazardSpan } from "./notification-situation";
@@ -6,6 +7,14 @@ import type { Snapshot } from "./recommendation-store";
 const NO_ALERT_URGENCY: AlertUrgency = "Unknown";
 
 type StoredFinding = Snapshot["output"]["findings"][number];
+
+function moreUrgent(a: AlertUrgency, b: AlertUrgency): AlertUrgency {
+  // The client lists urgencies most urgent first.
+  if (ALERT_URGENCIES.indexOf(b) < ALERT_URGENCIES.indexOf(a)) {
+    return b;
+  }
+  return a;
+}
 
 interface NoticeContextInput {
   readonly facility: NoticeContext["facility"];
@@ -34,7 +43,10 @@ function urgencyOf(
       return [];
     }),
   );
-  return alerts.find(({ id }) => alertIds.has(id))?.urgency ?? NO_ALERT_URGENCY;
+  return alerts
+    .filter(({ id }) => alertIds.has(id))
+    .map(({ urgency }) => urgency)
+    .reduce(moreUrgent, NO_ALERT_URGENCY);
 }
 
 /** The deciding finding is the first, so its hazard and alert set the notice's framing and urgency. */
