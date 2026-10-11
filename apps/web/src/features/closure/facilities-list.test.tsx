@@ -27,6 +27,7 @@ const KANSAS_CITY: Facility = {
   notificationLeadMinutes: 60,
   decisionMakerId: 1,
   backupDecisionMakerId: 2,
+  roadClass: "superCommuter",
   hazards: ["winter", "wind", "airQuality"],
 };
 
