@@ -9,6 +9,8 @@ type ConfirmState =
   | {
       readonly kind: "confirming" | "submitting";
       readonly request: DecisionRequest;
+      /** When the panel built the request, so a deferral keeps its full interval past the review. */
+      readonly heldAt: number;
       readonly settle: (outcome: DecideOutcome) => void;
     };
 
@@ -29,6 +31,19 @@ interface ConfirmedDecision {
 const CANCELLED: DecideOutcome = { kind: "cancelled" };
 const FAILED: DecideOutcome = { kind: "failed" };
 
+/** A deferral's recheck time counts from confirmation, not from when the dialog opened. */
+function confirmedRequest(
+  request: DecisionRequest,
+  heldAt: number,
+  confirmedAt: number,
+): DecisionRequest {
+  if (request.action !== "defer") {
+    return request;
+  }
+  const recheckAt = Date.parse(request.recheckAt) + (confirmedAt - heldAt);
+  return { ...request, recheckAt: new Date(recheckAt).toISOString() };
+}
+
 function heldRequest(state: ConfirmState): DecisionRequest | null {
   if (state.kind === "idle") {
     return null;
@@ -41,7 +56,7 @@ export function useConfirmedDecision(submit: Submit): ConfirmedDecision {
 
   function submitDecision(request: DecisionRequest): Promise<DecideOutcome> {
     return new Promise((settle) => {
-      setState({ kind: "confirming", request, settle });
+      setState({ kind: "confirming", request, heldAt: Date.now(), settle });
     });
   }
 
@@ -50,7 +65,9 @@ export function useConfirmedDecision(submit: Submit): ConfirmedDecision {
       return;
     }
     setState({ ...state, kind: "submitting" });
-    const outcome = await submit(state.request).catch(() => FAILED);
+    const outcome = await submit(
+      confirmedRequest(state.request, state.heldAt, Date.now()),
+    ).catch(() => FAILED);
     setState({ kind: "idle" });
     state.settle(outcome);
   }

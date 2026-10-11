@@ -18,6 +18,16 @@ const OVERRIDE: DecisionRequest = {
   decidedById: 1,
   reason: { category: "local_conditions", text: "Water main break on site" },
 };
+/** Fifteen minutes after HELD_AT, as the form builds it when the dialog opens. */
+const DEFER: DecisionRequest = {
+  action: "defer",
+  recheckAt: "2026-01-15T11:30:00.000Z",
+  decidedById: 1,
+  reason: { category: "road_reports", text: "Waiting on the county." },
+};
+const HELD_AT = "2026-01-15T11:15:00.000Z";
+const MS_PER_MINUTE = 60_000;
+const REVIEW_MINUTES = 5;
 const RECORDED: DecideOutcome = { kind: "recorded" };
 const OVERRIDE_NOTE =
   "This list is for the recommended posture. Your chosen posture's notice is built after you record the decision, and only if the recommendation times it; Notifications says so when it does not.";
@@ -78,13 +88,26 @@ it("says the list is for the recommended posture when the manager overrides", as
   expect(await outcome).toEqual({ kind: "cancelled" });
 });
 
+it("counts a deferral's recheck interval from confirmation, not from when the dialog opened", async () => {
+  vi.useFakeTimers({ now: Date.parse(HELD_AT) });
+  try {
+    const record = vi.fn<Record>(() => Promise.resolve(RECORDED));
+    const outcome = startSubmit(record, DEFER);
+
+    vi.advanceTimersByTime(REVIEW_MINUTES * MS_PER_MINUTE);
+    fireEvent.click(screen.getByRole("button", { name: "Record decision" }));
+
+    expect(await outcome).toEqual(RECORDED);
+    expect(record.mock.calls).toEqual([
+      [{ ...DEFER, recheckAt: "2026-01-15T11:35:00.000Z" }],
+    ]);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 it("tells the manager a deferral notifies nobody instead of listing recipients", async () => {
-  const outcome = startSubmit(vi.fn<Record>(), {
-    action: "defer",
-    recheckAt: "2026-01-15T11:30:00.000Z",
-    decidedById: 1,
-    reason: { category: "road_reports", text: "Waiting on the county." },
-  });
+  const outcome = startSubmit(vi.fn<Record>(), DEFER);
 
   expect([
     screen.getByRole("status").textContent,
