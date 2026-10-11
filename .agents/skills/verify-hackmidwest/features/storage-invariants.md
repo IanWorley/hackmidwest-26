@@ -58,6 +58,6 @@ Preconditions:
 
 - `db-reject` writes to a `.backup` snapshot of the run's database and deletes it afterwards. The instance's data never changes, so other recipes can run on the same instance.
 - A write the schema allows makes `db-reject` print `verdict> FAIL` and exit `1`. That is the probe working: it proves only rejections, never acceptance.
-- Match on the trigger message or the `CHECK` name, not the whole error line. The `sqlite3` CLI prefixes it with `Error in 3rd command line argument:`.
+- Match on the trigger message or the `CHECK` name, not the whole error line. The `sqlite3` CLI prefix depends on its version, for example `Error in 3rd command line argument:` or `Error: stepping,` with a `(19)` suffix.
 - The `sqlite3` CLI leaves foreign keys off, so a probe cannot prove a foreign-key rejection.
 - A storage PR that adds a table or a constraint adds its sub-feature and probe here in the same PR.

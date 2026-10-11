@@ -45,6 +45,24 @@ serves_app() {
   [[ "${response##*$'\n'}" == "$2" ]] && grep -q "<title>$TASKS_PAGE_TITLE</title>" <<< "$response"
 }
 
+# Exec "$@" as the leader of a new session, keeping the caller's PID, so PID == PGID for `down`.
+# macOS ships no setsid binary; perl's POSIX::setsid does the same there.
+start_session() {
+  if command -v setsid > /dev/null; then
+    exec setsid "$@"
+  fi
+  exec perl -MPOSIX -e 'POSIX::setsid() != -1 or die "setsid: $!"; exec @ARGV or die "exec: $!"' "$@"
+}
+
+# macOS has no ss; lsof is the portable fallback.
+listener_pid() {
+  if command -v ss > /dev/null; then
+    ss -ltnpH "sport = :$1" | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2
+  else
+    lsof -nP -iTCP:"$1" -sTCP:LISTEN -t | head -1
+  fi
+}
+
 free_port() {
   bun -e 'const s = Bun.serve({ port: 0, fetch: () => new Response() }); console.log(s.port); s.stop(true);'
 }
@@ -96,8 +114,8 @@ cmd_up() {
       || { cat "$dir/setup.log" >&2; die "migrate/seed failed"; }
   fi
 
-  # Backgrounding setsid directly (no subshell) makes $! the new group's leader, so PID == PGID.
-  setsid bun run --cwd "$REPO_ROOT" dev > "$dir/dev.log" 2>&1 < /dev/null &
+  # start_session execs in place, so $! is the new group's leader and PID == PGID.
+  start_session bun run --cwd "$REPO_ROOT" dev > "$dir/dev.log" 2>&1 < /dev/null &
   local pgid=$!
 
   cat > "$dir/state.env" <<EOF
@@ -138,7 +156,7 @@ cmd_doctor() {
   check() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; ok=0; fi; }
   owns_port() {
     local pid
-    pid="$(ss -ltnpH "sport = :$1" | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2)"
+    pid="$(listener_pid "$1")"
     [[ -n "$pid" && "$(ps -o pgid= -p "$pid" | tr -d ' ')" == "$PGID" ]]
   }
   check "process group $PGID alive" "kill -0 -- -$PGID 2> /dev/null"
