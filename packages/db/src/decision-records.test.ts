@@ -17,6 +17,7 @@ import {
   SEND_BY,
 } from "./decision-records.fixtures";
 import {
+  decisionDirectives,
   decisions,
   humanInputs,
   notificationDispatches,
@@ -55,6 +56,14 @@ const ADD_ONLY_TABLES = [
     updateMessage:
       "human_inputs is add-only: record a newer input instead of updating one",
     deleteMessage: "human_inputs is add-only: inputs cannot be deleted",
+  },
+  {
+    name: "decision_directives",
+    table: decisionDirectives,
+    updateMessage:
+      "decision_directives is add-only: record a newer directive instead of updating one",
+    deleteMessage:
+      "decision_directives is add-only: directives cannot be deleted",
   },
 ];
 
