@@ -1,6 +1,7 @@
 import { Value } from "@sinclair/typebox/value";
 import { expect, it } from "vitest";
-import { EngineInputSchema, evaluatePosture } from "./engine";
+import { evaluatePosture } from "./engine";
+import { EngineInputSchema } from "./engine-input";
 import {
   AFTER_GUST,
   AFTERNOON_HOUR,

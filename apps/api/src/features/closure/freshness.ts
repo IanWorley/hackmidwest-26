@@ -5,6 +5,7 @@ const STALE_LIMITS = {
   observations: TIMING_POLICY.observationStaleMinutes,
   forecast: TIMING_POLICY.forecastStaleMinutes,
   airQuality: TIMING_POLICY.airQualityStaleMinutes,
+  gauge: TIMING_POLICY.gaugeStageStaleMinutes,
 } as const;
 
 type InputKind = keyof typeof STALE_LIMITS;

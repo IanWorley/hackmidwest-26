@@ -151,6 +151,8 @@ function marginPhrase(margin: Margin): string {
       return `${metricLabel(margin.metric)} ${margin.observed} mph vs ${margin.cutoff} mph cutoff, +${margin.by}`;
     case "aqi":
       return `AQI ${margin.observed} vs ${margin.cutoff} cutoff, +${margin.by}`;
+    case "nws_flood_category":
+      return `river ${margin.observed} ft vs ${margin.cutoff} ft ${margin.category} flood stage, +${margin.by} ft`;
     default:
       return margin satisfies never;
   }

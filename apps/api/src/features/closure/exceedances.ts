@@ -1,4 +1,5 @@
 import { HAZARDS, type Hazard } from "@hackmidwest/db";
+import type { FloodCategory } from "../../clients/nwps";
 import type { HazardEvidence } from "./hazard-window";
 import { type NonEmpty, type Origin, periodOf, type Signal } from "./signals";
 import {
@@ -11,6 +12,9 @@ import {
 import { MS_PER_MINUTE, parseInstant } from "./zoned-time";
 
 type AlertOrigin = Extract<Origin, { readonly source: "alerts" }>;
+
+/** NWPS reports stages in hundredths of a foot, so a stage difference rounds there. */
+const STAGE_DECIMALS = 2;
 
 /** How far a signal is past a cutoff. For an alert, `by` counts CAP severity steps. */
 type Margin =
@@ -30,6 +34,14 @@ type Margin =
     }
   | {
       readonly unit: "aqi";
+      readonly observed: number;
+      readonly cutoff: number;
+      readonly by: number;
+    }
+  /** `observed` is the river's crest and `cutoff` this gauge's stage for `category`, in feet. */
+  | {
+      readonly unit: "nws_flood_category";
+      readonly category: FloodCategory;
       readonly observed: number;
       readonly cutoff: number;
       readonly by: number;
@@ -55,6 +67,7 @@ interface Crossing {
 const MEASURES_DURATION = {
   alerts: true,
   forecast: true,
+  gauge: true,
   observations: false,
   airQuality: false,
 } as const satisfies Record<Origin["source"], boolean>;
@@ -150,9 +163,23 @@ function marginOver(signal: Signal, cutoff: Cutoff): Margin | null {
         cutoff: cutoff.value,
         by: signal.value - cutoff.value,
       });
-    // No input carries a river stage yet, so a flood-category cutoff is never crossed.
+    // Each category has its own stage, so a crossing counts only for its own category.
     case "nws_flood_category":
-      return null;
+      if (
+        signal.unit !== "nws_flood_category" ||
+        signal.value !== cutoff.value
+      ) {
+        return null;
+      }
+      return atOrPast({
+        unit: "nws_flood_category",
+        category: signal.value,
+        observed: signal.stageFt,
+        cutoff: signal.floodStageFt,
+        by: Number(
+          (signal.stageFt - signal.floodStageFt).toFixed(STAGE_DECIMALS),
+        ),
+      });
     default:
       return cutoff satisfies never;
   }

@@ -1,6 +1,7 @@
 import type { Hazard } from "@hackmidwest/db";
 import type { NwsAlert } from "../../clients/nws-model";
-import type { EngineInput, Recommendation } from "./engine";
+import type { Recommendation } from "./engine";
+import type { EngineInput } from "./engine-input";
 import type { Reading } from "./readings";
 import { FACILITY } from "./timing-test-fixtures";
 
@@ -16,6 +17,22 @@ const AFTERNOON_HOUR = [
   "2026-01-14T19:00:00Z",
   "2026-01-14T20:00:00Z",
 ] as const;
+
+/** KCDM7's stages, which defines no action stage. */
+const FLOOD_STAGES_FT = { minor: 32, moderate: 35, major: 49 } as const;
+const BELOW_MODERATE_FT = 33;
+/** River crests relative to the KCDM7 stages above. */
+const CREST_FT = {
+  belowModerate: 34,
+  justUnderModerate: 34.99,
+  atModerate: 35,
+  justUnderMajor: 48.99,
+  atMajor: 49,
+  pastMajor: 49.2,
+} as const;
+const RIVER_OBSERVED_AT = "2026-01-14T08:30:00Z";
+const RIVER_CREST_AT = "2026-01-14T14:30:00Z";
+const RIVER_FALLEN_AT = "2026-01-14T20:30:00Z";
 
 /** NWS observations report wind in km/h; each value rounds to the mph in its name. */
 const KMH = {
@@ -46,6 +63,7 @@ function input(
     alerts: { asOf: NOW, items: [] },
     readings: [],
     forecast: null,
+    gauge: null,
     ...overrides,
   };
 }
@@ -108,6 +126,23 @@ function forecast(
   };
 }
 
+/** A river observed below moderate stage, forecast to crest at `crestFt` mid-morning and fall back by afternoon. */
+function river(
+  crestFt: number,
+  observedAt: string = RIVER_OBSERVED_AT,
+): EngineInput["gauge"] {
+  return {
+    rawRef: "https://api.water.noaa.gov/nwps/v1/gauges/KCDM7",
+    asOf: NOW,
+    floodStagesFt: FLOOD_STAGES_FT,
+    observed: { stageFt: BELOW_MODERATE_FT, validTime: observedAt },
+    forecast: [
+      { stageFt: crestFt, validTime: RIVER_CREST_AT },
+      { stageFt: BELOW_MODERATE_FT, validTime: RIVER_FALLEN_AT },
+    ],
+  };
+}
+
 /** `hazard/cutoffId` for each finding, most disruptive first. */
 function crossed(recommendation: Recommendation): string[] {
   return recommendation.findings.map(
@@ -122,6 +157,7 @@ export {
   AQI_AT,
   AQI_READING,
   alerts,
+  CREST_FT,
   crossed,
   forecast,
   GUST_AT,
@@ -130,5 +166,6 @@ export {
   NOW,
   nwsAlert,
   OVERNIGHT_END,
+  river,
   wind,
 };

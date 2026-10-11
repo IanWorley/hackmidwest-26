@@ -1,5 +1,8 @@
+import type { FloodCategory } from "../../clients/nwps";
 import type { ForecastPeriod, NwsAlert } from "../../clients/nws-model";
+import type { EngineInput } from "./engine-input";
 import type { InputKind } from "./freshness";
+import { gaugeSignals } from "./gauge-stages";
 import { currentAlerts, type HazardEvidence } from "./hazard-window";
 import type { Reading } from "./readings";
 import type { NwsSeverity, WindMetric } from "./thresholds";
@@ -18,7 +21,7 @@ const FORECAST_WIND_PATTERN = /^(?<low>\d+)(?: to (?<high>\d+))? mph$/u;
 
 type NonEmpty<T> = readonly [T, ...T[]];
 type Period = HazardEvidence["exceedingPeriods"][number];
-type ReadingInput = Exclude<InputKind, "forecast">;
+type ReadingInput = Extract<InputKind, "observations" | "airQuality">;
 
 /** One value in a cutoff's unit. Mirrors the `Cutoff` union so one switch narrows both. */
 type Quantity =
@@ -32,7 +35,14 @@ type Quantity =
       readonly metric: WindMetric;
       readonly value: number;
     }
-  | { readonly unit: "aqi"; readonly value: number };
+  | { readonly unit: "aqi"; readonly value: number }
+  | {
+      readonly unit: "nws_flood_category";
+      readonly value: FloodCategory;
+      /** The crest while the river is at or above `floodStageFt`. */
+      readonly stageFt: number;
+      readonly floodStageFt: number;
+    };
 
 type Origin =
   | {
@@ -46,7 +56,8 @@ type Origin =
       readonly endBasis: NwsAlert["hazardWindow"]["endBasis"];
     }
   | {
-      readonly source: "forecast";
+      /** A gauge spans its crossing, from the first stage at or above the flood stage. */
+      readonly source: "forecast" | "gauge";
       readonly ref: string;
       readonly asOf: IsoInstant;
       readonly start: IsoInstant;
@@ -64,6 +75,7 @@ type Origin =
 type Signal = Quantity & { readonly origin: Origin };
 
 interface SignalInputs {
+  readonly now: IsoInstant;
   readonly alerts: {
     readonly asOf: IsoInstant;
     readonly items: readonly NwsAlert[];
@@ -74,6 +86,7 @@ interface SignalInputs {
     readonly rawRef: string;
     readonly periods: readonly ForecastPeriod[];
   } | null;
+  readonly gauge: EngineInput["gauge"];
 }
 
 function normalize(inputs: SignalInputs): Signal[] {
@@ -86,6 +99,7 @@ function normalize(inputs: SignalInputs): Signal[] {
     ...(forecast?.periods.flatMap((forecastPeriod) =>
       forecastSignals(forecastPeriod, forecast.rawRef, forecast.asOf),
     ) ?? []),
+    ...gaugeSignals(inputs.gauge, inputs.now),
   ];
 }
 
@@ -190,6 +204,7 @@ function periodOf(origin: Origin): Period {
   switch (origin.source) {
     case "alerts":
     case "forecast":
+    case "gauge":
       return { startTime: origin.start, endTime: origin.end };
     case "observations":
     case "airQuality":
@@ -215,6 +230,7 @@ function shiftOrigin(origin: Origin, minutes: number): Origin {
   switch (origin.source) {
     case "alerts":
     case "forecast":
+    case "gauge":
       return {
         ...origin,
         start: shiftIso(origin.start, minutes),

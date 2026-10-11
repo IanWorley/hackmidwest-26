@@ -1,16 +1,9 @@
-import {
-  type ConfidenceLevel,
-  facilities,
-  HAZARDS,
-  POSTURES,
-} from "@hackmidwest/db";
-import { createSchemaFactory } from "drizzle-typebox";
-import { type Static, t } from "elysia";
-import { ForecastPeriodSchema, NwsAlertSchema } from "../../clients/nws-model";
+import { type ConfidenceLevel, POSTURES } from "@hackmidwest/db";
+import type { EngineInput } from "./engine-input";
 import { type Exceedance, matchCutoffs, toEvidence } from "./exceedances";
 import { type InputKind, staleInputs } from "./freshness";
 import type { EndBasis } from "./hazard-window";
-import { type Reading, ReadingSchema } from "./readings";
+import type { Reading } from "./readings";
 import {
   type ConfidenceReason,
   type Finding,
@@ -36,37 +29,6 @@ import {
   toIso,
 } from "./zoned-time";
 
-const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
-const facilityColumns = createSelectSchema(facilities).properties;
-
-/** Plain JSON with ISO-8601 instants, so a stored input replays through `Value.Parse`. */
-const EngineInputSchema = t.Object({
-  /** The evaluation instant. The engine never reads the clock. */
-  now: t.String(),
-  facility: t.Object({
-    timezone: facilityColumns.timezone,
-    opensAt: facilityColumns.opensAt,
-    closesAt: facilityColumns.closesAt,
-    arrivalWindowStart: facilityColumns.arrivalWindowStart,
-    arrivalWindowEnd: facilityColumns.arrivalWindowEnd,
-    typicalCommuteMinutes: facilityColumns.typicalCommuteMinutes,
-    roadClass: facilityColumns.roadClass,
-    decisionDeadline: facilityColumns.decisionDeadline,
-    hazards: t.Array(t.UnionEnum(HAZARDS)),
-  }),
-  alerts: t.Object({ asOf: t.String(), items: t.Array(NwsAlertSchema) }),
-  readings: t.Array(ReadingSchema),
-  forecast: t.Union([
-    t.Object({
-      asOf: t.String(),
-      rawRef: t.String(),
-      periods: t.Array(ForecastPeriodSchema),
-    }),
-    t.Null(),
-  ]),
-});
-
-type EngineInput = Static<typeof EngineInputSchema>;
 type EndStrength = "firm" | "estimated" | "none";
 type InputHealth = "fresh" | "degraded";
 
@@ -194,7 +156,7 @@ function inputHealth(input: EngineInput): ConfidenceReason[] {
   const required = new Set(
     input.facility.hazards.flatMap((hazard) =>
       Object.values<Cutoff>(THRESHOLDS[hazard].cutoffs).flatMap((cutoff) =>
-        unitInputs(cutoff.unit),
+        unitInputs(cutoff.unit, input),
       ),
     ),
   );
@@ -205,6 +167,10 @@ function inputHealth(input: EngineInput): ConfidenceReason[] {
     }));
   if (input.forecast !== null) {
     stamps.push({ input: "forecast", asOf: input.forecast.asOf });
+  }
+  const observedStage = input.gauge?.observed ?? null;
+  if (observedStage !== null) {
+    stamps.push({ input: "gauge", asOf: observedStage.validTime });
   }
   return [...required].flatMap((kind): ConfidenceReason[] => {
     const [latest] = stamps
@@ -255,7 +221,10 @@ function sensitivity(
 }
 
 /** The inputs a cutoff unit is read from. Alerts are always present by type. */
-function unitInputs(unit: Cutoff["unit"]): readonly InputKind[] {
+function unitInputs(
+  unit: Cutoff["unit"],
+  input: EngineInput,
+): readonly InputKind[] {
   switch (unit) {
     case "nws_severity":
       return [];
@@ -263,9 +232,12 @@ function unitInputs(unit: Cutoff["unit"]): readonly InputKind[] {
       return ["observations", "forecast"];
     case "aqi":
       return ["airQuality"];
-    // No input carries a river stage yet.
+    // A facility with no gauge relies on flood alerts alone, so nothing is missing.
     case "nws_flood_category":
-      return [];
+      if (input.gauge === null) {
+        return [];
+      }
+      return ["gauge"];
     default:
       return unit satisfies never;
   }
@@ -283,5 +255,4 @@ function readingInput(source: Reading["source"]): InputKind {
 }
 
 export type { Recommendation } from "./recommendation";
-export type { EngineInput };
-export { EngineInputSchema, evaluatePosture };
+export { evaluatePosture };
