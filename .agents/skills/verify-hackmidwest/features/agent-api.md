@@ -1,6 +1,6 @@
 # Agent API
 
-The agent API is a separate backend for agent and AI callers. It runs as its own process on its own port, next to the tasks API. It answers `GET /health` while it is serving requests, and `GET /tasks/summary` with task counts it reads from the tasks API over HTTP. It never opens the database.
+The agent API is a separate backend for agent and AI callers. It runs as its own process on its own port, next to the tasks API. It answers `GET /health` while it is serving requests, `GET /tasks/summary` with task counts it reads from the tasks API over HTTP, and `POST /recommendations/:id/narrate` with a stored recommendation's rationale phrased for a manager's email. It never opens the database.
 
 ## Sub-features
 
@@ -10,11 +10,15 @@ The agent API is a separate backend for agent and AI callers. It runs as its own
 - `agent-summary-ok` returns `200` with `{total, completed, open}` matching the tasks API's list.
 - `agent-summary-follows-api` reflects a task created through `POST /api/tasks` on the next request.
 - `agent-summary-api-failure` returns `500` with body exactly `{"message":"Internal server error"}` when the tasks API fails.
+- `agent-narrate-ok` returns `200` with `{"template","narrated"}`, where `template` is exactly the stored recommendation's `snapshot.output.rationale`. Without `OPENROUTER_API_KEY`, `narrated` equals `template`.
+- `agent-narrate-not-found` returns `404` with body exactly `{"message":"Recommendation not found"}`, passed through from the API.
+- `agent-narrate-malformed-id` returns `422` for an id such as `0x1`, like the API.
 
 ## How to get to it (user POV)
 
 - Send `GET /health` to `$AGENT_API_URL`.
 - Send `GET /tasks/summary` to `$AGENT_API_URL`.
+- Send `POST /recommendations/<id>/narrate` to `$AGENT_API_URL` for a recommendation created through `POST /api/facilities/<id>/recommendations`.
 
 ## Driving it with verify.sh
 
@@ -26,10 +30,16 @@ Preconditions:
 - **Separate port.** Ask the tasks API for the same path. Run `RUN_ID=<id> $V api agent-health-not-on-api GET /health`. Status `404 Not Found`, which shows the route is served only on the agent API's port.
 - **Summary.** Read the summary. Run `RUN_ID=<id> $V agent agent-summary-ok GET /tasks/summary`. Status `200 OK`; body is exactly `{"total":1,"completed":0,"open":1}`.
 - **Follows the API.** Create a task, then read the summary again. Run `RUN_ID=<id> $V api agent-summary-create POST /api/tasks '{"title":"Ask the agent"}'` (`201`), then `RUN_ID=<id> $V agent agent-summary-after-create GET /tasks/summary`. Body is exactly `{"total":2,"completed":0,"open":2}`. Run `RUN_ID=<id> $V db agent-summary-rows "select id, title, completed from tasks order by id"` to show the two rows the counts came from.
+- **Narrate.** Create a recommendation, then narrate it. Run `RUN_ID=<id> $V api agent-narrate-create POST /api/facilities/1/recommendations` (`201`; note its `id`, `1` on a fresh instance), `RUN_ID=<id> $V api agent-narrate-record GET /api/recommendations/1`, then `RUN_ID=<id> $V agent agent-narrate-ok POST /recommendations/1/narrate`. Status `200 OK`; `template` equals the record's `snapshot.output.rationale`, and with no `OPENROUTER_API_KEY` `narrated` equals `template`. Run `RUN_ID=<id> $V db agent-narrate-row "select id, facility_id, posture, json_extract(snapshot, '$.output.rationale') as rationale from recommendations order by id"` to show the stored row the narration came from.
+- **Narrate unknown id.** Run `RUN_ID=<id> $V agent agent-narrate-not-found POST /recommendations/999999/narrate`. Status `404 Not Found`; body is exactly `{"message":"Recommendation not found"}`.
+- **Narrate malformed id.** Run `RUN_ID=<id> $V agent agent-narrate-malformed-id POST /recommendations/0x1/narrate`. Status `422 Unprocessable Entity`.
 - **Storage failure.** This needs its own instance. Run `STORAGE=broken RUN_ID=<id> $V up`, then `RUN_ID=<id> $V api agent-broken-tasks GET /api/tasks` (`500`), `RUN_ID=<id> $V agent agent-health-broken-storage GET /health` (`200`, `{"status":"ok"}`), and `RUN_ID=<id> $V agent agent-summary-broken-storage GET /tasks/summary` (`500`, `{"message":"Internal server error"}`). `dev.log` shows the agent API's `TasksApiError`. `down` this instance afterwards.
 
 ## Gotchas
 
+- Narrate creates its recommendation with a live NWS and Open-Meteo pull, so it needs network access. If `POST /api/facilities/1/recommendations` fails, the narrate step cannot run; report it as unreached.
+- `up` does not set `OPENROUTER_API_KEY`, but a developer's `.env` can. Check `run.env` or the narrate body: `narrated` differs from `template` only when a model answered.
+- The narrate step creates a recommendation row. `down` and `up` before a recipe that expects no recommendations.
 - Health proves the process is serving requests. It does not check the tasks API, storage, or any model provider.
 - There is no CORS on the agent API. It is called by agents and servers, not by the browser, so do not drive it through `$V browser`.
 - The summary depends on the tasks API being up. `up` sets `TASKS_API_URL` from this run's API port, so a `500` from the summary with a healthy `GET /api/tasks` is not a URL typo. Look for the agent API's `TasksApiError` in `dev.log` after `down`.
