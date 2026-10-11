@@ -16,7 +16,7 @@ import {
   STATUS_LABELS,
 } from "./roster-filter";
 import { UpdateStatusDialog } from "./status-form";
-import { formatStatusReason } from "./status-reason";
+import { formatScheduled, formatStatusReason } from "./status-reason";
 
 const TABLE_NAME = "People";
 const COLUMNS = [
@@ -56,6 +56,20 @@ function baselineText(baseline: Person["baseline"]): string {
   return label;
 }
 
+function ScheduledStatus({
+  person,
+  timeZone,
+}: {
+  person: Person;
+  timeZone: string;
+}): JSX.Element | null {
+  const scheduled = formatScheduled(person, timeZone);
+  if (scheduled === undefined) {
+    return null;
+  }
+  return <p className="text-muted-foreground text-sm">{scheduled}</p>;
+}
+
 function effectiveText(person: Person, timeZone: string): string {
   const effective = effectiveOf(person);
   if (effective === undefined) {
@@ -87,7 +101,8 @@ function PersonRow({
         {pick(person.essentialPersonnel, YES_TEXT, NO_TEXT)}
       </TableCell>
       <TableCell className={WRAPPING_CELL}>
-        {baselineText(person.baseline)}
+        <p>{baselineText(person.baseline)}</p>
+        <ScheduledStatus person={person} timeZone={timeZone} />
       </TableCell>
       <TableCell className={WRAPPING_CELL}>
         <p>{effectiveText(person, timeZone)}</p>

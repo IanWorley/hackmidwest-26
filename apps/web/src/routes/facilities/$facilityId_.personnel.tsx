@@ -13,12 +13,16 @@ import {
   recordEmployeeStatus,
   type StatusBody,
 } from "@/features/closure/record-status";
-import { formatClock } from "@/features/closure/status-reason";
+import {
+  formatClock,
+  formatFacilityDay,
+} from "@/features/closure/status-reason";
 import { pageTitle } from "@/lib/page-title";
 
 const PAGE_HEADING = "People and status";
 const DECISION_LINK_TEXT = "Who's notified and why";
-const AS_OF_PREFIX = "Status as of";
+const STATUS_FOR_PREFIX = "Status for";
+const AS_OF_TEXT = "as of";
 const NOT_FOUND_TITLE = "Facility not found";
 const NOT_FOUND_TEXT = `${NOT_FOUND_TITLE}.`;
 const LOADING_TITLE = "Loading personnel";
@@ -53,7 +57,7 @@ function PersonnelPage(): JSX.Element {
   ): Promise<RecordOutcome> {
     const outcome = await recordEmployeeStatus(employeeId, body);
     if (outcome.kind === "recorded") {
-      await router.invalidate();
+      await router.invalidate({ sync: true });
     }
     return outcome;
   }
@@ -63,7 +67,7 @@ function PersonnelPage(): JSX.Element {
       <header className="space-y-1">
         <h1 className="font-heading font-semibold text-2xl">{PAGE_HEADING}</h1>
         <p className="text-muted-foreground">
-          {`${facility.name}. ${AS_OF_PREFIX} ${formatClock(personnel.asOf, facility.timezone)} (${facility.timezone}).`}
+          {`${facility.name}. ${STATUS_FOR_PREFIX} ${formatFacilityDay(personnel.facilityDate)}, ${AS_OF_TEXT} ${formatClock(personnel.asOf, facility.timezone)} (${facility.timezone}).`}
         </p>
         {personnel.decision !== null && (
           <Link

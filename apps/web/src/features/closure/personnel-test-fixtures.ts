@@ -61,6 +61,7 @@ export function resolvedPerson(
 export function personnel(people: ResolvedPerson[]): Personnel {
   return {
     facilityId: 1,
+    facilityDate: "2026-01-14",
     asOf: "2026-01-14T15:00:00.000Z",
     decision: null,
     buildings: [MAIN_OFFICE, ANNEX],
