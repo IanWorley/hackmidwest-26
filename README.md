@@ -71,7 +71,7 @@ bun run dev
 
 Replace the placeholder `NWS_USER_AGENT` in `.env` with your own app name and contact. The API will not start without it.
 
-Open <http://localhost:3000/tasks>. The API serves `GET/POST /api/tasks` on <http://localhost:3001>. The agent API serves `GET /health`, `GET /tasks/summary`, and `POST /recommendations/:id/narrate` on <http://localhost:3002>, reading from the API over HTTP. Narrate calls OpenRouter when `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` are both set. Without a key it returns the stored rationale unchanged. A key without a model stops the agent API at startup.
+Open <http://localhost:3000/tasks>. The API serves `GET/POST /api/tasks` on <http://localhost:3001>. The agent API serves `GET /health`, `GET /tasks/summary`, `POST /recommendations/:id/narrate`, and `POST /facilities/:id/run` on <http://localhost:3002>, reading from the API over HTTP. Narrate calls OpenRouter when `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` are both set. Without a key it returns the stored rationale unchanged. A key without a model stops the agent API at startup.
 
 ## Commands
 
