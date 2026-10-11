@@ -15,7 +15,7 @@ The `/facilities` page shows every facility in name order as a row of the `Facil
 ## How to get to it (user POV)
 
 - Open `$WEB_URL/facilities` directly (bookmark, reload, or typed URL).
-- Choose `Open the facilities` on the home page (see [home-navigation](./home-navigation.md)).
+- Choose a facility name in the `Facility standing` table on the home page (see [home-navigation](./home-navigation.md)).
 - Choose `Facilities` in the header navigation from any page.
 - Choose a facility name in the `Facilities` table.
 - Open `$WEB_URL/facilities/<id>` directly.
