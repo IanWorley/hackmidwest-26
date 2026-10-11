@@ -1,6 +1,7 @@
 import {
   buildingRosterEntries,
   buildings,
+  decisionDirectives,
   decisions,
   employeeStatusEvents,
   employees,
@@ -12,6 +13,7 @@ import { asc, eq, getTableColumns, max } from "drizzle-orm";
 import type { StatusEvent } from "./baseline";
 import { storedHash } from "./decision-chain";
 import type { DecisionRow } from "./decision-view";
+import { directiveRecordOf } from "./directive-history";
 import type { Directive } from "./directives";
 import type { Employee, FacilityPosture } from "./effective-status";
 import { postureOfDecision } from "./facility-posture";
@@ -51,17 +53,13 @@ interface DecisionFacts {
   readonly snapshot: Snapshot;
   readonly roster: FacilityRoster;
   readonly latestDecisionId: number;
+  readonly directives: readonly Directive[];
   readonly dispatches: readonly DispatchRow[];
 }
 
 type PlannedPackage =
   | { readonly kind: "planned"; readonly pkg: DecidedPackage }
   | { readonly kind: "conflict"; readonly conflict: NotificationConflict };
-
-/** #41 supplies a decision's directives; until then no decision has any. */
-function decisionDirectives(_decisionId: number): readonly Directive[] {
-  return [];
-}
 
 async function loadFacilityRoster(
   reader: Reader,
@@ -135,6 +133,13 @@ async function loadDecisionFacts(
     roster: await loadFacilityRoster(reader, decision.facilityId),
     // A recommendation's decisions form one linear chain, so the highest id is its tip.
     latestDecisionId: latest?.id ?? decision.id,
+    directives: (
+      await reader
+        .select()
+        .from(decisionDirectives)
+        .where(eq(decisionDirectives.decisionId, decisionId))
+        .orderBy(asc(decisionDirectives.id))
+    ).map(directiveRecordOf),
     dispatches: await reader
       .select()
       .from(notificationDispatches)
@@ -237,7 +242,7 @@ function decidedPackage(facts: DecisionFacts, now: string): PlannedPackage {
           roster,
           snapshot,
           posture: posture.posture,
-          directives: decisionDirectives(decision.id),
+          directives: facts.directives,
           now,
         }),
       };
