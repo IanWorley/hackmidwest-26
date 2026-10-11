@@ -35,26 +35,24 @@ it("normalizes known units and skips null values and unknown unit codes", () => 
   ]);
 });
 
-it("turns each AirNow pollutant observation into an AQI reading", () => {
-  const readings = airQualityReadings([
-    {
-      parameter: "PM2.5",
-      aqi: 158,
-      category: "Unhealthy",
-      reportingArea: "Kansas City",
-      observedAt: "2026-10-11T00:00:00.000Z",
-      rawRef: "airnow:Kansas City:PM2.5:2026-10-11T00:00:00.000Z",
-    },
-  ]);
+const AIR_QUALITY_URL =
+  "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=39.1&longitude=-94.58&current=us_aqi&timeformat=unixtime";
+
+it("turns an Open-Meteo AQI observation into an AQI reading", () => {
+  const readings = airQualityReadings({
+    aqi: 158,
+    observedAt: "2026-10-11T01:00:00.000Z",
+    rawRef: AIR_QUALITY_URL,
+  });
 
   expect(readings).toEqual([
     {
-      source: "airnow",
-      observedAt: "2026-10-11T00:00:00.000Z",
+      source: "open-meteo",
+      observedAt: "2026-10-11T01:00:00.000Z",
       metric: "aqi",
       value: 158,
       unit: "AQI",
-      rawRef: "airnow:Kansas City:PM2.5:2026-10-11T00:00:00.000Z",
+      rawRef: AIR_QUALITY_URL,
     },
   ]);
 });

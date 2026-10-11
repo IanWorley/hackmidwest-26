@@ -2,8 +2,8 @@ import { createTestDatabase } from "@hackmidwest/db/testing";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app";
-import { makeAirNowClient } from "../clients/airnow";
 import { type NwsClientShape, NwsError } from "../clients/nws";
+import { makeOpenMeteoClient } from "../clients/open-meteo";
 import {
   createApiRuntime,
   HTTP_INTERNAL_SERVER_ERROR,
@@ -64,7 +64,7 @@ async function getLive(nws: NwsClientShape, query: string): Promise<Response> {
   const store = await createTestDatabase();
   const runtime = createApiRuntime(store.db, {
     nws,
-    airNow: makeAirNowClient({ apiKey: undefined, fetch: globalThis.fetch }),
+    openMeteo: makeOpenMeteoClient(),
   });
   try {
     const app = createApp({

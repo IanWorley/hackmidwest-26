@@ -1,8 +1,8 @@
 import { type Static, t } from "elysia";
-import type { AirNowObservation } from "../../clients/airnow";
 import type { NwsObservation } from "../../clients/nws-model";
+import type { AirQualityObservation } from "../../clients/open-meteo";
 
-const READING_SOURCES = ["nws", "airnow"] as const;
+const READING_SOURCES = ["nws", "open-meteo"] as const;
 const OBSERVATION_METRICS = [
   "temperature",
   "windSpeed",
@@ -53,18 +53,22 @@ function observationReadings(observation: NwsObservation): Reading[] {
   });
 }
 
-/** AQI thresholds apply whatever the pollutant, so each pollutant becomes one `aqi` reading. */
 function airQualityReadings(
-  observations: readonly AirNowObservation[],
+  observation: AirQualityObservation | undefined,
 ): Reading[] {
-  return observations.map((observation) => ({
-    source: "airnow",
-    observedAt: observation.observedAt,
-    metric: "aqi",
-    value: observation.aqi,
-    unit: "AQI",
-    rawRef: observation.rawRef,
-  }));
+  if (observation === undefined) {
+    return [];
+  }
+  return [
+    {
+      source: "open-meteo",
+      observedAt: observation.observedAt,
+      metric: "aqi",
+      value: observation.aqi,
+      unit: "AQI",
+      rawRef: observation.rawRef,
+    },
+  ];
 }
 
 export type { Reading };
