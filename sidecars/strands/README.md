@@ -17,8 +17,13 @@ A tool returns the response's parsed JSON. On a non-2xx response it raises, so S
 tool result with the status and body, and `run` exits `1`.
 
 The deterministic engine decides a facility's posture, and a manager records every decision in the
-web app. The agent has no tool that records a decision or dispatches a crew, and its system prompt tells
-it to advise and narrate only.
+web app. The agent has no tool that records a decision or dispatches a crew, never records a decision of
+its own, and its system prompt tells it to advise and narrate only.
+
+`run_facility` evaluates the facility through the API, though, and every evaluation applies the API's
+missed-deadline policy. If the facility's previous live recommendation passed its `decideBy` with no
+decision, the API records a `no_decision` row for it, decided by the facility's backup decision maker.
+A run can therefore add that row, exactly as `POST /api/facilities/:id/recommendations` would.
 
 ## Set up
 

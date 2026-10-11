@@ -32,7 +32,9 @@ def run_facility(facility_id: int) -> Json:
     """Run the agent API's orchestration for one facility and return its step-by-step run log.
 
     The run evaluates the facility's posture with the deterministic engine, previews the
-    recommendation, and narrates it. It records no decision.
+    recommendation, and narrates it. It never records a decision or dispatch of its own. Like any
+    evaluation, it can make the API record a `no_decision` for the facility's previous
+    recommendation when that one passed its decide-by time undecided.
 
     Args:
         facility_id: Numeric id of the facility to run.
