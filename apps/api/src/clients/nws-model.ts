@@ -39,15 +39,16 @@ const AlertMessageTypeSchema = t.UnionEnum(ALERT_MESSAGE_TYPES);
 
 const GeoPointSchema = t.Object({ lat: t.Number(), lon: t.Number() });
 
+/** NWS reports missing hourly data as null values, so every forecast value may be null. */
 const ForecastPeriodSchema = t.Object({
   startTime: t.String(),
   endTime: t.String(),
   isDaytime: t.Boolean(),
-  temperature: t.Number(),
-  temperatureUnit: t.String(),
-  windSpeed: t.String(),
-  windDirection: t.String(),
-  shortForecast: t.String(),
+  temperature: NullableNumber,
+  temperatureUnit: NullableString,
+  windSpeed: NullableString,
+  windDirection: NullableString,
+  shortForecast: NullableString,
   probabilityOfPrecipitation: NullableNumber,
 });
 

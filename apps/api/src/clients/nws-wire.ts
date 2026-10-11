@@ -27,11 +27,11 @@ const ForecastPeriodWire = t.Object({
   startTime: t.String(),
   endTime: t.String(),
   isDaytime: t.Boolean(),
-  temperature: t.Number(),
-  temperatureUnit: t.String(),
-  windSpeed: t.String(),
-  windDirection: t.String(),
-  shortForecast: t.String(),
+  temperature: NullableNumber,
+  temperatureUnit: NullableString,
+  windSpeed: NullableString,
+  windDirection: NullableString,
+  shortForecast: NullableString,
   probabilityOfPrecipitation: t.Object({ value: NullableNumber }),
 });
 

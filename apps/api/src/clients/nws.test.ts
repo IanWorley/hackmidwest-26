@@ -1,12 +1,13 @@
-import { Duration, Effect } from "effect";
-import { TestClock } from "effect/testing";
+import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
-import { makeNwsClient, type NwsClientShape } from "./nws";
 import { hazardWindow } from "./nws-model";
+import {
+  alertsResponse,
+  clientFor,
+  KANSAS_CITY,
+  pointsResponse,
+} from "./nws-test-client";
 
-const BASE_URL = "http://nws.test";
-const USER_AGENT = "hackmidwest-26 test (ops@example.com)";
-const KANSAS_CITY = { lat: 39.099_712, lon: -94.578_561 };
 const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 const HTTP_SERVICE_UNAVAILABLE = 503;
@@ -25,58 +26,6 @@ const ALERT = {
   ends: "2026-01-10T12:00:00-06:00",
   expires: "2026-01-10T06:00:00-06:00",
 };
-
-interface SentRequest {
-  readonly url: string;
-  readonly userAgent: string | null;
-  readonly accept: string | null;
-}
-
-/** A client whose requests are answered from `responses` in order and recorded in `sent`. */
-function clientFor(responses: Response[]): {
-  readonly client: NwsClientShape;
-  readonly sent: SentRequest[];
-} {
-  const sent: SentRequest[] = [];
-  function fetch(url: string, init: RequestInit): Promise<Response> {
-    const headers = new Headers(init.headers);
-    sent.push({
-      url,
-      userAgent: headers.get("User-Agent"),
-      accept: headers.get("Accept"),
-    });
-    const response = responses.shift();
-    if (response === undefined) {
-      return Promise.reject(new Error(`unexpected request to ${url}`));
-    }
-    return Promise.resolve(response);
-  }
-  return {
-    client: makeNwsClient({ userAgent: USER_AGENT, fetch, baseUrl: BASE_URL }),
-    sent,
-  };
-}
-
-function alertsResponse(properties: object): Response {
-  return Response.json({ features: [{ properties }] });
-}
-
-function pointsResponse(): Response {
-  return Response.json({
-    properties: {
-      gridId: "EAX",
-      gridX: 44,
-      gridY: 51,
-      forecast: "http://nws.test/gridpoints/EAX/44,51/forecast",
-      forecastHourly: "http://nws.test/gridpoints/EAX/44,51/forecast/hourly",
-      observationStations: "http://nws.test/gridpoints/EAX/44,51/stations",
-    },
-  });
-}
-
-function emptyForecastResponse(): Response {
-  return Response.json({ properties: { periods: [] } });
-}
 
 describe("hazardWindow", () => {
   it("runs from onset to ends when NWS gives both", () => {
@@ -189,78 +138,41 @@ it("fails a 404 with its status after one request", async () => {
     "NWS request failed (HTTP 404): http://nws.test/points/39.0997,-94.5786",
   ]);
 });
-
-it("looks up a point's grid again once the cached mapping is a day old", async () => {
-  const { client, sent } = clientFor([
+it("keeps an hourly period whose values NWS reports as missing", async () => {
+  const { client } = clientFor([
     pointsResponse(),
-    emptyForecastResponse(),
-    emptyForecastResponse(),
-    pointsResponse(),
-    emptyForecastResponse(),
-  ]);
-
-  await Effect.runPromise(
-    Effect.gen(function* () {
-      yield* client.forecast(KANSAS_CITY);
-      yield* client.forecast(KANSAS_CITY);
-      yield* TestClock.adjust(Duration.hours(24));
-      yield* client.forecast(KANSAS_CITY);
-    }).pipe(Effect.provide(TestClock.layer())),
-  );
-
-  expect(sent.map(({ url }) => url)).toEqual([
-    "http://nws.test/points/39.0997,-94.5786",
-    "http://nws.test/gridpoints/EAX/44,51/forecast",
-    "http://nws.test/gridpoints/EAX/44,51/forecast",
-    "http://nws.test/points/39.0997,-94.5786",
-    "http://nws.test/gridpoints/EAX/44,51/forecast",
-  ]);
-});
-
-it("shares one /points request between concurrent pulls of the same point", async () => {
-  const { client, sent } = clientFor([
-    pointsResponse(),
-    emptyForecastResponse(),
-    emptyForecastResponse(),
-  ]);
-
-  await Effect.runPromise(
-    Effect.all(
-      [client.forecast(KANSAS_CITY), client.hourlyForecast(KANSAS_CITY)],
-      {
-        concurrency: "unbounded",
+    Response.json({
+      properties: {
+        periods: [
+          {
+            startTime: "2026-10-11T02:00:00-05:00",
+            endTime: "2026-10-11T03:00:00-05:00",
+            isDaytime: false,
+            temperature: null,
+            temperatureUnit: null,
+            windSpeed: null,
+            windDirection: null,
+            shortForecast: null,
+            probabilityOfPrecipitation: { value: null },
+          },
+        ],
       },
-    ),
-  );
-
-  expect(sent.map(({ url }) => url).sort((a, b) => a.localeCompare(b))).toEqual(
-    [
-      "http://nws.test/gridpoints/EAX/44,51/forecast",
-      "http://nws.test/gridpoints/EAX/44,51/forecast/hourly",
-      "http://nws.test/points/39.0997,-94.5786",
-    ],
-  );
-});
-
-it("looks up a point again after a failed lookup instead of caching the failure", async () => {
-  const { client, sent } = clientFor([
-    new Response(null, { status: HTTP_NOT_FOUND }),
-    pointsResponse(),
-    emptyForecastResponse(),
+    }),
   ]);
 
-  const first = await Effect.runPromise(
-    Effect.exit(client.forecast(KANSAS_CITY)),
-  );
-  const second = await Effect.runPromise(client.forecast(KANSAS_CITY));
+  const periods = await Effect.runPromise(client.hourlyForecast(KANSAS_CITY));
 
-  expect([first._tag, second, sent.map(({ url }) => url)]).toEqual([
-    "Failure",
-    [],
-    [
-      "http://nws.test/points/39.0997,-94.5786",
-      "http://nws.test/points/39.0997,-94.5786",
-      "http://nws.test/gridpoints/EAX/44,51/forecast",
-    ],
+  expect(periods).toEqual([
+    {
+      startTime: "2026-10-11T02:00:00-05:00",
+      endTime: "2026-10-11T03:00:00-05:00",
+      isDaytime: false,
+      temperature: null,
+      temperatureUnit: null,
+      windSpeed: null,
+      windDirection: null,
+      shortForecast: null,
+      probabilityOfPrecipitation: null,
+    },
   ]);
 });
