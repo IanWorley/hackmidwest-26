@@ -2,6 +2,7 @@ import { createTestDatabase } from "@hackmidwest/db/testing";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app";
+import { makeNwpsClient } from "../clients/nwps";
 import { type NwsClientShape, NwsError } from "../clients/nws";
 import { makeOpenMeteoClient } from "../clients/open-meteo";
 import {
@@ -64,6 +65,7 @@ async function getLive(nws: NwsClientShape, query: string): Promise<Response> {
   const store = await createTestDatabase();
   const runtime = createApiRuntime(store.db, {
     nws,
+    nwps: makeNwpsClient(),
     openMeteo: makeOpenMeteoClient(),
   });
   try {
