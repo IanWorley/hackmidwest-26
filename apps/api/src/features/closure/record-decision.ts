@@ -179,4 +179,4 @@ const recordDecision = Effect.fn("recordDecision")(function* (
 });
 
 export type { Transaction };
-export { DecisionWriteError, insertDecision, recordDecision };
+export { DecisionWriteError, eligibleDecider, insertDecision, recordDecision };
