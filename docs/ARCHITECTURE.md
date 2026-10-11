@@ -17,8 +17,9 @@ Four Bun workspaces:
   the narrow `ClosureApi` and `TasksApi` ports. `src/api-client.ts` implements both from one Eden client typed by the
   same `@hackmidwest/api/contract` the web uses (`TASKS_API_URL`), and Biome stops `features/` from importing Eden or
   the contract. `ClosureApi` can evaluate, preview notifications, and read a recommendation, and nothing else, so an
-  agent feature cannot record a decision or dispatch notifications. So `apps/api` stays the only SQLite writer and
-  owns every rule. It has no CORS (no browser calls it) and no type contract (no client imports it yet). It serves
+  agent feature cannot call the decision or dispatch routes. Its evaluate can still make the API record the
+  missed-deadline `no_decision` row, because the API does that on any evaluation. So `apps/api` stays the only
+  SQLite writer and owns every rule. It has no CORS (no browser calls it) and no type contract (no client imports it yet). It serves
   `GET /health`, a placeholder `GET /tasks/summary`, `POST /recommendations/:id/narrate`, and
   `POST /facilities/:id/run`.
 - `apps/web` is TanStack Start. It imports one thing from the API: the `App` **type**, via the
