@@ -9,6 +9,7 @@ import {
   ACCEPT,
   AFTER_DECIDE_BY,
   appRunner,
+  BEFORE_DECIDED_AT,
   DECIDE_BY,
   DECIDED_AT,
   DECIDER_ID,
@@ -17,6 +18,7 @@ import {
   FACILITY_ID,
   FIRST_DECISION_ID,
   HALF_MINUTE_LATE,
+  MINUTE_AFTER_DECIDED_AT,
   OVERRIDE,
   RECHECK_AT,
   RECOMMENDATION_HASH,
@@ -154,8 +156,8 @@ it("rejects an override to the recommended posture", async () => {
   });
 });
 
-it.each([DECIDE_BY, AFTER_DECIDE_BY])(
-  "rejects a deferral that rechecks at %s, not before decideBy",
+it.each([BEFORE_DECIDED_AT, DECIDED_AT, DECIDE_BY, AFTER_DECIDE_BY])(
+  "rejects a deferral that rechecks at %s, outside the decision-to-decideBy window",
   async (recheckAt) => {
     await withApp(async ({ request }) => {
       const response = await request(decide(), { ...DEFER, recheckAt });
@@ -167,12 +169,38 @@ it.each([DECIDE_BY, AFTER_DECIDE_BY])(
           on: "body",
           property: "/recheckAt",
           message:
-            "A deferral must recheck before the recommendation's decideBy",
+            "A deferral must recheck after the decision and before the recommendation's decideBy",
         },
       ]);
     });
   },
 );
+
+it("rejects a human input reported after the decision", async () => {
+  await withApp(async ({ db, request }) => {
+    const response = await request(decide(), {
+      ...ACCEPT,
+      humanInputs: [
+        {
+          reportedBy: "Road crew",
+          reportedAt: MINUTE_AFTER_DECIDED_AT,
+          text: "Highway reopened.",
+        },
+      ],
+    });
+
+    expect([response.status, await response.json()]).toEqual([
+      HTTP_UNPROCESSABLE_ENTITY,
+      {
+        type: "validation",
+        on: "body",
+        property: "/humanInputs/0/reportedAt",
+        message: "A human input cannot be reported after the decision",
+      },
+    ]);
+    expect(await storedDecisions(db)).toEqual([]);
+  });
+});
 
 // Grace Lindqvist decides for Fargo, not Kansas City, the fixture recommendation's facility.
 const OTHER_FACILITY_DECIDER_ID = 5;

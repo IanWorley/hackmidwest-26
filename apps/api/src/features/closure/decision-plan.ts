@@ -84,6 +84,7 @@ function decisionBasis(
 function actionColumns(
   body: DecisionBody,
   recommendation: RecommendationRow,
+  decidedAt: DateTime.Utc,
 ): Refusal | Pick<DecisionContent, "action" | "chosenPosture" | "recheckAt"> {
   switch (body.action) {
     case "accept":
@@ -105,10 +106,13 @@ function actionColumns(
         recheckAt: null,
       };
     case "defer":
-      if (Date.parse(body.recheckAt) >= Date.parse(recommendation.decideBy)) {
+      if (
+        Date.parse(body.recheckAt) <= DateTime.toEpochMillis(decidedAt) ||
+        Date.parse(body.recheckAt) >= Date.parse(recommendation.decideBy)
+      ) {
         return rejected(
           BODY_FIELDS.recheckAt,
-          "A deferral must recheck before the recommendation's decideBy",
+          "A deferral must recheck after the decision and before the recommendation's decideBy",
         );
       }
       return {
@@ -165,7 +169,16 @@ function planDecision(
       "Changing a decision requires a reason",
     );
   }
-  const columns = actionColumns(body, context.recommendation);
+  const lateInput = (body.humanInputs ?? []).findIndex(
+    (input) => Date.parse(input.reportedAt) > DateTime.toEpochMillis(decidedAt),
+  );
+  if (lateInput !== -1) {
+    return rejected(
+      `${BODY_FIELDS.humanInputs}/${lateInput}/reportedAt`,
+      "A human input cannot be reported after the decision",
+    );
+  }
+  const columns = actionColumns(body, context.recommendation, decidedAt);
   if ("kind" in columns) {
     return columns;
   }

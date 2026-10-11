@@ -5,6 +5,7 @@ import { HTTP_NOT_FOUND, HTTP_OK } from "../../runtime";
 import {
   ACCEPT,
   appRunner,
+  BEFORE_DECIDED_AT,
   DECIDED_AT,
   decide,
   EMPLOYEE_ID,
@@ -28,7 +29,7 @@ it("returns the facility's decisions newest first with their human inputs", asyn
       humanInputs: [
         {
           reportedBy: "Night shift supervisor",
-          reportedAt: RECHECK_AT,
+          reportedAt: BEFORE_DECIDED_AT,
           text: "The north lot has not been plowed.",
         },
       ],
@@ -62,7 +63,7 @@ it("returns the facility's decisions newest first with their human inputs", asyn
             id: 1,
             decisionId: 1,
             reportedBy: "Night shift supervisor",
-            reportedAt: RECHECK_AT,
+            reportedAt: BEFORE_DECIDED_AT,
             text: "The north lot has not been plowed.",
           },
         ],

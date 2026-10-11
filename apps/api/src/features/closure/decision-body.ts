@@ -15,6 +15,7 @@ const BODY_FIELDS = {
   action: "/action",
   chosenPosture: "/chosenPosture",
   decidedById: "/decidedById",
+  humanInputs: "/humanInputs",
   reason: "/reason",
   recheckAt: "/recheckAt",
 } as const;
