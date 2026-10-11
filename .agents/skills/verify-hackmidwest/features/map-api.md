@@ -1,0 +1,39 @@
+# Map API
+
+`GET /api/map` returns everything the map draws in one response. `facilities` lists every facility by name with its coordinates, its live Open-Meteo US AQI, and its standing: the latest recommendation's posture, `decideBy`, `asOf`, `mode`, and whether it has a decision, or `{"posture":"not_evaluated"}` before any evaluation. `alerts` is a GeoJSON `FeatureCollection` of the active NWS alerts at any facility, each listed once, with storm-based polygons as NWS drew them and zone-based alerts drawn from their zones' outlines. Standings are read fresh on every request; alerts and AQI are reused for 60 seconds.
+
+## Sub-features
+
+- `map-api-not-evaluated` reports `{"posture":"not_evaluated"}` for every facility on a fresh seed.
+- `map-api-facilities` lists the 4 demo facilities ordered by name, each with `id`, `name`, `lat`, `lon`, and `aqi` that is `{"value","observedAt"}` or `null`.
+- `map-api-standing` reports a facility's latest recommendation as `posture`, `recommendationId`, `decideBy`, `asOf`, `mode` (`live` or `as_of`), and `decided`, on the first load after the recommendation is stored.
+- `map-api-decided` reports `"decided":true` once a decision is recorded on the latest recommendation.
+- `map-api-alerts` returns `alerts` as `{"type":"FeatureCollection","features":[…]}`; each feature has `"type":"Feature"`, the NWS alert `id`, a `Polygon` or `MultiPolygon` `geometry` (or `null` when NWS has no outline), and `properties` `event`, `headline`, `severity`, `certainty`, `urgency`, `onset`, `ends`.
+- `map-api-alerts-unique` lists an alert that touches several facilities once.
+- `map-api-live-cache` serves a repeat load within 60 seconds without pulling NWS and Open-Meteo again.
+
+## How to get to it (user POV)
+
+- Send `GET /api/map` to `$API_URL`. The web map page will load it.
+
+## Driving it with verify.sh
+
+Preconditions:
+
+- Baseline state from the index: the 4 demo facilities and no recommendations.
+- The machine can reach `https://api.weather.gov` and `https://air-quality-api.open-meteo.com`.
+
+- **Fresh seed.** Run `RUN_ID=<id> $V api map-api-fresh GET /api/map`. `200 OK`; `facilities` has 4 entries in the order `Fargo Service Center` (id `2`), `Kansas City Area Service Center` (id `1`), `Lafayette Service Center` (id `4`), `Yakima Service Center` (id `3`); each `standing` is exactly `{"posture":"not_evaluated"}`; each `aqi` is `null` or an object with a numeric `value` and an ISO `observedAt`. `alerts.type` is `FeatureCollection`, and no two features share an `id` (`jq '[.alerts.features[].id] | length == (unique | length)'` prints `true`).
+- **Evaluate one facility.** Run `RUN_ID=<id> $V api map-api-evaluate POST /api/facilities/1/recommendations`. `201`; note its `id`, `posture`, `decideBy`, and `asOf`.
+- **Evaluated standing.** Run `RUN_ID=<id> $V api map-api-evaluated GET /api/map`. `200`; the Kansas City entry's `standing` is `{"posture":<posture>,"recommendationId":<id>,"decideBy":<decideBy>,"asOf":<asOf>,"mode":"live","decided":false}` with the values from the `POST`, and the other three are still `{"posture":"not_evaluated"}`. Run it within 60 seconds of the fresh-seed load: the standing changes even while live conditions are cached.
+- **Stored state.** Run `RUN_ID=<id> $V db map-api-rows "select r.id, r.facility_id, r.posture, r.decide_by, r.as_of, r.evaluated_at, (select count(*) from decisions d where d.recommendation_id = r.id) as decisions from recommendations r where r.facility_id = 1 order by r.id"`. One row whose `id`, `posture`, `decide_by`, and `as_of` equal the Kansas City standing, `as_of` equals `evaluated_at` (so `mode` is `live`), and `decisions` is `0` (so `decided` is `false`).
+- **Decision recorded.** Run `RUN_ID=<id> $V api map-api-decide POST /api/recommendations/<id>/decisions '{"action":"accept","decidedById":1}'` with the recommendation id from the `POST`, then `RUN_ID=<id> $V api map-api-decided GET /api/map`. `201`, then `200` with the Kansas City `standing` unchanged except `"decided":true`.
+- **Cached live conditions.** Wait for the 60 seconds to pass since the last map load, then run `time RUN_ID=<id> $V api map-api-cold GET /api/map` and, within 60 seconds, `time RUN_ID=<id> $V api map-api-warm GET /api/map`. Both `200`, and `alerts` and every `aqi` are identical between the two bodies. The dev log does not record outbound requests, so the proof is timing: the cold load waits on NWS and Open-Meteo (typically a second or more), and the warm one answers in tens of milliseconds.
+
+## Gotchas
+
+- The data is live. Alerts and AQI change between runs, and on a calm day `alerts.features` is `[]`, so `map-api-alerts` and `map-api-alerts-unique` can only be shown on a day with an active alert at a facility. Report them as unverified rather than passing on an empty list.
+- Open-Meteo has no AQI for some points, so `aqi` can be `null` for a facility. That is not a failure.
+- Each cold load makes one NWS alerts request per facility, one zone request per zone of each zone-based alert, and one Open-Meteo request per facility. NWS rate-limits with `403` and the client retries, so a slow cold `200` is normal. A `500` means an upstream stayed down after retries; rerun before reporting a failure, and check `dev.log` for `NWS request failed` or `OpenMeteoError`.
+- A failed pull is not cached, so the next load retries it immediately.
+- `POST` stores a new row each call. Start from a fresh `up` so the single-row expectation holds.
