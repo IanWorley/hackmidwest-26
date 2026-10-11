@@ -16,6 +16,10 @@ import {
   isUtcInstant,
   nonBlankChecks,
 } from "../checks";
+import {
+  isStoredDirectiveScope,
+  type StoredDirectiveScope,
+} from "../directive-scope";
 
 import { decisionMakers, facilities } from "./facilities";
 import { employees, NOTIFICATION_CHANNELS } from "./roster";
@@ -58,6 +62,14 @@ export const REASON_CATEGORIES = [
   "other",
 ] as const;
 export type ReasonCategory = (typeof REASON_CATEGORIES)[number];
+
+export const DIRECTIVE_KINDS = [
+  "report",
+  "telework",
+  "dismissed",
+  "excused",
+] as const;
+export type DirectiveKind = (typeof DIRECTIVE_KINDS)[number];
 
 /** Add-only: migration triggers reject UPDATE and DELETE and drop an insert that reuses an id, so a re-evaluation is a newer recommendation. */
 export const recommendations = sqliteTable(
@@ -230,5 +242,54 @@ export const humanInputs = sqliteTable(
   (table) => [
     ...nonBlankChecks("human_inputs", table.reportedBy, table.text),
     check("human_inputs_reported_at_format", isUtcInstant(table.reportedAt)),
+  ],
+);
+
+/** Add-only: migration triggers reject UPDATE and DELETE and drop an insert that reuses an id, so a changed directive is a newer row. Scope is text because it may name a building, an employee, or neither; parseDirectiveScope reads it. */
+export const decisionDirectives = sqliteTable(
+  "decision_directives",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    decisionId: integer("decision_id")
+      .notNull()
+      .references(() => decisions.id),
+    decisionHash: text("decision_hash").notNull(),
+    scope: text("scope").$type<StoredDirectiveScope>().notNull(),
+    directive: text("directive", { enum: DIRECTIVE_KINDS }).notNull(),
+    effectiveAt: text("effective_at"),
+    reasonCategory: text("reason_category", {
+      enum: REASON_CATEGORIES,
+    }).notNull(),
+    reasonText: text("reason_text").notNull(),
+    issuedById: integer("issued_by_id")
+      .notNull()
+      .references(() => decisionMakers.id),
+    issuedAt: text("issued_at").notNull(),
+    contentHash: text("content_hash").notNull(),
+  },
+  (table) => [
+    ...nonBlankChecks("decision_directives", table.reasonText),
+    check(
+      "decision_directives_decision_hash_sha256",
+      isSha256Hex(table.decisionHash),
+    ),
+    check("decision_directives_scope", isStoredDirectiveScope(table.scope)),
+    check(
+      "decision_directives_directive",
+      inArray(table.directive, DIRECTIVE_KINDS).inlineParams(),
+    ),
+    check(
+      "decision_directives_effective_at_format",
+      isUtcInstant(table.effectiveAt),
+    ),
+    check(
+      "decision_directives_reason_category",
+      inArray(table.reasonCategory, REASON_CATEGORIES).inlineParams(),
+    ),
+    check("decision_directives_issued_at_format", isUtcInstant(table.issuedAt)),
+    check(
+      "decision_directives_content_hash_sha256",
+      isSha256Hex(table.contentHash),
+    ),
   ],
 );
