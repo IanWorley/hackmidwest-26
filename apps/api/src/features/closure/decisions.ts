@@ -5,7 +5,7 @@ import {
   recommendations,
 } from "@hackmidwest/db";
 import { eq } from "drizzle-orm";
-import { DateTime, Effect, Option } from "effect";
+import { DateTime, Effect, Option, Semaphore } from "effect";
 import { Elysia, type ElysiaCustomStatusResponse, status, t } from "elysia";
 import {
   Database,
@@ -56,6 +56,11 @@ const FACILITY_DECISIONS_PATH = `${FACILITIES_PATH}/:id/decisions`;
 const DECISION_VERIFY_PATH = "/api/decisions/:id/verify";
 const RECOMMENDATION_NOT_FOUND_MESSAGE = "Recommendation not found";
 const DECISION_NOT_FOUND_MESSAGE = "Decision not found";
+
+// libsql opens a connection per transaction and sets no busy timeout, so two missed-decision
+// writes started together would fight over SQLite's write lock. The loser fails, and libsql
+// leaves its connection unable to commit again. Queueing them means neither ever fails.
+const missedDecisionWrites = Semaphore.makeUnsafe(1);
 
 type RecordDecisionResponse =
   | ElysiaCustomStatusResponse<typeof HTTP_CREATED, DecisionResponse>
@@ -169,7 +174,7 @@ async function missedDecisionInTransaction(
 /**
  * When decideBy has passed and nobody decided, record a no_decision row naming the facility's
  * backup decision maker. Returns none when a decision exists or decideBy has not passed, so a
- * second run writes nothing.
+ * second run writes nothing, even when both run at once.
  */
 const recordMissedDecision = Effect.fn("recordMissedDecision")(function* (
   recommendationId: number,
@@ -182,7 +187,7 @@ const recordMissedDecision = Effect.fn("recordMissedDecision")(function* (
         missedDecisionInTransaction(tx, recommendationId, now),
       ),
     catch: (cause) => new DecisionWriteError({ cause }),
-  });
+  }).pipe(Semaphore.withPermit(missedDecisionWrites));
   return Option.fromNullishOr(missed);
 });
 
