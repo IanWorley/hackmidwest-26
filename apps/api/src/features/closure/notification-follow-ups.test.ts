@@ -5,11 +5,14 @@ import {
   DECIDED,
   decidedPackage,
   directive,
+  dismissedAt,
   employee,
   FACILITY_NAME,
   NORMAL,
   NOW,
+  type PackageFields,
   packageInput,
+  RELEASE_AFTER_START,
   SUPERSEDING,
 } from "./notification-test-fixtures";
 import {
@@ -44,6 +47,16 @@ it("sends the new instruction to someone the superseding decision no longer noti
   ]);
 });
 
+it("gives first-time wording to someone only the superseding decision notifies", () => {
+  const update = buildPostureChangeUpdate({
+    original: decidedPackage({ posture: NORMAL }),
+    superseding: decidedPackage({ source: SUPERSEDING }),
+  });
+  expect(update.notices.map(({ message }) => message.appliesToYou)).toEqual([
+    "You are teleworking today.",
+  ]);
+});
+
 it("withdraws the earlier notice for someone the superseding decision does not place", () => {
   const update = buildPostureChangeUpdate({
     original: decidedPackage({}),
@@ -73,6 +86,32 @@ it("sends the all-clear to the original recipients, timed to the day operations 
     original: DECIDED.decision,
     notices: [[1, "2026-10-13T09:55:00.000Z"]],
   });
+});
+
+it.each<[string, PackageFields, string]>([
+  [
+    "names the hazard that ended",
+    {},
+    `Winter weather has ended. ${FACILITY_NAME} resumes normal operations on 2026-10-13.`,
+  ],
+  [
+    "invents no hazard or closure after a directive alone",
+    {
+      posture: NORMAL,
+      hazard: null,
+      directives: [dismissedAt(RELEASE_AFTER_START)],
+    },
+    `${FACILITY_NAME} continues normal operations on 2026-10-13.`,
+  ],
+])("words an all-clear that %s", (_case, fields, whatsHappening) => {
+  const allClear = buildAllClear({
+    original: decidedPackage(fields),
+    resumesOn: "2026-10-13",
+    now: NOW,
+  });
+  expect(allClear.notices.map(({ message }) => message.whatsHappening)).toEqual(
+    [whatsHappening],
+  );
 });
 
 it("rejects an all-clear for a date that does not exist", () => {

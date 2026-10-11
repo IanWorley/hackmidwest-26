@@ -1,28 +1,21 @@
-import type { Hazard } from "@hackmidwest/db";
+import type { EmployeeStatus } from "@hackmidwest/db";
 import type { DirectiveScopeKind } from "./directives";
 import type {
   Cause,
   EffectiveStatus,
   EffectiveStatusKind,
-  FacilityPosture,
   PersonnelStatus,
   Release,
 } from "./effective-status";
-import type { Posture } from "./postures";
-import { releaseTiming } from "./release-timing";
 import {
-  formatTimeOfDay,
-  type Instant,
-  MS_PER_MINUTE,
-  parseInstant,
-  toInstant,
-} from "./zoned-time";
-
-interface HazardSpan {
-  readonly kind: Hazard;
-  readonly start: string;
-  readonly end: string;
-}
+  allClearHappening,
+  happening,
+  headline,
+  localTime,
+  type Situation,
+} from "./notification-situation";
+import { releaseTiming } from "./release-timing";
+import { type Instant, MS_PER_MINUTE, toInstant } from "./zoned-time";
 
 /** Three parts per #29: what is happening, whether it applies to you, what to do. */
 interface MessageDraft {
@@ -39,20 +32,17 @@ type MessageIntent =
   | { readonly kind: "withdrawn" }
   | { readonly kind: "all_clear"; readonly resumesOn: string };
 
-interface MessageContext {
-  readonly facilityName: string;
-  readonly zone: string;
-  readonly posture: FacilityPosture;
-  readonly hazard: HazardSpan | null;
+interface MessageContext extends Situation {
   /** This person's shift start, else the arrival window start, on the facility date. */
   readonly workStartsAt: Instant;
   /** Null when they have no shift of their own. */
   readonly workEndsAt: Instant | null;
+  readonly now: Instant;
 }
 
-/** A teleworker is never told to travel to or leave the building. */
+/** `whereabouts` is their baseline status: where they would be today without this decision. */
 interface PersonContext extends MessageContext {
-  readonly remote: boolean;
+  readonly whereabouts: EmployeeStatus;
 }
 
 interface Instructions {
@@ -65,10 +55,11 @@ type StatusTemplate<K extends EffectiveStatusKind> = (
   context: PersonContext,
 ) => Instructions;
 
-type Headline<P extends Posture> = (
-  posture: FacilityPosture<P>,
-  context: MessageContext,
-) => string;
+interface DismissalCopy {
+  readonly stayHome: (context: PersonContext) => string;
+  readonly stopAt: (time: string, context: PersonContext) => string;
+  readonly stopNow: (context: PersonContext) => string;
+}
 
 const UPDATED_PREFIX = "Updated: ";
 const REPLACES_EARLIER_NOTICE =
@@ -82,13 +73,7 @@ const ALL_CLEAR: Instructions = {
   appliesToYou: "Your earlier instructions no longer apply.",
   whatToDo: "Follow your usual schedule.",
 };
-
-const HAZARD_LABEL: Readonly<Record<Hazard, string>> = {
-  winter: "Winter weather",
-  wind: "High winds",
-  airQuality: "Poor air quality",
-  flood: "Flooding",
-};
+const STAY_OFF_WORK = "Stay off work as planned.";
 
 const DIRECTIVE_SCOPE_PHRASE: Readonly<Record<DirectiveScopeKind, string>> = {
   facility: "A manager issued a directive for the whole facility",
@@ -97,16 +82,23 @@ const DIRECTIVE_SCOPE_PHRASE: Readonly<Record<DirectiveScopeKind, string>> = {
   employee: "A manager issued a directive for you",
 };
 
-const POSTURE_HEADLINE: { readonly [P in Posture]: Headline<P> } = {
-  normal: (_posture, { facilityName }) =>
-    `${facilityName} is open on its normal schedule`,
-  delayed_arrival: ({ delayMinutes }, { facilityName }) =>
-    `${facilityName} opens ${delayMinutes} minutes late`,
-  early_dismissal: ({ releaseAt }, { facilityName, zone }) =>
-    `${facilityName} closes early at ${formatTimeOfDay(parseInstant(releaseAt), zone)}`,
-  unscheduled_telework: (_posture, { facilityName }) =>
-    `${facilityName} is on unscheduled telework`,
-  full_closure: (_posture, { facilityName }) => `${facilityName} is closed`,
+/** Nobody is told to leave a building they are not in. */
+const DISMISSAL_COPY: Readonly<Record<EmployeeStatus, DismissalCopy>> = {
+  working_onsite: {
+    stayHome: ({ facilityName }) => `Do not report to ${facilityName} today.`,
+    stopAt: (time, { facilityName }) => `Leave ${facilityName} at ${time}.`,
+    stopNow: ({ facilityName }) => `Leave ${facilityName} now.`,
+  },
+  teleworking: {
+    stayHome: () => "Do not work today.",
+    stopAt: (time) => `Stop work at ${time}.`,
+    stopNow: () => "Stop work now.",
+  },
+  not_working: {
+    stayHome: () => STAY_OFF_WORK,
+    stopAt: () => STAY_OFF_WORK,
+    stopNow: () => STAY_OFF_WORK,
+  },
 };
 
 const STATUS_TEMPLATES: {
@@ -122,7 +114,7 @@ const STATUS_TEMPLATES: {
   }),
   delayed_arrival: ({ delayMinutes }, context) => ({
     appliesToYou: `Your arrival is delayed by ${delayMinutes} minutes.`,
-    whatToDo: `Arrive by ${formatTimeOfDay(toInstant(context.workStartsAt + delayMinutes * MS_PER_MINUTE), context.zone)} instead of ${startTime(context)}.`,
+    whatToDo: `Arrive by ${localTime(toInstant(context.workStartsAt + delayMinutes * MS_PER_MINUTE), context)} instead of ${startTime(context)}.`,
   }),
   report_required: (_status, context) => ({
     appliesToYou: "You are required to report in person.",
@@ -135,21 +127,8 @@ const STATUS_TEMPLATES: {
   }),
 };
 
-function stayHome({ facilityName, remote }: PersonContext): string {
-  if (remote) {
-    return "Do not work today.";
-  }
-  return `Do not report to ${facilityName} today.`;
-}
-
-function stopAt(time: string, { facilityName, remote }: PersonContext): string {
-  if (remote) {
-    return `Stop work at ${time}.`;
-  }
-  return `Leave ${facilityName} at ${time}.`;
-}
-
 function dismissal(release: Release, context: PersonContext): Instructions {
+  const copy = DISMISSAL_COPY[context.whereabouts];
   const timing = releaseTiming(
     release,
     context.workStartsAt,
@@ -159,21 +138,29 @@ function dismissal(release: Release, context: PersonContext): Instructions {
     case "all_day":
       return {
         appliesToYou: "You are dismissed for the day.",
-        whatToDo: stayHome(context),
+        whatToDo: copy.stayHome(context),
       };
     case "before_start":
       return {
         appliesToYou: `Your release time, ${localTime(timing.at, context)}, is no later than your ${startTime(context)} start.`,
-        whatToDo: stayHome(context),
+        whatToDo: copy.stayHome(context),
       };
-    case "during_shift":
+    case "during_shift": {
+      const time = localTime(timing.at, context);
+      if (timing.at <= context.now) {
+        return {
+          appliesToYou: `You were released early at ${time}.`,
+          whatToDo: copy.stopNow(context),
+        };
+      }
       return {
-        appliesToYou: `You are released early at ${localTime(timing.at, context)}.`,
-        whatToDo: stopAt(localTime(timing.at, context), context),
+        appliesToYou: `You are released early at ${time}.`,
+        whatToDo: copy.stopAt(time, context),
       };
+    }
     case "after_shift":
       return {
-        appliesToYou: `The ${localTime(timing.at, context)} release comes after your shift ends at ${localTime(timing.endsAt, context)}.`,
+        appliesToYou: `Your shift ends at ${localTime(timing.endsAt, context)}, no later than the ${localTime(timing.at, context)} release.`,
         whatToDo: "Work your normal hours.",
       };
     default:
@@ -181,19 +168,8 @@ function dismissal(release: Release, context: PersonContext): Instructions {
   }
 }
 
-function localTime(at: Instant, { zone }: MessageContext): string {
-  return formatTimeOfDay(at, zone);
-}
-
 function startTime(context: MessageContext): string {
   return localTime(context.workStartsAt, context);
-}
-
-function headline<P extends Posture>(
-  posture: FacilityPosture<P>,
-  context: MessageContext,
-): string {
-  return POSTURE_HEADLINE[posture.posture](posture, context);
 }
 
 function template<K extends EffectiveStatusKind>(
@@ -215,31 +191,19 @@ function instructionsFor(
   { baseline, effective }: PersonnelStatus,
   context: MessageContext,
 ): Instructions {
-  const remote = baseline.status === "teleworking";
   const { appliesToYou, whatToDo } = template(effective, {
     ...context,
-    remote,
+    whereabouts: baseline.status,
   });
   return { appliesToYou: withCause(appliesToYou, effective.cause), whatToDo };
 }
 
-function happening(context: MessageContext): string {
-  const facility = `${headline(context.posture, context)}.`;
-  const { hazard, zone } = context;
-  if (hazard === null) {
-    return facility;
-  }
-  const from = formatTimeOfDay(parseInstant(hazard.start), zone);
-  const to = formatTimeOfDay(parseInstant(hazard.end), zone);
-  return `${HAZARD_LABEL[hazard.kind]} expected from ${from} to ${to}. ${facility}`;
-}
-
-/** Every user-facing string comes from here; effective status deliberately builds none. */
+/** Every user-facing string comes from here or notification-situation.ts; effective status deliberately builds none. */
 function draftMessage(
   context: MessageContext,
   intent: MessageIntent,
 ): MessageDraft {
-  const subject = headline(context.posture, context);
+  const subject = headline(context);
   switch (intent.kind) {
     case "initial":
       return {
@@ -267,8 +231,8 @@ function draftMessage(
       };
     case "all_clear":
       return {
-        subject: `All clear: ${context.facilityName} resumes normal operations`,
-        whatsHappening: `The hazard is over. ${context.facilityName} resumes normal operations on ${intent.resumesOn}.`,
+        subject: `All clear: ${context.facilityName}`,
+        whatsHappening: allClearHappening(context, intent.resumesOn),
         ...ALL_CLEAR,
       };
     default:
@@ -276,5 +240,5 @@ function draftMessage(
   }
 }
 
-export type { HazardSpan, MessageDraft, MessageIntent };
+export type { MessageDraft, MessageIntent };
 export { draftMessage };

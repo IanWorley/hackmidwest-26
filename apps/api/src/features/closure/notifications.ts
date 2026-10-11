@@ -160,10 +160,19 @@ function buildPostureChangeUpdate({
       employee,
     ]),
   );
+  const notifiedBefore = new Set(
+    original.recipients.map(({ employee }) => employee.id),
+  );
   const notices = [...audience.values()].sort(byEmployeeId).map((employee) => {
     const line = current.get(employee.id);
     if (line === undefined) {
       return planNotice(superseding.context, employee, { kind: "withdrawn" });
+    }
+    if (!notifiedBefore.has(employee.id)) {
+      return planNotice(superseding.context, line.employee, {
+        kind: "initial",
+        status: line.status,
+      });
     }
     return planNotice(superseding.context, line.employee, {
       kind: "update",
