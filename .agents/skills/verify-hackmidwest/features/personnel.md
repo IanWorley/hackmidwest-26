@@ -49,4 +49,6 @@ Preconditions:
 - `POST /api/facilities/1/recommendations` pulls live weather. If its posture is already `full_closure`, override to `unscheduled_telework` instead. If it times an early dismissal, the untimed step shows a decided posture. Report that, and don't count it as untimed proof.
 - Recording a status and recording a decision both mutate data. `down` and `up` before running a recipe that expects the baseline.
 - `Recorded by` lists only the facility's decision maker and backup, so the UI cannot send an ineligible recorder. The `/reportedById` `422` is reachable only through `POST /api/employees/:id/status` directly.
+- A status filter chosen before a reload that turns the posture untimed is ignored, so every row stays visible. Driving that transition needs the posture to change through another API call while the page stays open, and `$V browser` cannot interleave an API call into one session. `personnel-roster.test.tsx` covers it. Report it as not driven.
+- The `Who's notified and why` link opens the facility route, which shows the decision screen once #92 lands. Before that, the destination shows only facility details.
 - `Identity is not verified.` is literal: nothing checks that the chosen recorder is the person using the browser.
