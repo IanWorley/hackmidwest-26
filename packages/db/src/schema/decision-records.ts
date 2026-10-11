@@ -98,7 +98,7 @@ export const recommendations = sqliteTable(
   ],
 );
 
-/** Add-only: migration triggers reject UPDATE and DELETE and drop an insert that reuses an id, so a changed decision is a newer row that supersedes it. Each recommendation has one root decision and each decision at most one successor, so a facility has a single current decision. The decider's name and role are copied in because decision_makers rows can change later. */
+/** Add-only: migration triggers reject UPDATE and DELETE and drop an insert that reuses an id, so a changed decision is a newer row that supersedes it. A recommendation belongs to one decision chain, each decision has at most one successor, and successors stay in their facility, so each recommendation has one linear history. Separate recommendations for a facility each get their own chain; the route decides which one is current. The decider's name and role are copied in because decision_makers rows can change later. */
 export const decisions = sqliteTable(
   "decisions",
   {
