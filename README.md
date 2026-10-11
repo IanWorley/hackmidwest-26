@@ -105,6 +105,8 @@ On the host, put `compose.yaml` beside a `.env` copied from `.env.example`. In t
 - Set `NWS_USER_AGENT` to your app name and contact.
 - Keep a relative `DB_PATH` under `.data/`, which is the `api-data` volume.
 
+New GitHub packages are private, so log the host in before the first pull: `docker login ghcr.io -u <github-user>` with a personal access token that has `read:packages`. Making the three packages public in their package settings works too.
+
 The web image reads `WEB_PORT`, default 3000. Run `docker compose up -d`, or set `TAG=1.0.0` to pin a release instead of `latest`. The one-shot `migrate` service applies migrations before the API starts, and the API never migrates on its own. Containers never seed.
 
 ## Where things live
