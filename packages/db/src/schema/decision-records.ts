@@ -44,6 +44,9 @@ export const ACTIONS_WITH_CHOSEN_POSTURE = [
   "accept",
   "override",
 ] as const satisfies readonly DecisionAction[];
+export const ACTIONS_WITH_RECHECK = [
+  "defer",
+] as const satisfies readonly DecisionAction[];
 export const ACTIONS_REQUIRING_REASON = [
   "override",
   "defer",
@@ -112,6 +115,7 @@ export const decisions = sqliteTable(
       .references(() => facilities.id),
     action: text("action", { enum: DECISION_ACTIONS }).notNull(),
     chosenPosture: text("chosen_posture", { enum: POSTURES }),
+    recheckAt: text("recheck_at"),
     decidedById: integer("decided_by_id")
       .notNull()
       .references(() => decisionMakers.id),
@@ -147,6 +151,11 @@ export const decisions = sqliteTable(
       sql`(${table.chosenPosture} is not null) = (${inArray(table.action, ACTIONS_WITH_CHOSEN_POSTURE)}) and (${table.chosenPosture} is null or ${inArray(table.chosenPosture, POSTURES)})`.inlineParams(),
     ),
     check("decisions_decided_at_format", isUtcInstant(table.decidedAt)),
+    check("decisions_recheck_at_format", isUtcInstant(table.recheckAt)),
+    check(
+      "decisions_recheck_at_only_for_defer",
+      sql`(${table.recheckAt} is not null) = (${inArray(table.action, ACTIONS_WITH_RECHECK)})`.inlineParams(),
+    ),
     check(
       "decisions_identity_verified_boolean",
       isBoolean(table.identityVerified),

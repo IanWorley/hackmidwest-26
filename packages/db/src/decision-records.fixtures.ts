@@ -26,6 +26,7 @@ export const AS_OF = "2026-10-02T09:55:00.000Z";
 export const EVALUATED_AT = "2026-10-02T10:00:00.000Z";
 export const DECIDED_AT = "2026-10-02T10:30:00.000Z";
 export const DECIDE_BY = "2026-10-02T11:00:00.000Z";
+export const RECHECK_AT = "2026-10-02T10:45:00.000Z";
 export const SEND_BY = "2026-10-02T11:30:00.000Z";
 export const RECORDED_AT = "2026-10-02T10:35:00.000Z";
 export const DECIDER_NAME = "Dana Whitfield";
@@ -76,6 +77,22 @@ export const CORRECTION = {
   reasonCategory: "road_reports",
   reasonText: "County reports the highway closed.",
   supersedesDecisionId: DECISION_ID,
+  contentHash: DECISION_HASH,
+} as const;
+
+export const DEFERRAL = {
+  recommendationId: RECOMMENDATION_ID,
+  recommendationHash: RECOMMENDATION_HASH,
+  facilityId: SEEDED_FACILITY_ID,
+  action: "defer",
+  recheckAt: RECHECK_AT,
+  decidedById: SEEDED_DECISION_MAKER_ID,
+  decidedByName: DECIDER_NAME,
+  decidedByRole: DECIDER_ROLE,
+  decidedAt: DECIDED_AT,
+  identityVerified: false,
+  reasonCategory: "local_conditions",
+  reasonText: "Waiting on the 10:30 road crew report.",
   contentHash: DECISION_HASH,
 } as const;
 
