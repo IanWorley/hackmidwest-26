@@ -106,3 +106,5 @@ export function createApiRuntime(
     dispose: () => runtime.dispose(),
   };
 }
+
+export type { ApiClients };

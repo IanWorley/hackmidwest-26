@@ -7,7 +7,7 @@ import type { NwpsClientShape } from "../../clients/nwps";
 import { KCDM7 } from "../../clients/nwps-test-client";
 import type { NwsClientShape } from "../../clients/nws";
 import type { OpenMeteoClientShape } from "../../clients/open-meteo";
-import { createApiRuntime } from "../../runtime";
+import { type ApiClients, createApiRuntime } from "../../runtime";
 import type { EngineInput } from "./engine-input";
 import { ALL_DAY_END, nwsAlert } from "./engine-test-fixtures";
 import { recommendationHash } from "./recommendation-store";
@@ -65,11 +65,6 @@ const LOW_RIVER = { stageFt: LOW_RIVER_FT, validTime: RIVER_AT };
 
 const stormNws: NwsClientShape = {
   activeAlerts: () => Effect.succeed([WINTER_STORM]),
-  activeAlertAreas: () =>
-    Effect.succeed([
-      { alert: WINTER_STORM, geometry: null, affectedZones: [] },
-    ]),
-  zoneGeometry: () => Effect.succeed(null),
   forecast: () => Effect.succeed(FORECAST),
   hourlyForecast: () => Effect.succeed(FORECAST),
   latestObservation: () =>
@@ -193,17 +188,14 @@ function requestFor(path: string, body: object | undefined): Request {
   });
 }
 
-async function withStormAppOn(
+async function withAppOn(
   openStore: () => Promise<DatabaseStore>,
+  clients: ApiClients,
   run: (app: TestApp) => Promise<void>,
 ): Promise<void> {
   const store = await openStore();
   const { clock, set } = settableClock(CLOCK);
-  const runtime = createApiRuntime(
-    store.db,
-    { nws: stormNws, openMeteo: cleanAir, nwps: lowRiver },
-    { clock },
-  );
+  const runtime = createApiRuntime(store.db, clients, { clock });
   const app = createApp({
     runRequest: runtime.runRequest,
     webOrigin: WEB_ORIGIN,
@@ -243,6 +235,17 @@ async function withStormAppOn(
   }
 }
 
+function withStormAppOn(
+  openStore: () => Promise<DatabaseStore>,
+  run: (app: TestApp) => Promise<void>,
+): Promise<void> {
+  return withAppOn(
+    openStore,
+    { nws: stormNws, openMeteo: cleanAir, nwps: lowRiver },
+    run,
+  );
+}
+
 function storedDecisions(db: Db): Promise<DecisionRow[]> {
   return db.select().from(decisions).orderBy(asc(decisions.id)).all();
 }
@@ -264,5 +267,6 @@ export {
   type TestApp,
   UNKNOWN_ID,
   WINTER_STORM,
+  withAppOn,
   withStormAppOn,
 };
