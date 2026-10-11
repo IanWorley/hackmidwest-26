@@ -42,12 +42,8 @@
           "name": "building_roster_entries_building_id_buildings_id_fk",
           "tableFrom": "building_roster_entries",
           "tableTo": "buildings",
-          "columnsFrom": [
-            "building_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["building_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -55,12 +51,8 @@
           "name": "building_roster_entries_employee_id_employees_id_fk",
           "tableFrom": "building_roster_entries",
           "tableTo": "employees",
-          "columnsFrom": [
-            "employee_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -105,12 +97,8 @@
           "name": "buildings_facility_id_facilities_id_fk",
           "tableFrom": "buildings",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -287,17 +275,13 @@
       "indexes": {
         "decisions_one_root_per_recommendation": {
           "name": "decisions_one_root_per_recommendation",
-          "columns": [
-            "recommendation_id"
-          ],
+          "columns": ["recommendation_id"],
           "isUnique": true,
           "where": "\"decisions\".\"supersedes_decision_id\" is null"
         },
         "decisions_one_successor": {
           "name": "decisions_one_successor",
-          "columns": [
-            "supersedes_decision_id"
-          ],
+          "columns": ["supersedes_decision_id"],
           "isUnique": true
         }
       },
@@ -306,12 +290,8 @@
           "name": "decisions_recommendation_id_recommendations_id_fk",
           "tableFrom": "decisions",
           "tableTo": "recommendations",
-          "columnsFrom": [
-            "recommendation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["recommendation_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -319,12 +299,8 @@
           "name": "decisions_facility_id_facilities_id_fk",
           "tableFrom": "decisions",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -332,12 +308,8 @@
           "name": "decisions_decided_by_id_decision_makers_id_fk",
           "tableFrom": "decisions",
           "tableTo": "decision_makers",
-          "columnsFrom": [
-            "decided_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["decided_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -345,12 +317,8 @@
           "name": "decisions_supersedes_decision_id_decisions_id_fk",
           "tableFrom": "decisions",
           "tableTo": "decisions",
-          "columnsFrom": [
-            "supersedes_decision_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["supersedes_decision_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -463,12 +431,8 @@
           "name": "employee_status_events_employee_id_employees_id_fk",
           "tableFrom": "employee_status_events",
           "tableTo": "employees",
-          "columnsFrom": [
-            "employee_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -476,12 +440,8 @@
           "name": "employee_status_events_reported_by_id_decision_makers_id_fk",
           "tableFrom": "employee_status_events",
           "tableTo": "decision_makers",
-          "columnsFrom": [
-            "reported_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reported_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -601,12 +561,8 @@
           "name": "employees_assigned_building_id_buildings_id_fk",
           "tableFrom": "employees",
           "tableTo": "buildings",
-          "columnsFrom": [
-            "assigned_building_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assigned_building_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -791,12 +747,8 @@
           "name": "facilities_decision_maker_id_decision_makers_id_fk",
           "tableFrom": "facilities",
           "tableTo": "decision_makers",
-          "columnsFrom": [
-            "decision_maker_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["decision_maker_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -804,12 +756,8 @@
           "name": "facilities_backup_decision_maker_id_decision_makers_id_fk",
           "tableFrom": "facilities",
           "tableTo": "decision_makers",
-          "columnsFrom": [
-            "backup_decision_maker_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["backup_decision_maker_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -899,22 +847,15 @@
           "name": "facility_hazards_facility_id_facilities_id_fk",
           "tableFrom": "facility_hazards",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "facility_hazards_facility_id_hazard_pk": {
-          "columns": [
-            "facility_id",
-            "hazard"
-          ],
+          "columns": ["facility_id", "hazard"],
           "name": "facility_hazards_facility_id_hazard_pk"
         }
       },
@@ -971,12 +912,8 @@
           "name": "human_inputs_decision_id_decisions_id_fk",
           "tableFrom": "human_inputs",
           "tableTo": "decisions",
-          "columnsFrom": [
-            "decision_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["decision_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1061,10 +998,7 @@
       "indexes": {
         "notification_dispatches_decision_employee": {
           "name": "notification_dispatches_decision_employee",
-          "columns": [
-            "decision_id",
-            "employee_id"
-          ],
+          "columns": ["decision_id", "employee_id"],
           "isUnique": true
         }
       },
@@ -1073,12 +1007,8 @@
           "name": "notification_dispatches_decision_id_decisions_id_fk",
           "tableFrom": "notification_dispatches",
           "tableTo": "decisions",
-          "columnsFrom": [
-            "decision_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["decision_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1086,12 +1016,8 @@
           "name": "notification_dispatches_employee_id_employees_id_fk",
           "tableFrom": "notification_dispatches",
           "tableTo": "employees",
-          "columnsFrom": [
-            "employee_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1194,12 +1120,8 @@
           "name": "recommendations_facility_id_facilities_id_fk",
           "tableFrom": "recommendations",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
