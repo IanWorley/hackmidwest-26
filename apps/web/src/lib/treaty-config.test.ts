@@ -9,10 +9,7 @@ it("keeps date strings from the API as the strings the contract types them as", 
   const client = treaty<App>("http://api.test", {
     ...TREATY_CONFIG,
     fetcher: Object.assign(
-      () =>
-        Promise.resolve(
-          Response.json({ decideBy: DECIDE_BY }),
-        ),
+      () => Promise.resolve(Response.json({ decideBy: DECIDE_BY })),
       { preconnect: () => undefined },
     ),
   });

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import type { DecideOutcome, DecisionRequest, Recorder } from "./decision-api";
 import { DecisionPanel } from "./decision-panel";
@@ -14,6 +14,7 @@ const RECORDERS: Recorder[] = [
 function renderPanel(
   outcome: DecideOutcome,
   currentDecisionId?: number,
+  reload: () => Promise<void> = () => Promise.resolve(),
 ): {
   submitDecision: ReturnType<
     typeof vi.fn<(r: DecisionRequest) => Promise<DecideOutcome>>
@@ -23,7 +24,7 @@ function renderPanel(
   const submitDecision = vi.fn<(r: DecisionRequest) => Promise<DecideOutcome>>(
     () => Promise.resolve(outcome),
   );
-  const onReload = vi.fn<() => Promise<void>>(() => Promise.resolve());
+  const onReload = vi.fn<() => Promise<void>>(reload);
   render(
     <DecisionPanel
       currentDecisionId={currentDecisionId}
@@ -68,6 +69,7 @@ it.each([
       description: "Enter a reason.",
     });
     expect(reason.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(reason);
     expect(submitDecision).not.toHaveBeenCalled();
   },
 );
@@ -115,4 +117,76 @@ it("reloads and explains when a newer recommendation refused the decision", asyn
   );
   expect(onReload).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole("form")).toBeNull();
+});
+
+it("flags and focuses the top-most missing field of an empty override", async () => {
+  renderPanel({ kind: "recorded" });
+  fireEvent.click(screen.getByRole("button", { name: "Override" }));
+  fireEvent.click(screen.getByRole("button", { name: "Record override" }));
+
+  const posture = await screen.findByRole("combobox", {
+    name: "Posture instead",
+    description: "Choose a posture other than the recommended one.",
+  });
+  expect(document.activeElement).toBe(posture);
+  expect(
+    screen
+      .getByRole("combobox", { name: "Recorded by" })
+      .getAttribute("aria-invalid"),
+  ).toBe("false");
+});
+
+it("announces an accept through the status line already on the page and focuses it", async () => {
+  renderPanel({ kind: "recorded" });
+  const status = screen.getByRole("status");
+  expect(status.textContent).toBe("");
+  fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+  choose("Recorded by", "1");
+  fireEvent.click(screen.getByRole("button", { name: "Record acceptance" }));
+
+  await waitFor(() => {
+    expect(document.activeElement?.textContent).toBe("Decision recorded.");
+  });
+  expect(screen.getByRole("status")).toBe(status);
+});
+
+it.each([
+  [
+    "decisionChanged",
+    "Someone else decided first.Nothing was saved. The decision history below is reloaded; review it before you decide again.",
+  ],
+  [
+    "previewRecommendation",
+    "That recommendation was a preview, not the live one.Nothing was saved. The page is reloaded with the live recommendation, if there is one; review it before you decide.",
+  ],
+] as const)("reloads and explains a %s refusal", async (conflict, text) => {
+  const { onReload } = renderPanel({ kind: "conflict", conflict });
+  fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+  choose("Recorded by", "1");
+  fireEvent.click(screen.getByRole("button", { name: "Record acceptance" }));
+
+  await waitFor(() => {
+    expect(document.activeElement?.textContent).toBe(text);
+  });
+  expect(screen.getByRole("alert").textContent).toBe(text);
+  expect(onReload).toHaveBeenCalledTimes(1);
+});
+
+it("holds the refusal notice until the reload has finished", async () => {
+  const reload = Promise.withResolvers<void>();
+  renderPanel(
+    { kind: "conflict", conflict: "newerRecommendation" },
+    undefined,
+    () => reload.promise,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+  choose("Recorded by", "1");
+  fireEvent.click(screen.getByRole("button", { name: "Record acceptance" }));
+
+  await screen.findByRole("button", { name: "Recording…" });
+  expect(screen.queryByRole("alert")).toBeNull();
+  reload.resolve();
+  expect((await screen.findByRole("alert")).textContent).toBe(
+    "A newer recommendation exists.Nothing was saved. The newer recommendation is now shown above; review it before you decide.",
+  );
 });

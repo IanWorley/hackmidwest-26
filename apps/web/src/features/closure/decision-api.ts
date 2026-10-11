@@ -11,9 +11,16 @@ type DirectivesCall = ReturnType<typeof api.api.decisions>["directives"];
 type DecisionRequest = Parameters<DecideCall["post"]>[0];
 type DirectiveRequest = Parameters<DirectivesCall["post"]>[0];
 type HumanAction = DecisionRequest["action"];
+type DecideRefusal = NonNullable<
+  Awaited<ReturnType<DecideCall["post"]>>["error"]
+>["value"];
+type WireConflict = Extract<DecideRefusal, { conflict: string }>["conflict"];
 
 /** Why a decision was refused as stale, in the screen's terms rather than the wire's. */
-type Conflict = "newerRecommendation" | "decisionChanged";
+type Conflict =
+  | "previewRecommendation"
+  | "newerRecommendation"
+  | "decisionChanged";
 
 type DecideOutcome =
   | { readonly kind: "recorded" }
@@ -56,6 +63,19 @@ function controlFor(property: unknown): FormField {
     API_FIELD_CONTROLS.get(topLevel) ??
     "form"
   );
+}
+
+function conflictFor(wire: WireConflict): Conflict {
+  switch (wire) {
+    case "preview_recommendation":
+      return "previewRecommendation";
+    case "newer_recommendation":
+      return "newerRecommendation";
+    case "newer_decision":
+      return "decisionChanged";
+    default:
+      return wire satisfies never;
+  }
 }
 
 async function loadLatestRecommendation(
@@ -124,6 +144,18 @@ async function loadDirectives(decisionId: number, signal: AbortSignal) {
   return result.data;
 }
 
+/** History is newest first, so the first decision on the shown recommendation is the one a new decision supersedes. */
+function currentDecisionOf<Row extends { recommendationId: number }>(
+  history: readonly Row[],
+  recommendation: { id: number } | null,
+): Row | null {
+  return (
+    history.find(
+      (decision) => decision.recommendationId === recommendation?.id,
+    ) ?? null
+  );
+}
+
 /** Everything the decision screen renders, read in one loader so a reload refreshes it together. */
 async function loadDecisionScreen({
   facilityId,
@@ -140,10 +172,7 @@ async function loadDecisionScreen({
       loadRecorders(facility.id, signal),
       loadBuildings(facility.id, signal),
     ]);
-  const currentDecision =
-    history.find(
-      (decision) => decision.recommendationId === latestRecommendation?.id,
-    ) ?? null;
+  const currentDecision = currentDecisionOf(history, latestRecommendation);
   let directives: Awaited<ReturnType<typeof loadDirectives>> = [];
   if (currentDecision !== null) {
     directives = await loadDirectives(currentDecision.id, signal);
@@ -181,10 +210,7 @@ async function decide(
   const { value } = result.error;
   // Eden does not narrow `value` on `status`, so read the variant from its fields.
   if ("conflict" in value) {
-    if (value.conflict === "newer_recommendation") {
-      return { kind: "conflict", conflict: "newerRecommendation" };
-    }
-    return { kind: "conflict", conflict: "decisionChanged" };
+    return { kind: "conflict", conflict: conflictFor(value.conflict) };
   }
   if (result.error.status === HTTP_UNPROCESSABLE && "property" in value) {
     return { kind: "invalid", field: controlFor(value.property) };
@@ -241,4 +267,10 @@ export type {
   Recommendation,
   Recorder,
 };
-export { decide, evaluateFacility, issueDirective, loadDecisionScreen };
+export {
+  currentDecisionOf,
+  decide,
+  evaluateFacility,
+  issueDirective,
+  loadDecisionScreen,
+};

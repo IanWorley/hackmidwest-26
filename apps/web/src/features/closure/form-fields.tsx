@@ -7,6 +7,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { Recorder } from "./decision-api";
 import {
+  controlId,
   errorId,
   FIELD_ERRORS,
   FIELD_NAMES,
@@ -25,10 +26,6 @@ const CHOOSE_PLACEHOLDER = "Choose…";
 interface FieldProps {
   readonly formId: string;
   readonly invalidField: FormField | undefined;
-}
-
-function controlId(formId: string, field: FormField): string {
-  return `${formId}-${field}`;
 }
 
 function describedBy(ids: readonly (string | undefined)[]): string | undefined {
@@ -57,8 +54,16 @@ export function FieldError({
   if (invalidField !== field) {
     return null;
   }
+  let tabIndex: number | undefined;
+  if (field === "form") {
+    tabIndex = -1;
+  }
   return (
-    <p className="text-destructive text-sm" id={errorId(formId, field)}>
+    <p
+      className="text-destructive text-sm"
+      id={errorId(formId, field)}
+      tabIndex={tabIndex}
+    >
       {FIELD_ERRORS[field]}
     </p>
   );
