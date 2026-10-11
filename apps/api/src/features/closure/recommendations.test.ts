@@ -154,6 +154,31 @@ it(`POST ${EVALUATE_PATH} rejects an asOf that is not a timestamp`, async () => 
   });
 });
 
+it(`POST ${EVALUATE_PATH} rejects an unknown body field and stores nothing`, async () => {
+  await withApp(async ({ get, post }) => {
+    const response = await post(EVALUATE_PATH, {
+      asOf: AS_OF,
+      posture: "normal",
+    });
+    const { type, property, message } = await response.json();
+    const latest = await get(LATEST_PATH);
+
+    expect([
+      response.status,
+      { type, property, message },
+      latest.status,
+    ]).toEqual([
+      HTTP_UNPROCESSABLE_ENTITY,
+      {
+        type: "validation",
+        property: "/posture",
+        message: "Unexpected property",
+      },
+      HTTP_NOT_FOUND,
+    ]);
+  });
+});
+
 it(`POST ${EVALUATE_PATH} after decideBy records that nobody decided the previous recommendation, naming the backup`, async () => {
   await withApp(async ({ db, post, setClock }) => {
     await post(EVALUATE_PATH);
