@@ -16,6 +16,16 @@ const PortSchema = t.Integer({ minimum: MIN_TCP_PORT, maximum: MAX_TCP_PORT });
 interface AgentApiConfig {
   readonly port: number;
   readonly tasksApiUrl: string;
+  readonly openRouterApiKey: string | undefined;
+  readonly openRouterModel: string | undefined;
+}
+
+/** Bun loads `KEY=` from .env as "", which means the key is not set. */
+function readOptional(value: string | undefined): string | undefined {
+  if (value === "") {
+    return undefined;
+  }
+  return value;
 }
 
 export function readAgentApiConfig(
@@ -47,5 +57,10 @@ export function readAgentApiConfig(
       "TASKS_API_URL must be an HTTP(S) origin without credentials or a path",
     );
   }
-  return { port, tasksApiUrl: tasksApi.origin };
+  return {
+    port,
+    tasksApiUrl: tasksApi.origin,
+    openRouterApiKey: readOptional(environment.OPENROUTER_API_KEY),
+    openRouterModel: readOptional(environment.OPENROUTER_MODEL),
+  };
 }
