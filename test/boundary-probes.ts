@@ -2,6 +2,7 @@ import {
   AGENT_API_CRUISE_PROBES,
   AGENT_API_LINT_PROBES,
 } from "./agent-api-boundary-probes";
+import { API_INTEGRATION_TEST_LINT_PROBES } from "./api-integration-test-probes";
 import {
   type BoundaryProbe,
   DB_CONNECTION_STUB,
@@ -291,4 +292,5 @@ export const LINT_PROBES: readonly BoundaryProbe[] = [
     violatedRules: ["style/noRestrictedGlobals"],
   },
   ...AGENT_API_LINT_PROBES,
+  ...API_INTEGRATION_TEST_LINT_PROBES,
 ];
