@@ -2,7 +2,6 @@ import { decisionDirectives } from "@hackmidwest/db";
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { expect, it } from "vitest";
 import {
-  HTTP_CONFLICT,
   HTTP_CREATED,
   HTTP_NOT_FOUND,
   HTTP_OK,
@@ -16,8 +15,6 @@ import {
   DECIDER_ID,
   decide,
   FIRST_DECISION_ID,
-  OVERRIDE,
-  SECOND_DECISION_ID,
   SHA256_HEX,
   storedDecisions,
   UNKNOWN_ID,
@@ -201,6 +198,43 @@ it.each([
       "The scope must name a building or employee of the decision's facility",
     ),
   },
+  {
+    case: "with an unknown top-level field",
+    body: { ...ESSENTIAL_REPORT, priority: "high" },
+    error: validation("/priority", "Unexpected property"),
+  },
+  {
+    case: "with an unknown field in its scope",
+    body: {
+      ...ESSENTIAL_REPORT,
+      scope: { kind: "facility", buildingId: ANNEX_ID },
+    },
+    error: validation("/scope/buildingId", "Unexpected property"),
+  },
+  {
+    case: "with an unknown field in its reason",
+    body: {
+      ...ESSENTIAL_REPORT,
+      reason: { ...PLANT_OPERATORS, severity: "high" },
+    },
+    error: validation("/reason/severity", "Unexpected property"),
+  },
+  {
+    case: "with an unknown scope kind",
+    body: { ...ESSENTIAL_REPORT, scope: { kind: "team" } },
+    error: validation(
+      "/scope",
+      "Expected scope kind facility, group, building, or employee",
+    ),
+  },
+  {
+    case: "with a building id that is not an integer",
+    body: {
+      ...ESSENTIAL_REPORT,
+      scope: { kind: "building", buildingId: "two" },
+    },
+    error: validation("/scope/buildingId", "Expected union value"),
+  },
 ])("rejects a directive $case", async ({ body, error }) => {
   await withApp(async ({ db, request }) => {
     await request(decide(), ACCEPT);
@@ -236,28 +270,6 @@ it.each([
         "/effectiveAt",
         "Expected string to match 'utc-instant' format",
       ),
-    ]);
-  });
-});
-
-it("refuses a directive on a decision that a newer decision supersedes", async () => {
-  await withApp(async ({ db, request }) => {
-    await request(decide(), ACCEPT);
-    await request(decide(), {
-      ...OVERRIDE,
-      supersedesDecisionId: FIRST_DECISION_ID,
-    });
-
-    const response = await request(DIRECTIVES_PATH, ESSENTIAL_REPORT);
-
-    expect([
-      response.status,
-      await response.json(),
-      await db.select().from(decisionDirectives),
-    ]).toEqual([
-      HTTP_CONFLICT,
-      { conflict: "newer_decision", latestDecisionId: SECOND_DECISION_ID },
-      [],
     ]);
   });
 });

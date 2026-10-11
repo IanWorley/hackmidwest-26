@@ -11,19 +11,22 @@ import {
   type RunRequest,
 } from "../../runtime";
 import {
-  firstInvalidField,
+  rejectUnknownFields,
   type ValidationErrorBody,
   validationErrorResponse,
 } from "./decision-body";
-import { newerDecisionConflict } from "./decision-plan";
-import { directiveBody } from "./directive-body";
+import { describeInvalidDirective, directiveBody } from "./directive-body";
 import {
   type DirectiveRecord,
   directiveResponse,
   listDecisionDirectives,
 } from "./directive-history";
 import { decimalIdParams } from "./facilities";
-import { type DirectiveOutcome, recordDirective } from "./record-directive";
+import {
+  type DirectiveOutcome,
+  recordDirective,
+  supersededDecisionConflict,
+} from "./record-directive";
 
 const DIRECTIVES_PATH = "/api/decisions/:id/directives";
 const DECISION_NOT_FOUND_MESSAGE = "Decision not found";
@@ -40,7 +43,7 @@ type RecordDirectiveResponse =
     >
   | ElysiaCustomStatusResponse<
       typeof HTTP_CONFLICT,
-      typeof newerDecisionConflict.static
+      typeof supersededDecisionConflict.static
     >
   | ElysiaCustomStatusResponse<
       typeof HTTP_UNPROCESSABLE_ENTITY,
@@ -73,19 +76,20 @@ function createDirectivesModule(runRequest: RunRequest) {
       {
         params: decimalIdParams,
         body: directiveBody,
+        transform: rejectUnknownFields(directiveBody),
         // A nested field's own schema has no custom error, so Elysia would answer in its verbose shape.
         error: ({ code, error }) => {
           if (code === "VALIDATION" && error.type === "body") {
             return status(
               HTTP_UNPROCESSABLE_ENTITY,
-              firstInvalidField(directiveBody, error.value),
+              describeInvalidDirective(error.value),
             );
           }
         },
         response: {
           [HTTP_CREATED]: directiveResponse,
           [HTTP_NOT_FOUND]: decisionNotFoundResponse,
-          [HTTP_CONFLICT]: newerDecisionConflict,
+          [HTTP_CONFLICT]: supersededDecisionConflict,
           [HTTP_UNPROCESSABLE_ENTITY]: validationErrorResponse,
           [HTTP_INTERNAL_SERVER_ERROR]: internalServerErrorResponse,
         },

@@ -11,10 +11,11 @@ import {
 } from "@hackmidwest/db";
 import { and, desc, eq } from "drizzle-orm";
 import { DateTime, Effect, Option } from "effect";
+import { t } from "elysia";
 import { Database } from "../../runtime";
 import { invalidBody, type ValidationErrorBody } from "./decision-body";
 import type { RecordContent } from "./decision-chain";
-import type { newerDecisionConflict } from "./decision-plan";
+import { newerDecisionConflict } from "./decision-plan";
 import { DIRECTIVE_FIELDS, type DirectiveBody } from "./directive-body";
 import {
   type DirectiveRecord,
@@ -32,12 +33,18 @@ import { contentHash } from "./records";
 type DirectiveContent = RecordContent<DirectiveRow>;
 type DecisionRow = typeof decisions.$inferSelect;
 
+/** #69's newer_decision conflict. A superseded decision always has a successor, so the id is never null here. */
+const supersededDecisionConflict = t.Object({
+  ...newerDecisionConflict.properties,
+  latestDecisionId: t.Integer(),
+});
+
 type DirectiveOutcome =
   | { readonly kind: "recorded"; readonly directive: DirectiveRecord }
   | { readonly kind: "decision_not_found" }
   | {
       readonly kind: "conflict";
-      readonly conflict: typeof newerDecisionConflict.static;
+      readonly conflict: typeof supersededDecisionConflict.static;
     }
   | { readonly kind: "rejected"; readonly rejection: ValidationErrorBody };
 
@@ -90,24 +97,43 @@ async function scopeInFacility(
   }
 }
 
-function raised(error: unknown, message: string): boolean {
+/** The driver's own error at the bottom of the cause chain. Wrappers above it quote the query's params, request text included. */
+function innermostError(error: unknown): unknown {
+  const seen = new Set<unknown>();
+  let current = error;
+  while (
+    current instanceof Error &&
+    current.cause !== undefined &&
+    !seen.has(current)
+  ) {
+    seen.add(current);
+    current = current.cause;
+  }
+  return current;
+}
+
+function isSupersededDecisionAbort(error: unknown): boolean {
+  const innermost = innermostError(error);
   return (
-    error instanceof Error &&
-    (error.message.includes(message) || raised(error.cause, message))
+    innermost instanceof Error &&
+    innermost.message === SUPERSEDED_DECISION_MESSAGE
   );
 }
 
 async function newestDecisionId(
   tx: Transaction,
   recommendationId: number,
-): Promise<number | null> {
+): Promise<number> {
   const [newest] = await tx
     .select({ id: decisions.id })
     .from(decisions)
     .where(eq(decisions.recommendationId, recommendationId))
     .orderBy(desc(decisions.id))
     .limit(1);
-  return newest?.id ?? null;
+  if (newest === undefined) {
+    throw new Error(`Recommendation ${recommendationId} has no decision`);
+  }
+  return newest.id;
 }
 
 /** The superseded-decision check lives in migration 0006's trigger alone, so its abort is the 409. */
@@ -126,7 +152,7 @@ async function insertDirective(
     }
     return { kind: "recorded", directive: directiveRecordOf(row) };
   } catch (cause) {
-    if (!raised(cause, SUPERSEDED_DECISION_MESSAGE)) {
+    if (!isSupersededDecisionAbort(cause)) {
       throw cause;
     }
     return {
@@ -202,4 +228,4 @@ const recordDirective = Effect.fn("recordDirective")(function* (
 });
 
 export type { DirectiveOutcome };
-export { recordDirective };
+export { recordDirective, supersededDecisionConflict };
