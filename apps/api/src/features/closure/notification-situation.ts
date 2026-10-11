@@ -19,6 +19,8 @@ interface HazardSpan {
 interface Situation {
   readonly facilityName: string;
   readonly zone: string;
+  /** `YYYY-MM-DD`: the operating day the message is about, which may be tomorrow. */
+  readonly facilityDate: string;
   readonly posture: FacilityPosture;
   readonly hazard: HazardSpan | null;
 }
@@ -59,7 +61,7 @@ function postureHeadline<P extends Posture>(
 }
 
 function headline(situation: Situation): string {
-  return postureHeadline(situation.posture, situation);
+  return `${postureHeadline(situation.posture, situation)} on ${situation.facilityDate}`;
 }
 
 /** Dates join the times only when the window crosses a facility day, so a 28-hour storm never reads as overnight. */

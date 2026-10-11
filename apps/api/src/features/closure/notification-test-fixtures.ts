@@ -36,6 +36,7 @@ const FACILITY: NotificationPackageInput["facility"] = {
   name: FACILITY_NAME,
   timezone: "America/Chicago",
   arrivalWindowStart: "06:30",
+  closesAt: "16:30",
   typicalCommuteMinutes: 35,
   notificationLeadMinutes: 60,
 };

@@ -7,7 +7,12 @@ import {
   type MessageIntent,
 } from "./notification-messages";
 import type { HazardSpan } from "./notification-situation";
-import { releaseTiming } from "./release-timing";
+import {
+  type DayPhase,
+  dayPhase,
+  releaseTiming,
+  type WorkDay,
+} from "./work-day";
 import {
   type Instant,
   localInstant,
@@ -26,6 +31,7 @@ type NotificationFacility = Pick<
   | "name"
   | "timezone"
   | "arrivalWindowStart"
+  | "closesAt"
   | "typicalCommuteMinutes"
   | "notificationLeadMinutes"
 >;
@@ -91,6 +97,12 @@ interface Start {
   readonly source: StartTime["source"];
 }
 
+interface PersonDay {
+  readonly start: Start;
+  readonly day: WorkDay;
+  readonly phase: DayPhase;
+}
+
 const CHANNEL_POLICY: {
   readonly [U in AlertUrgency]: Readonly<Record<Timeliness, ChannelRule>>;
 } = {
@@ -144,13 +156,10 @@ function commuteOf(
 function endOf(
   { facility, facilityDate }: NoticeContext,
   { shiftEnd }: Employee,
-): Instant | null {
-  if (shiftEnd === null) {
-    return null;
-  }
+): Instant {
   return localInstant(
     parseCalendarDate(facilityDate),
-    shiftEnd,
+    shiftEnd ?? facility.closesAt,
     facility.timezone,
   );
 }
@@ -164,12 +173,10 @@ function leadBefore(at: Instant, { facility }: NoticeContext): Instant {
  * people before or during their commute. Once they are at work, a release during their shift is the deadline.
  */
 function anchorFor(
-  context: NoticeContext,
-  employee: Employee,
-  start: Start,
+  { start, day, phase }: PersonDay,
+  commute: Commute,
   intent: MessageIntent,
 ): { readonly anchor: SendAnchor; readonly at: Instant } {
-  const commute = commuteOf(context, employee);
   const beforeCommute = {
     anchor: {
       kind: "before_commute",
@@ -181,12 +188,8 @@ function anchorFor(
   if (!("status" in intent) || intent.status.effective.kind !== "dismissed") {
     return beforeCommute;
   }
-  const timing = releaseTiming(
-    intent.status.effective.release,
-    start.at,
-    endOf(context, employee),
-  );
-  if (timing.kind !== "during_shift" || parseInstant(context.now) < start.at) {
+  const timing = releaseTiming(intent.status.effective.release, day);
+  if (timing.kind !== "during_shift" || phase === "before_start") {
     return beforeCommute;
   }
   return {
@@ -209,10 +212,17 @@ function planNotice(
   intent: MessageIntent,
 ): Notice {
   const { facility } = context;
+  const now = parseInstant(context.now);
   const start = startOf(context, employee);
-  const { anchor, at } = anchorFor(context, employee, start, intent);
+  const day = { startsAt: start.at, endsAt: endOf(context, employee) };
+  const person = { start, day, phase: dayPhase(now, day) };
+  const { anchor, at } = anchorFor(
+    person,
+    commuteOf(context, employee),
+    intent,
+  );
   const sendBy = leadBefore(at, context);
-  const timeliness = timelinessOf(sendBy, parseInstant(context.now));
+  const timeliness = timelinessOf(sendBy, now);
   const rule = CHANNEL_POLICY[context.urgency][timeliness];
   return {
     employee,
@@ -227,11 +237,12 @@ function planNotice(
       {
         facilityName: facility.name,
         zone: facility.timezone,
+        facilityDate: context.facilityDate,
         posture: context.posture,
         hazard: context.hazard,
-        workStartsAt: start.at,
-        workEndsAt: endOf(context, employee),
-        now: parseInstant(context.now),
+        day,
+        phase: person.phase,
+        now,
       },
       intent,
     ),
