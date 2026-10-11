@@ -36,8 +36,8 @@
       }
     },
     {
-      // The package's public entry point re-exports its modules.
-      "includes": ["src/index.ts"],
+      // The package's public entry points re-export its modules.
+      "includes": ["src/index.ts", "src/testing.ts"],
       "linter": {
         "rules": {
           "performance": { "noBarrelFile": "off" }
