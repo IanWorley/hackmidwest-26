@@ -1,5 +1,5 @@
 import type { Database } from "@hackmidwest/db";
-import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
+import type { DatabaseStore } from "@hackmidwest/db/connection";
 import {
   EVALUATE_PATH,
   type TestApp,
@@ -22,11 +22,12 @@ interface DecisionTestApp extends TestApp {
   readonly evaluate: () => Promise<Response>;
 }
 
-/** The storm app on a fresh demo database, with the database exposed for reads and tampering. */
-async function withDecisionApp(
+/** The storm app on the store `openStore` returns, with its database exposed for reads and tampering. */
+async function withDecisionAppOn(
+  openStore: () => Promise<DatabaseStore>,
   run: (app: DecisionTestApp) => Promise<void>,
 ): Promise<void> {
-  const store = await createTestDatabaseWithDemoFacilities();
+  const store = await openStore();
   await withStormAppOn(
     () => Promise.resolve(store),
     (app) =>
@@ -34,6 +35,7 @@ async function withDecisionApp(
   );
 }
 
+export type { DecisionTestApp };
 export {
   DANA_WHITFIELD_ID,
   DECIDE_PATH,
@@ -41,5 +43,5 @@ export {
   HISTORY_PATH,
   MARCUS_OYELARAN_ID,
   ROAD_REPORTS,
-  withDecisionApp,
+  withDecisionAppOn,
 };

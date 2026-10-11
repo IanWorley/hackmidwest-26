@@ -1,17 +1,25 @@
+import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { HTTP_NOT_FOUND, HTTP_OK } from "../../runtime";
 import {
   DANA_WHITFIELD_ID,
   DECIDE_PATH,
+  type DecisionTestApp,
   HISTORY_PATH,
   ROAD_REPORTS,
-  withDecisionApp,
+  withDecisionAppOn,
 } from "./decision-test-app";
 import { CLOCK, UNKNOWN_ID } from "./recommendation-test-app";
 
 const LATE_DECISION_AT = "2026-01-14T11:00:30.000Z";
 const DISPATCHER = "County dispatcher";
 const ROAD_CLOSED = "Route 9 closed at the river.";
+
+function withDecisionApp(
+  run: (app: DecisionTestApp) => Promise<void>,
+): Promise<void> {
+  return withDecisionAppOn(createTestDatabaseWithDemoFacilities, run);
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"], now: new Date(CLOCK) });

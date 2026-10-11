@@ -1,12 +1,14 @@
 import { notificationDispatches } from "@hackmidwest/db";
+import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { HTTP_CREATED } from "../../runtime";
 import { HTTP_CONFLICT, HTTP_UNPROCESSABLE } from "./decision-request";
 import {
   DANA_WHITFIELD_ID,
   DECIDE_PATH,
+  type DecisionTestApp,
   ROAD_REPORTS,
-  withDecisionApp,
+  withDecisionAppOn,
 } from "./decision-test-app";
 import { CLOCK } from "./recommendation-test-app";
 
@@ -15,6 +17,12 @@ const RECHECK_AT = "2026-01-14T10:15:00-00:00";
 const AFTER_DECIDE_BY = "2026-01-14T11:15:00.000Z";
 const NIGHT_SHIFT = "Night shift supervisor";
 const UNPLOWED_LOT = "The north lot has not been plowed.";
+
+function withDecisionApp(
+  run: (app: DecisionTestApp) => Promise<void>,
+): Promise<void> {
+  return withDecisionAppOn(createTestDatabaseWithDemoFacilities, run);
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"], now: new Date(CLOCK) });

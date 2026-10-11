@@ -1,10 +1,12 @@
+import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   DANA_WHITFIELD_ID,
   DECIDE_PATH,
+  type DecisionTestApp,
   HISTORY_PATH,
   MARCUS_OYELARAN_ID,
-  withDecisionApp,
+  withDecisionAppOn,
 } from "./decision-test-app";
 import { CLOCK, EVALUATE_PATH } from "./recommendation-test-app";
 
@@ -37,6 +39,12 @@ function entries(history: readonly HistoryEntry[]): HistoryEntry[] {
       decidedAt,
     }),
   );
+}
+
+function withDecisionApp(
+  run: (app: DecisionTestApp) => Promise<void>,
+): Promise<void> {
+  return withDecisionAppOn(createTestDatabaseWithDemoFacilities, run);
 }
 
 beforeEach(() => {

@@ -1,4 +1,5 @@
 import { notificationDispatches } from "@hackmidwest/db";
+import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { HTTP_NOT_FOUND, HTTP_OK } from "../../runtime";
@@ -6,8 +7,9 @@ import { dispatchHash } from "./decision-store";
 import {
   DANA_WHITFIELD_ID,
   DECIDE_PATH,
+  type DecisionTestApp,
   ROAD_REPORTS,
-  withDecisionApp,
+  withDecisionAppOn,
 } from "./decision-test-app";
 import { CLOCK, UNKNOWN_ID } from "./recommendation-test-app";
 
@@ -16,6 +18,12 @@ const SEEDED_EMPLOYEE_ID = 1;
 const SEND_BY = "2026-01-14T11:30:00.000Z";
 const FORGED_HASH =
   "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
+
+function withDecisionApp(
+  run: (app: DecisionTestApp) => Promise<void>,
+): Promise<void> {
+  return withDecisionAppOn(createTestDatabaseWithDemoFacilities, run);
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"], now: new Date(CLOCK) });
