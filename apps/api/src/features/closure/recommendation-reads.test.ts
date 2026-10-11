@@ -1,6 +1,7 @@
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  HTTP_CREATED,
   HTTP_INTERNAL_SERVER_ERROR,
   HTTP_NOT_FOUND,
   HTTP_OK,
@@ -20,6 +21,8 @@ import {
 import { RECOMMENDATIONS_PATH } from "./recommendations";
 
 const FACILITY_WITHOUT_RECOMMENDATIONS_ID = 4;
+const HTTP_UNPROCESSABLE = 422;
+const HEX_ID = "0x1";
 
 function withApp(run: (app: TestApp) => Promise<void>): Promise<void> {
   return withStormAppOn(createTestDatabaseWithDemoFacilities, run);
@@ -120,5 +123,51 @@ it(`GET ${RECOMMENDATIONS_PATH}/:id/replay reports a mismatch when the stored ou
 
     const { matches, replayed } = await response.json();
     expect([matches, replayed.rationale]).toEqual([false, output.rationale]);
+  });
+});
+
+it(`GET ${RECOMMENDATIONS_PATH}/:id/replay returns 404 for an id no recommendation has`, async () => {
+  await withApp(async ({ get }) => {
+    const response = await get(`${RECOMMENDATIONS_PATH}/${UNKNOWN_ID}/replay`);
+
+    expect([response.status, await response.json()]).toEqual([
+      HTTP_NOT_FOUND,
+      { message: "Recommendation not found" },
+    ]);
+  });
+});
+
+it("every recommendation route rejects a non-decimal id with 422 instead of aliasing id 1", async () => {
+  await withApp(async ({ get, post }) => {
+    const created = await post(EVALUATE_PATH, { asOf: AS_OF });
+
+    const responses = await Promise.all([
+      post(`/api/facilities/${HEX_ID}/recommendations`),
+      get(`/api/facilities/${HEX_ID}/recommendations/latest`),
+      get(`${RECOMMENDATIONS_PATH}/${HEX_ID}`),
+      get(`${RECOMMENDATIONS_PATH}/${HEX_ID}/replay`),
+    ]);
+
+    expect([created.status, ...responses.map(({ status }) => status)]).toEqual([
+      HTTP_CREATED,
+      HTTP_UNPROCESSABLE,
+      HTTP_UNPROCESSABLE,
+      HTTP_UNPROCESSABLE,
+      HTTP_UNPROCESSABLE,
+    ]);
+  });
+});
+
+it(`GET ${RECOMMENDATIONS_PATH}/:id fails with a 500 when the stored snapshot carries a field the schema does not list`, async () => {
+  await withApp(async ({ get, insertRow }) => {
+    const output = evaluatePosture(EXPECTED_INPUT);
+    const id = await insertRow({
+      input: EXPECTED_INPUT,
+      output: { ...output, unlisted: "hashed but never returned" },
+    });
+
+    const response = await get(`${RECOMMENDATIONS_PATH}/${id}`);
+
+    expect(response.status).toBe(HTTP_INTERNAL_SERVER_ERROR);
   });
 });

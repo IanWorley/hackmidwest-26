@@ -47,7 +47,7 @@ const RECOMMENDATION_NOT_FOUND_MESSAGE = "Recommendation not found";
 
 const evaluateBody = t.Optional(
   t.Object({
-    /** Evaluate the data pulled now as of this instant instead of the clock reading. */
+    /** Evaluate the data pulled now as of this instant instead of the clock reading. A future instant previews a later call, such as tomorrow morning's. */
     asOf: t.Optional(t.String({ format: "date-time" })),
   }),
 );

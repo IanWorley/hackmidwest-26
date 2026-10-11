@@ -20,6 +20,8 @@ import {
 
 const HTTP_UNPROCESSABLE = 422;
 const KANSAS_CITY_ID = 1;
+/** 04:30 Central the morning after the clock, the as-of demo's next-morning call. */
+const FUTURE_AS_OF = "2026-01-15T10:30:00.000Z";
 
 function withApp(run: (app: TestApp) => Promise<void>): Promise<void> {
   return withStormAppOn(createTestDatabaseWithDemoFacilities, run);
@@ -76,6 +78,21 @@ it(`POST ${EVALUATE_PATH} evaluates at the clock reading when no asOf is given`,
       asOf: CLOCK,
       mode: "live",
     });
+  });
+});
+
+it(`POST ${EVALUATE_PATH} accepts a future asOf, evaluating the data pulled now at that instant and labeling it as_of`, async () => {
+  await withApp(async ({ post }) => {
+    const response = await post(EVALUATE_PATH, { asOf: FUTURE_AS_OF });
+
+    const { evaluatedAt, asOf, mode, snapshot } = await response.json();
+    expect([
+      response.status,
+      evaluatedAt,
+      asOf,
+      mode,
+      snapshot.input.now,
+    ]).toEqual([HTTP_CREATED, CLOCK, FUTURE_AS_OF, "as_of", FUTURE_AS_OF]);
   });
 });
 
