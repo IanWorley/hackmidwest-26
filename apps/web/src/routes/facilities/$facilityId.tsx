@@ -8,6 +8,7 @@ import { type JSX, useCallback } from "react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { loadDecisionScreen } from "@/features/closure/decision-api";
 import { DecisionScreenView } from "@/features/closure/decision-screen";
+import { loadNoticeScreen } from "@/features/closure/notice-screen";
 import { pageTitle } from "@/lib/page-title";
 
 const PERSONNEL_LINK_TEXT = "People and status";
@@ -36,7 +37,7 @@ function facilityTitle(
 }
 
 function FacilityPage(): JSX.Element {
-  const screen = Route.useLoaderData();
+  const { notices, ...screen } = Route.useLoaderData();
   const router = useRouter();
   // `sync` waits for the loader; otherwise the router refetches in the background and a notice
   // that says the newer data is shown would appear while the old data is still on screen.
@@ -55,6 +56,7 @@ function FacilityPage(): JSX.Element {
           {PERSONNEL_LINK_TEXT}
         </Link>
       }
+      notices={notices}
       onReload={reload}
       screen={screen}
     />
@@ -63,11 +65,14 @@ function FacilityPage(): JSX.Element {
 
 // Router's generator owns this route identifier; it must remain a file-matching literal.
 export const Route = createFileRoute("/facilities/$facilityId")({
-  loader: ({ params, abortController }) =>
-    loadDecisionScreen({
+  loader: async ({ params, abortController }) => {
+    const { signal } = abortController;
+    const screen = await loadDecisionScreen({
       facilityId: params.facilityId,
-      signal: abortController.signal,
-    }),
+      signal,
+    });
+    return { ...screen, notices: await loadNoticeScreen(screen, signal) };
+  },
   // After loader, so TypeScript infers loaderData from it.
   head: ({ loaderData, match }) => ({
     meta: [

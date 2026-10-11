@@ -40,11 +40,15 @@ type SectionState =
   | { readonly status: "invalid"; readonly field: FormField }
   | { readonly status: "issued" }
   | { readonly status: "superseded" }
-  | { readonly status: "failed" };
+  | { readonly status: "dispatched" }
+  | { readonly status: "failed" }
+  /** The outcome is unknown on screen because the reload after it failed. */
+  | { readonly status: "reloadFailed" };
 
 type SectionEvent =
   | { readonly type: "submit" }
   | { readonly type: "reject"; readonly field: FormField }
+  | { readonly type: "reloadFailed" }
   | { readonly type: "settle"; readonly outcome: DirectiveOutcome };
 
 /** Each submit starts over, so the section only remembers how the last one ended. */
@@ -57,6 +61,8 @@ function sectionReducer(
       return { status: "submitting" };
     case "reject":
       return { status: "invalid", field: event.field };
+    case "reloadFailed":
+      return { status: "reloadFailed" };
     case "settle":
       if (event.outcome.kind === "invalid") {
         return { status: "invalid", field: event.outcome.field };

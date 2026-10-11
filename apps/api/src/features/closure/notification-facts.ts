@@ -109,6 +109,20 @@ async function loadRecommendation(
   return recommendation;
 }
 
+/** The decision's first dispatch row; dispatch is once-only, so any row means its notices went out. */
+async function findFirstDispatch(
+  reader: Reader,
+  decisionId: number,
+): Promise<DispatchRow | undefined> {
+  const [first] = await reader
+    .select()
+    .from(notificationDispatches)
+    .where(eq(notificationDispatches.decisionId, decisionId))
+    .orderBy(asc(notificationDispatches.id))
+    .limit(1);
+  return first;
+}
+
 async function loadDecisionFacts(
   reader: Reader,
   decisionId: number,
@@ -260,6 +274,7 @@ function decidedPackage(facts: DecisionFacts, now: string): PlannedPackage {
 export type { DecisionFacts, DispatchRow };
 export {
   decidedPackage,
+  findFirstDispatch,
   loadDecisionFacts,
   loadFacilityRoster,
   loadRecommendation,

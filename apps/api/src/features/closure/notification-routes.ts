@@ -6,9 +6,17 @@ import {
   HTTP_INTERNAL_SERVER_ERROR,
   HTTP_NOT_FOUND,
   HTTP_OK,
+  HTTP_UNPROCESSABLE_ENTITY,
   internalServerErrorResponse,
   type RunRequest,
 } from "../../runtime";
+import { CLOSED } from "../../schema-options";
+import {
+  firstInvalidField,
+  rejectUnknownFields,
+  type ValidationErrorBody,
+  validationErrorResponse,
+} from "./decision-body";
 import { decimalIdParams } from "./facilities";
 import {
   type DecisionNotificationsOutcome,
@@ -54,12 +62,30 @@ const decisionNotificationsRoute = {
   },
 };
 
+/** Answers in the shape every body 422 uses, not Elysia's verbose one. */
+function describeInvalidDispatch({
+  found,
+}: {
+  readonly found: unknown;
+}): ValidationErrorBody {
+  return firstInvalidField(dispatchBody, found);
+}
+
+/** The hash of the package the manager reviewed, from `GET /api/decisions/:id/notifications`. */
+const dispatchBody = t.Object(
+  { packageHash: t.String() },
+  { ...CLOSED, error: describeInvalidDispatch },
+);
+
 const dispatchRoute = {
   params: decimalIdParams,
+  body: dispatchBody,
+  transform: rejectUnknownFields(dispatchBody),
   response: {
     [HTTP_CREATED]: decisionNotificationsView,
     [HTTP_NOT_FOUND]: decisionNotFoundResponse,
     [HTTP_CONFLICT]: notificationConflictResponse,
+    [HTTP_UNPROCESSABLE_ENTITY]: validationErrorResponse,
     [HTTP_INTERNAL_SERVER_ERROR]: internalServerErrorResponse,
   },
 };
@@ -124,9 +150,9 @@ function createNotificationsModule(runRequest: RunRequest) {
     )
     .post(
       DISPATCH_PATH,
-      ({ params }) =>
+      ({ params, body }) =>
         runRequest(
-          dispatchNotifications(params.id).pipe(
+          dispatchNotifications(params.id, body.packageHash).pipe(
             Effect.map(toHttpResponse(HTTP_CREATED)),
           ),
         ),

@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  type RenderResult,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { expect, it, vi } from "vitest";
 import {
@@ -32,17 +38,7 @@ function renderSection(
   const submitDirective = vi.fn<
     (request: DirectiveRequest) => Promise<DirectiveOutcome>
   >(() => Promise.resolve(outcome));
-  render(
-    <DirectivesSection
-      {...STANDING}
-      buildings={BUILDINGS}
-      directives={[]}
-      onReload={reloadNothing}
-      recorders={RECORDERS}
-      submitDirective={submitDirective}
-      timeZone="America/Chicago"
-    />,
-  );
+  render(<DirectivesSection {...sectionProps({ submitDirective })} />);
   return submitDirective;
 }
 
@@ -50,6 +46,7 @@ const STANDING = {
   decision: KANSAS_CITY_ACCEPT,
   posture: "delayed_arrival",
   isOnShownRecommendation: true,
+  isDispatched: false,
 } as const;
 
 function sectionProps(
@@ -77,23 +74,25 @@ function choose(label: string, value: string): void {
   });
 }
 
+/** Fills in a valid whole-facility directive and submits it. */
+function issueFacilityTelework(): void {
+  choose("Applies to", "facility");
+  choose("Directive", "telework");
+  choose("Reason category", "road_reports");
+  fireEvent.change(screen.getByRole("textbox", { name: "Reason" }), {
+    target: { value: "Plows reach the lot after nine." },
+  });
+  choose("Recorded by", "1");
+  fireEvent.click(screen.getByRole("button", { name: "Issue directive" }));
+}
+
 it("issues an employee directive with its reason and recorder", async () => {
   const submitDirective = vi.fn<
     (request: DirectiveRequest) => Promise<DirectiveOutcome>
   >(() => Promise.resolve({ kind: "issued" }));
   const onReload = vi.fn<() => Promise<void>>(() => Promise.resolve());
   render(
-    <DirectivesSection
-      {...STANDING}
-      buildings={BUILDINGS}
-      directives={[]}
-      onReload={onReload}
-      recorders={[
-        { id: 1, name: "Dana Whitfield", role: "County Executive Director" },
-      ]}
-      submitDirective={submitDirective}
-      timeZone="America/Chicago"
-    />,
+    <DirectivesSection {...sectionProps({ onReload, submitDirective })} />,
   );
   choose("Applies to", "employee:8");
   choose("Directive", "dismissed");
@@ -123,14 +122,7 @@ it("issues an employee directive with its reason and recorder", async () => {
 it("focuses the status line already on the page once a directive is issued", async () => {
   renderSection();
   const status = screen.getByRole("status");
-  choose("Applies to", "facility");
-  choose("Directive", "telework");
-  choose("Reason category", "road_reports");
-  fireEvent.change(screen.getByRole("textbox", { name: "Reason" }), {
-    target: { value: "Plows reach the lot after nine." },
-  });
-  choose("Recorded by", "1");
-  fireEvent.click(screen.getByRole("button", { name: "Issue directive" }));
+  issueFacilityTelework();
 
   await waitFor(() => {
     expect(document.activeElement?.textContent).toBe("Directive issued.");
@@ -238,4 +230,62 @@ it("says a newer undecided recommendation leaves the standing decision in force"
       "The recommendation above is newer and nobody has decided on it, so this decision still stands.",
     ),
   ).toBeTruthy();
+});
+
+it("closes the directive form once the decision's notices were dispatched", () => {
+  render(<DirectivesSection {...sectionProps({ isDispatched: true })} />);
+
+  expect([
+    screen.queryByRole("form", { name: "Issue directive" }),
+    screen.getByRole("status").textContent,
+  ]).toEqual([
+    null,
+    "This decision's notices were dispatched, and dispatch happens once, so a new directive would reach nobody. Record a new decision to change what staff are told.",
+  ]);
+});
+
+it("keeps a dispatch refusal on screen and focused after the reload closes the form", async () => {
+  // The reload brings the dispatched decision, as the page does after another tab dispatched.
+  let rerender: RenderResult["rerender"] | undefined;
+  function reloadDispatched(): Promise<void> {
+    rerender?.(<DirectivesSection {...props} isDispatched={true} />);
+    return Promise.resolve();
+  }
+  const props = sectionProps({
+    onReload: reloadDispatched,
+    submitDirective: () => Promise.resolve({ kind: "dispatched" }),
+  });
+  ({ rerender } = render(<DirectivesSection {...props} />));
+  issueFacilityTelework();
+
+  const alert = await screen.findByRole("alert");
+  await waitFor(() => {
+    expect(document.activeElement).toBe(alert);
+  });
+  expect([
+    alert.textContent,
+    screen.queryByRole("form", { name: "Issue directive" }),
+  ]).toEqual([
+    "This decision's notices were dispatched before your directive arrived, perhaps from another tab. Nothing was saved; the page is reloaded.",
+    null,
+  ]);
+});
+
+it("says the reload failed instead of leaving the form issuing when a refusal cannot reload", async () => {
+  render(
+    <DirectivesSection
+      {...sectionProps({
+        onReload: () => Promise.reject(new Error("The loader failed")),
+        submitDirective: () => Promise.resolve({ kind: "dispatched" }),
+      })}
+    />,
+  );
+  issueFacilityTelework();
+
+  expect((await screen.findByRole("alert")).textContent).toBe(
+    "The page could not be reloaded to show what happened. Reload it before trying again.",
+  );
+  expect(
+    screen.getByRole("button", { name: "Issue directive" }),
+  ).toHaveProperty("disabled", false);
 });

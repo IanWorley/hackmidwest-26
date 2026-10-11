@@ -34,12 +34,16 @@ type DecideOutcome =
   | { readonly kind: "recorded" }
   | { readonly kind: "invalid"; readonly field: FormField }
   | { readonly kind: "conflict"; readonly conflict: Conflict }
-  | { readonly kind: "failed" };
+  | { readonly kind: "failed" }
+  /** The manager went back from the confirmation step; nothing was sent. */
+  | { readonly kind: "cancelled" };
 
 type DirectiveOutcome =
   | { readonly kind: "issued" }
   | { readonly kind: "invalid"; readonly field: FormField }
   | { readonly kind: "superseded" }
+  /** Another tab dispatched the decision's notices first; dispatch is once-only, so nothing was saved. */
+  | { readonly kind: "dispatched" }
   | { readonly kind: "failed" };
 
 function conflictFor(wire: WireConflict): Conflict {
@@ -55,12 +59,14 @@ function conflictFor(wire: WireConflict): Conflict {
   }
 }
 
-/** Both refusals mean the decision on screen no longer takes directives, so the page reloads with the one that does. */
+/** Every refusal means the decision on screen no longer takes directives, so the page reloads. */
 function directiveConflictFor(wire: WireDirectiveConflict): DirectiveOutcome {
   switch (wire) {
     case "not_current_decision":
     case "no_chosen_posture":
       return { kind: "superseded" };
+    case "already_dispatched":
+      return { kind: "dispatched" };
     default:
       return wire satisfies never;
   }

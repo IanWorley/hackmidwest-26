@@ -7,6 +7,7 @@ import {
   useId,
   useReducer,
   useRef,
+  useState,
 } from "react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,12 @@ const ISSUED_TEXT = "Directive issued.";
 const SUPERSEDED_TITLE =
   "This decision was changed by someone else. Nothing was saved; the page is reloaded with the current decision.";
 const FAILED_TITLE = "The directive could not be issued. Try again.";
+const RELOAD_FAILED_TITLE =
+  "The page could not be reloaded to show what happened. Reload it before trying again.";
+const DISPATCH_REFUSED_TITLE =
+  "This decision's notices were dispatched before your directive arrived, perhaps from another tab. Nothing was saved; the page is reloaded.";
+const DISPATCHED_TEXT =
+  "This decision's notices were dispatched, and dispatch happens once, so a new directive would reach nobody. Record a new decision to change what staff are told.";
 const GROUPS_LABEL = "Groups";
 const BUILDINGS_LABEL = "Buildings";
 const EMPLOYEES_IN = "Employees in";
@@ -70,6 +77,7 @@ const NOTICE_STATUSES: readonly SectionState["status"][] = [
   "issued",
   "superseded",
   "failed",
+  "reloadFailed",
 ];
 
 interface FieldProps {
@@ -89,6 +97,12 @@ function OutcomeAlert({ state }: { state: SectionState }): JSX.Element | null {
       return (
         <Alert role="alert" variant="destructive">
           <AlertTitle>{FAILED_TITLE}</AlertTitle>
+        </Alert>
+      );
+    case "reloadFailed":
+      return (
+        <Alert role="alert" variant="destructive">
+          <AlertTitle>{RELOAD_FAILED_TITLE}</AlertTitle>
         </Alert>
       );
     default:
@@ -179,6 +193,8 @@ interface DirectivesSectionProps {
   readonly posture: Posture;
   /** False after a same-day re-evaluation nobody has decided on yet. */
   readonly isOnShownRecommendation: boolean;
+  /** True once the decision's notices went out; dispatch is once-only, so a later directive would reach nobody. */
+  readonly isDispatched: boolean;
   readonly directives: readonly Directive[];
   readonly buildings: readonly Building[];
   readonly recorders: readonly Recorder[];
@@ -189,7 +205,25 @@ interface DirectivesSectionProps {
   readonly onReload: () => Promise<void>;
 }
 
-function DirectiveForm(props: DirectivesSectionProps): JSX.Element {
+interface DirectiveFormProps extends DirectivesSectionProps {
+  /** The reload swaps this form for the dispatched notice, so the section keeps the refusal on screen. */
+  readonly onDispatchRefused: () => void;
+}
+
+/** Focused when it appears, because the form whose button had focus is gone after the reload. */
+function DispatchRefusedAlert(): JSX.Element {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
+  return (
+    <Alert ref={ref} role="alert" tabIndex={-1}>
+      <AlertTitle>{DISPATCH_REFUSED_TITLE}</AlertTitle>
+    </Alert>
+  );
+}
+
+function DirectiveForm(props: DirectiveFormProps): JSX.Element {
   const [state, dispatch] = useReducer(sectionReducer, { status: "editing" });
   const formId = useId();
   let invalidField: FormField | undefined;
@@ -226,8 +260,16 @@ function DirectiveForm(props: DirectivesSectionProps): JSX.Element {
         form.reset();
       }
       // Settle after the reload, so a notice that says the page is reloaded is already true.
-      if (outcome.kind === "issued" || outcome.kind === "superseded") {
-        await props.onReload();
+      if (outcome.kind !== "invalid" && outcome.kind !== "failed") {
+        try {
+          await props.onReload();
+        } catch {
+          dispatch({ type: "reloadFailed" });
+          return;
+        }
+      }
+      if (outcome.kind === "dispatched") {
+        props.onDispatchRefused();
       }
       dispatch({ type: "settle", outcome });
     },
@@ -257,8 +299,24 @@ function DirectiveForm(props: DirectivesSectionProps): JSX.Element {
   );
 }
 
+function DirectiveFormOrDispatched(props: DirectiveFormProps): JSX.Element {
+  if (props.isDispatched) {
+    return <p role="status">{DISPATCHED_TEXT}</p>;
+  }
+  return <DirectiveForm {...props} />;
+}
+
 export function DirectivesSection(props: DirectivesSectionProps): JSX.Element {
   const headingId = useId();
+  // Tied to the decision it was refused for, so a reload onto a newer decision drops it.
+  const [refusedDecisionId, setRefusedDecisionId] = useState<number | null>(
+    null,
+  );
+  const decisionId = props.decision.id;
+  const onDispatchRefused = useCallback(
+    (): void => setRefusedDecisionId(decisionId),
+    [decisionId],
+  );
   return (
     <section aria-labelledby={headingId} className="space-y-4">
       <h2 className="font-heading font-semibold text-xl" id={headingId}>
@@ -276,7 +334,11 @@ export function DirectivesSection(props: DirectivesSectionProps): JSX.Element {
         directives={props.directives}
         timeZone={props.timeZone}
       />
-      <DirectiveForm {...props} />
+      {refusedDecisionId === decisionId && <DispatchRefusedAlert />}
+      <DirectiveFormOrDispatched
+        {...props}
+        onDispatchRefused={onDispatchRefused}
+      />
     </section>
   );
 }

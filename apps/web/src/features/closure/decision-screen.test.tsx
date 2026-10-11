@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { JSX } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   ANNEX_DISMISSAL,
@@ -7,11 +8,19 @@ import {
 import { KANSAS_CITY_RECOMMENDATION } from "../../../test/recommendation-fixture";
 import type { DecisionScreen } from "./decision-api";
 import { DecisionScreenView } from "./decision-screen";
+import type { NoticeScreen } from "./notice-screen";
 
 const HTTP_CREATED = 201;
 const HTTP_BAD_GATEWAY = 502;
 const LOADED_AT = Date.parse("2026-10-11T08:30:00Z");
 const MINUTE_MS = 60_000;
+
+const NO_NOTICES: NoticeScreen = {
+  preview: null,
+  current: null,
+  verification: null,
+  decidedRecommendation: null,
+};
 
 const SCREEN: DecisionScreen = {
   facility: {
@@ -67,7 +76,13 @@ afterEach(() => {
 it("moves focus to the recommendation heading once a re-evaluation loads", async () => {
   evaluationRespondsWith(HTTP_CREATED);
   const onReload = vi.fn<() => Promise<void>>(() => Promise.resolve());
-  render(<DecisionScreenView onReload={onReload} screen={SCREEN} />);
+  render(
+    <DecisionScreenView
+      notices={NO_NOTICES}
+      onReload={onReload}
+      screen={SCREEN}
+    />,
+  );
   fireEvent.click(screen.getByRole("button", { name: "Re-evaluate" }));
 
   const heading = screen.getByRole("heading", { name: "Recommendation" });
@@ -82,7 +97,13 @@ it("moves focus to the recommendation heading once a re-evaluation loads", async
 
 it("returns focus to Re-evaluate and says nothing changed when it fails", async () => {
   evaluationRespondsWith(HTTP_BAD_GATEWAY);
-  render(<DecisionScreenView onReload={reloadNothing} screen={SCREEN} />);
+  render(
+    <DecisionScreenView
+      notices={NO_NOTICES}
+      onReload={reloadNothing}
+      screen={SCREEN}
+    />,
+  );
   const button = screen.getByRole("button", { name: "Re-evaluate" });
   fireEvent.click(button);
 
@@ -97,6 +118,7 @@ it("returns focus to Re-evaluate and says nothing changed when it fails", async 
 it("sends an earlier day's recommendation back to Re-evaluate with nothing to decide on", () => {
   render(
     <DecisionScreenView
+      notices={NO_NOTICES}
       onReload={reloadNothing}
       screen={{
         ...SCREEN,
@@ -121,6 +143,7 @@ it("reloads once the facility day rolls over at closing time", () => {
   const onReload = vi.fn<() => Promise<void>>(() => Promise.resolve());
   render(
     <DecisionScreenView
+      notices={NO_NOTICES}
       onReload={onReload}
       screen={{
         ...SCREEN,
@@ -138,6 +161,7 @@ it("reloads once the facility day rolls over at closing time", () => {
 it("keeps the standing decision and its directives after a same-day re-evaluation", () => {
   render(
     <DecisionScreenView
+      notices={NO_NOTICES}
       onReload={reloadNothing}
       screen={{
         ...SCREEN,
@@ -158,4 +182,56 @@ it("keeps the standing decision and its directives after a same-day re-evaluatio
   expect(
     screen.getByRole("list", { name: "Issued directives" }).children,
   ).toHaveLength(1);
+});
+
+const RECORDERS = [
+  { id: 1, name: "Dana Whitfield", role: "County Executive Director" },
+];
+
+function decidingOn(recommendationId: number): JSX.Element {
+  return (
+    <DecisionScreenView
+      notices={NO_NOTICES}
+      onReload={reloadNothing}
+      screen={{
+        ...SCREEN,
+        recorders: RECORDERS,
+        latestRecommendation: {
+          ...KANSAS_CITY_RECOMMENDATION,
+          id: recommendationId,
+        },
+      }}
+    />
+  );
+}
+
+/** Opens the confirmation for an accept; the returned call reloads onto the next recommendation. */
+function openConfirmation(): () => void {
+  const { rerender } = render(decidingOn(KANSAS_CITY_RECOMMENDATION.id));
+  fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "Recorded by" }), {
+    target: { value: "1" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Record acceptance" }));
+  return (): void => rerender(decidingOn(KANSAS_CITY_RECOMMENDATION.id + 1));
+}
+
+it("closes an open confirmation when a reload brings a different recommendation", () => {
+  const reloadOntoNext = openConfirmation();
+  expect(screen.getByRole("dialog")).toBeTruthy();
+
+  reloadOntoNext();
+
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("returns the decision panel to work once a dropped confirmation is cancelled", async () => {
+  openConfirmation()();
+
+  await waitFor(() => {
+    expect(screen.getByRole("button", { name: "Accept" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+  });
 });
