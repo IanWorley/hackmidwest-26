@@ -36,6 +36,7 @@ it("with no decision, lists each person at their baseline with who may record a 
 
     expect(body).toMatchObject({
       facilityId: FACILITY_ID,
+      facilityDate: "2026-10-02",
       asOf: DECIDED_AT,
       decision: null,
       posture: { kind: "none" },

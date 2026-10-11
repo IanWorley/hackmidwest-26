@@ -23,6 +23,8 @@ type CurrentPosture = DecidedPosture | { readonly kind: "none" };
 /** Everything stored about one facility's people, read in one batch. */
 interface PersonnelRecords {
   readonly facilityId: number;
+  /** The facility day `now` falls in: today until closing time, then tomorrow. */
+  readonly facilityDate: string;
   readonly buildings: readonly BuildingRow[];
   /** The facility's decision maker, then its backup. */
   readonly recorders: readonly DecisionMakerRow[];
@@ -65,6 +67,19 @@ function latestReported(
   return latest;
 }
 
+/** One pass over the event history, so resolving the roster stays linear as add-only history grows. */
+function byEmployee(
+  statusEvents: readonly StatusEvent[],
+): ReadonlyMap<number, readonly StatusEvent[]> {
+  const grouped = new Map<number, StatusEvent[]>();
+  for (const event of statusEvents) {
+    const events = grouped.get(event.employeeId) ?? [];
+    events.push(event);
+    grouped.set(event.employeeId, events);
+  }
+  return grouped;
+}
+
 /** Only a decided posture changes anyone's day; a deferral or no decision leaves the facility normal. */
 function appliedPosture(posture: CurrentPosture): FacilityPosture {
   if (posture.kind === "decided") {
@@ -83,6 +98,7 @@ function personnelView(
 ): PersonnelResponse {
   const context = {
     facilityId: records.facilityId,
+    facilityDate: records.facilityDate,
     asOf: now,
     decision: records.decision,
     buildings: records.buildings.map(({ id, name }) => ({ id, name })),
@@ -93,12 +109,14 @@ function personnelView(
     })),
   };
   const facilityPosture = appliedPosture(records.posture);
+  const eventsByEmployee = byEmployee(records.statusEvents);
   const people = [...records.employees]
     .sort((a, b) => a.id - b.id)
     .map((employee) => {
+      const statusEvents = eventsByEmployee.get(employee.id) ?? [];
       const { baseline, effective } = effectiveStatus({
         employee,
-        statusEvents: records.statusEvents,
+        statusEvents,
         posture: facilityPosture,
         directives: records.directives,
         now,
@@ -115,7 +133,7 @@ function personnelView(
           preferredChannel: employee.preferredChannel,
           hasAccessibilityNeeds: employee.accessibilityNeeds !== null,
           baseline,
-          latestEvent: latestReported(employee.id, records.statusEvents, now),
+          latestEvent: latestReported(employee.id, statusEvents, now),
         },
         effective,
       };

@@ -152,8 +152,10 @@ const loadPersonnelRecords = Effect.fn("loadPersonnelRecords")(function* (
   if (schedule === undefined) {
     return Option.none<PersonnelRecords>();
   }
+  const today = formatDate(facilityDate(schedule, parseInstant(now)));
   const records = {
     facilityId: facilityId.value,
+    facilityDate: today,
     buildings: buildingRows,
     recorders,
     employees: employeeRows,
@@ -171,7 +173,6 @@ const loadPersonnelRecords = Effect.fn("loadPersonnelRecords")(function* (
   }
   const { snapshot, chosenPosture, ...decision } = current;
   const recommendation = parseSnapshot(snapshot).output;
-  const today = formatDate(facilityDate(schedule, parseInstant(now)));
   if (recommendation.facilityDate !== today) {
     return undecided;
   }

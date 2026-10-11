@@ -115,6 +115,8 @@ const personSchema = t.Object({
 
 const personnelContextFields = {
   facilityId: positiveId,
+  /** `YYYY-MM-DD`: the facility day the statuses are for. After closing time it is tomorrow. */
+  facilityDate: t.String(),
   /** The instant every status in the response was resolved at. */
   asOf: t.String(),
   /** The facility's newest decision, which sets today's posture and holds its directives. */

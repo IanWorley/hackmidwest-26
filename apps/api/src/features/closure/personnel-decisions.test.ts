@@ -167,7 +167,11 @@ it("leaves today undecided when the newest decision is about another facility da
 
     const body = await personnel(request);
 
-    expect(body).toMatchObject({ decision: null, posture: { kind: "none" } });
+    expect(body).toMatchObject({
+      facilityDate: "2026-01-15",
+      decision: null,
+      posture: { kind: "none" },
+    });
     expect(person(body, AVERY_TELEWORK_ELIGIBLE)).toMatchObject({
       effective: { kind: "working_onsite", cause: { source: "baseline" } },
     });
