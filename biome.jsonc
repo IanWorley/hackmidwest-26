@@ -40,6 +40,10 @@
         "noSolidDestructuredProps": "off",
         "useQwikValidLexicalScope": "off"
       },
+      "suspicious": {
+        // Solid and Qwik rule; React's props are className and htmlFor.
+        "noReactSpecificProps": "off"
+      },
       "style": {
         // Next.js rule; TanStack Start renders <head> from the root route.
         "noHeadElement": "off",
