@@ -1,39 +1,34 @@
 import { decisions, facilities, recommendations } from "@hackmidwest/db";
 import { asc, inArray, max } from "drizzle-orm";
-import { Cache, Data, Duration, Effect, Exit } from "effect";
+import { createSchemaFactory } from "drizzle-typebox";
+import { Cache, Data, Effect, Option } from "effect";
 import { Elysia, t } from "elysia";
-import type { NwsError } from "../../clients/nws";
-import {
-  AlertCertaintySchema,
-  AlertSeveritySchema,
-  AlertUrgencySchema,
-  type AreaGeometry,
-  AreaGeometrySchema,
-  type GeoPoint,
-  type MultiPolygon,
-  NullableString,
-  type NwsAlertArea,
-} from "../../clients/nws-model";
-import type { OpenMeteoError } from "../../clients/open-meteo";
 import {
   Database,
   HTTP_INTERNAL_SERVER_ERROR,
   HTTP_OK,
   internalServerErrorResponse,
-  NwsClient,
-  OpenMeteoClient,
   type RunRequest,
 } from "../../runtime";
+import {
+  AlertCollectionSchema,
+  AqiSchema,
+  makeLiveConditionsCache,
+} from "./map-live";
 import { postureSchema } from "./postures";
 import { LIVE_RECOMMENDATION } from "./recommendation-mode";
 
 const MAP_PATH = "/api/map";
-/** Alerts and AQI change over minutes, so a minute of reuse spares api.weather.gov on page refreshes without hiding a new warning for long. */
-const LIVE_CONDITIONS_TTL = Duration.seconds(60);
-const LIVE_CONDITIONS_CACHE_CAPACITY = 4;
-const LIVE_REQUEST_CONCURRENCY = 4;
 
-const AqiSchema = t.Object({ value: t.Number(), observedAt: t.String() });
+const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
+const decisionColumns = createSelectSchema(decisions).properties;
+
+/** The newest decision on the recommendation, the tip of its chain. `chosenPosture` is set for accept and override. */
+const DecisionSchema = t.Object({
+  action: decisionColumns.action,
+  chosenPosture: decisionColumns.chosenPosture,
+  decidedAt: decisionColumns.decidedAt,
+});
 
 const StandingSchema = t.Union([
   t.Object({ posture: t.Literal("not_evaluated") }),
@@ -43,8 +38,7 @@ const StandingSchema = t.Union([
     decideBy: t.String(),
     /** When the evaluation ran, so a reader can judge how fresh the standing is. */
     asOf: t.String(),
-    /** A decision row exists for this recommendation. */
-    decided: t.Boolean(),
+    decision: t.Union([DecisionSchema, t.Null()]),
   }),
 ]);
 
@@ -58,188 +52,33 @@ const MapFacilitySchema = t.Object({
   standing: StandingSchema,
 });
 
-const AlertFeatureSchema = t.Object({
-  type: t.Literal("Feature"),
-  id: t.String(),
-  /** Null only when NWS gave no inline geometry and none of the alert's zones had any. */
-  geometry: t.Union([AreaGeometrySchema, t.Null()]),
-  /** `onset` and `ends` are the alert's hazard window: onset else effective, ends else expires. */
-  properties: t.Object({
-    event: t.String(),
-    headline: NullableString,
-    severity: AlertSeveritySchema,
-    certainty: AlertCertaintySchema,
-    urgency: AlertUrgencySchema,
-    onset: t.String(),
-    ends: t.String(),
-  }),
-});
-
-const AlertCollectionSchema = t.Object({
-  type: t.Literal("FeatureCollection"),
-  features: t.Array(AlertFeatureSchema),
-});
-
 const MapResponseSchema = t.Object({
   facilities: t.Array(MapFacilitySchema),
-  alerts: AlertCollectionSchema,
+  /** Null when NWS or Open-Meteo could not be reached; every `aqi` is null then too. */
+  alerts: t.Union([AlertCollectionSchema, t.Null()]),
 });
 
-type Aqi = typeof AqiSchema.static;
 type Standing = typeof StandingSchema.static;
-type AlertFeature = typeof AlertFeatureSchema.static;
-type AlertCollection = typeof AlertCollectionSchema.static;
-
-interface LiveConditions {
-  readonly alerts: AlertCollection;
-  /** One entry per requested point, in the same order. */
-  readonly aqi: readonly (Aqi | null)[];
-}
+type Decision = typeof DecisionSchema.static;
 
 class MapStorageError extends Data.TaggedError("MapStorageError")<{
   readonly cause: unknown;
 }> {}
 
-function uniqueById(areas: readonly NwsAlertArea[]): NwsAlertArea[] {
-  const byId = new Map<string, NwsAlertArea>();
-  for (const area of areas) {
-    if (!byId.has(area.alert.id)) {
-      byId.set(area.alert.id, area);
-    }
-  }
-  return [...byId.values()];
-}
+type Db = typeof Database.Service;
+type FacilityStanding = Omit<typeof MapFacilitySchema.static, "aqi">;
 
-function polygonsOf(geometry: AreaGeometry): number[][][][] {
-  if (geometry.type === "Polygon") {
-    return [geometry.coordinates];
-  }
-  return geometry.coordinates;
-}
-
-const zonesGeometry = Effect.fn("zonesGeometry")(function* (
-  zoneUrls: readonly string[],
-) {
-  const nws = yield* NwsClient;
-  const geometries = yield* Effect.forEach(zoneUrls, nws.zoneGeometry, {
-    concurrency: LIVE_REQUEST_CONCURRENCY,
-  });
-  const polygons = geometries.flatMap((geometry) => {
-    if (geometry === null) {
-      return [];
-    }
-    return polygonsOf(geometry);
-  });
-  if (polygons.length === 0) {
-    return null;
-  }
-  return { type: "MultiPolygon", coordinates: polygons } satisfies MultiPolygon;
-});
-
-const alertFeature = Effect.fn("alertFeature")(function* ({
-  alert,
-  geometry,
-  affectedZones,
-}: NwsAlertArea) {
-  const area = geometry ?? (yield* zonesGeometry(affectedZones));
-  return {
-    type: "Feature",
-    id: alert.id,
-    geometry: area,
-    properties: {
-      event: alert.event,
-      headline: alert.headline,
-      severity: alert.severity,
-      certainty: alert.certainty,
-      urgency: alert.urgency,
-      onset: alert.hazardWindow.start,
-      ends: alert.hazardWindow.end,
-    },
-  } satisfies AlertFeature;
-});
-
-const alertCollection = Effect.fn("alertCollection")(function* (
-  points: readonly GeoPoint[],
-) {
-  const nws = yield* NwsClient;
-  const areas = yield* Effect.forEach(points, nws.activeAlertAreas, {
-    concurrency: LIVE_REQUEST_CONCURRENCY,
-  });
-  const features = yield* Effect.forEach(
-    uniqueById(areas.flat()),
-    alertFeature,
-    { concurrency: LIVE_REQUEST_CONCURRENCY },
+function standingsByFacility(
+  latestRows: readonly (typeof recommendations.$inferSelect)[],
+  tipRows: readonly (Decision & { readonly recommendationId: number })[],
+): Map<number, Standing> {
+  const tips = new Map<number, Decision>(
+    tipRows.map(({ recommendationId, ...decision }) => [
+      recommendationId,
+      decision,
+    ]),
   );
-  return { type: "FeatureCollection", features } satisfies AlertCollection;
-});
-
-const currentAqi = Effect.fn("currentAqi")(function* (point: GeoPoint) {
-  const openMeteo = yield* OpenMeteoClient;
-  const observation = yield* openMeteo.currentAqi(point);
-  if (observation === undefined) {
-    return null;
-  }
-  return { value: observation.aqi, observedAt: observation.observedAt };
-});
-
-const liveConditions = Effect.fn("liveConditions")(function* (
-  points: readonly GeoPoint[],
-) {
-  return yield* Effect.all(
-    {
-      alerts: alertCollection(points),
-      aqi: Effect.forEach(points, currentAqi, {
-        concurrency: LIVE_REQUEST_CONCURRENCY,
-      }),
-    },
-    { concurrency: "unbounded" },
-  );
-});
-
-function liveConditionsTimeToLive(
-  exit: Exit.Exit<LiveConditions, NwsError | OpenMeteoError>,
-): Duration.Duration {
-  if (Exit.isSuccess(exit)) {
-    return LIVE_CONDITIONS_TTL;
-  }
-  return Duration.zero;
-}
-
-/** Each facility's newest live recommendation, the one `findLatestRecommendation` returns and a decision is about, and whether it has a decision. Previews never become a standing. */
-const readStandings = Effect.fn("readStandings")(function* () {
-  const db = yield* Database;
-  const latestIds = db
-    .select({ id: max(recommendations.id) })
-    .from(recommendations)
-    .where(LIVE_RECOMMENDATION)
-    .groupBy(recommendations.facilityId);
-  const [facilityRows, latestRows, decidedRows] = yield* Effect.tryPromise({
-    try: () =>
-      db.batch([
-        db
-          .select({
-            id: facilities.id,
-            name: facilities.name,
-            lat: facilities.latitude,
-            lon: facilities.longitude,
-          })
-          .from(facilities)
-          .orderBy(asc(facilities.name)),
-        db
-          .select()
-          .from(recommendations)
-          .where(inArray(recommendations.id, latestIds)),
-        db
-          .selectDistinct({ recommendationId: decisions.recommendationId })
-          .from(decisions)
-          .where(inArray(decisions.recommendationId, latestIds)),
-      ]),
-    catch: (cause) => new MapStorageError({ cause }),
-  });
-  const decided = new Set(
-    decidedRows.map(({ recommendationId }) => recommendationId),
-  );
-  const standings = new Map<number, Standing>(
+  return new Map<number, Standing>(
     latestRows.map((row) => [
       row.facilityId,
       {
@@ -247,30 +86,83 @@ const readStandings = Effect.fn("readStandings")(function* () {
         recommendationId: row.id,
         decideBy: row.decideBy,
         asOf: row.asOf,
-        decided: decided.has(row.id),
+        decision: tips.get(row.id) ?? null,
       },
     ]),
   );
+}
+
+/**
+ * Facilities by name, each with its newest live recommendation, the one `findLatestRecommendation`
+ * returns and a decision is about, and the newest decision on it. Previews never become a standing.
+ */
+async function queryStandings(db: Db): Promise<FacilityStanding[]> {
+  const latestIds = db
+    .select({ id: max(recommendations.id) })
+    .from(recommendations)
+    .where(LIVE_RECOMMENDATION)
+    .groupBy(recommendations.facilityId);
+  const tipIds = db
+    .select({ id: max(decisions.id) })
+    .from(decisions)
+    .where(inArray(decisions.recommendationId, latestIds))
+    .groupBy(decisions.recommendationId);
+  const [facilityRows, latestRows, tipRows] = await db.batch([
+    db
+      .select({
+        id: facilities.id,
+        name: facilities.name,
+        lat: facilities.latitude,
+        lon: facilities.longitude,
+      })
+      .from(facilities)
+      .orderBy(asc(facilities.name)),
+    db
+      .select()
+      .from(recommendations)
+      .where(inArray(recommendations.id, latestIds)),
+    db
+      .select({
+        recommendationId: decisions.recommendationId,
+        action: decisions.action,
+        chosenPosture: decisions.chosenPosture,
+        decidedAt: decisions.decidedAt,
+      })
+      .from(decisions)
+      .where(inArray(decisions.id, tipIds)),
+  ]);
+  const standings = standingsByFacility(latestRows, tipRows);
   return facilityRows.map((facility) => ({
     ...facility,
     standing: standings.get(facility.id) ?? { posture: "not_evaluated" },
   }));
+}
+
+const readStandings = Effect.fn("readStandings")(function* () {
+  const db = yield* Database;
+  return yield* Effect.tryPromise({
+    try: () => queryStandings(db),
+    catch: (cause) => new MapStorageError({ cause }),
+  });
 });
 
 export function createMapModule(runRequest: RunRequest) {
-  // Concurrent page loads share one pull; a different facility set is a different entry; failures are not kept.
-  const liveConditionsCache = Effect.runSync(
-    Cache.makeWith(liveConditions, {
-      capacity: LIVE_CONDITIONS_CACHE_CAPACITY,
-      timeToLive: liveConditionsTimeToLive,
-      requireServicesAt: "lookup",
-    }),
-  );
+  const liveConditionsCache = makeLiveConditionsCache();
 
   const mapRequest = Effect.fn("mapRequest")(function* () {
     const facilityStandings = yield* readStandings();
     const points = facilityStandings.map(({ lat, lon }) => ({ lat, lon }));
-    const { alerts, aqi } = yield* Cache.get(liveConditionsCache, points);
+    const live = yield* Cache.get(liveConditionsCache, points);
+    if (Option.isNone(live)) {
+      return {
+        facilities: facilityStandings.map((facility) => ({
+          ...facility,
+          aqi: null,
+        })),
+        alerts: null,
+      };
+    }
+    const { alerts, aqi } = live.value;
     return {
       facilities: facilityStandings.map((facility, index) => ({
         ...facility,

@@ -1,10 +1,14 @@
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
+import { Effect } from "effect";
 import { expect, it } from "vitest";
+import { HTTP_OK } from "../../runtime";
 import { MAP_PATH } from "./map";
 import {
+  ALERTS_DOWN,
   countingMapClients,
   STORM_ALERT,
   STORM_RING,
+  SUPERSEDING_AREAS,
   ZONE_A_RING,
   ZONE_ALERT,
   ZONE_B_RING,
@@ -19,6 +23,9 @@ import {
 } from "./recommendation-test-app";
 
 const DEMO_FACILITY_COUNT = 4;
+const KANSAS_CITY_ID = 1;
+const KANSAS_CITY_DECIDER = 1;
+const DECISIONS_PATH = "/api/recommendations/1/decisions";
 /** 61 seconds after the test app's clock, just past the 60-second live-conditions TTL. */
 const PAST_TTL = "2026-01-14T09:31:01.000Z";
 const CLEAN_AIR = { value: 40, observedAt: "2026-01-14T08:00:00.000Z" };
@@ -26,8 +33,9 @@ const NOT_EVALUATED = { posture: "not_evaluated" };
 
 function withCountingApp(
   run: (app: TestApp, alertAreaCalls: () => number) => Promise<void>,
+  areas?: Parameters<typeof countingMapClients>[0],
 ): Promise<void> {
-  const { clients, alertAreaCalls } = countingMapClients();
+  const { clients, alertAreaCalls } = countingMapClients(areas);
   return withAppOn(createTestDatabaseWithDemoFacilities, clients, (app) =>
     run(app, alertAreaCalls),
   );
@@ -62,7 +70,7 @@ it(`GET ${MAP_PATH} reports each facility's newest live recommendation, not a la
             recommendationId: 1,
             decideBy: "2026-01-14T11:00:00.000Z",
             asOf: CLOCK,
-            decided: false,
+            decision: null,
           },
         },
         {
@@ -144,4 +152,81 @@ it(`GET ${MAP_PATH} reuses live conditions within the TTL and pulls them again a
       DEMO_FACILITY_COUNT + DEMO_FACILITY_COUNT,
     ]);
   });
+});
+
+it(`GET ${MAP_PATH} reports the newest decision on a facility's recommendation`, async () => {
+  await withStormAppOn(
+    createTestDatabaseWithDemoFacilities,
+    async ({ get, post }) => {
+      await post(EVALUATE_PATH);
+      await post(DECISIONS_PATH, {
+        action: "accept",
+        decidedById: KANSAS_CITY_DECIDER,
+      });
+      await post(DECISIONS_PATH, {
+        action: "override",
+        chosenPosture: "normal",
+        decidedById: KANSAS_CITY_DECIDER,
+        supersedesDecisionId: 1,
+        reason: {
+          category: "road_reports",
+          text: "County reports the roads clear.",
+        },
+      });
+
+      const { facilities } = await (await get(MAP_PATH)).json();
+
+      expect(
+        facilities.find(({ id }: { id: number }) => id === KANSAS_CITY_ID)
+          .standing.decision,
+      ).toEqual({
+        action: "override",
+        chosenPosture: "normal",
+        decidedAt: CLOCK,
+      });
+    },
+  );
+});
+
+it(`GET ${MAP_PATH} drops alerts an Update or Cancel supersedes, and the Cancel itself`, async () => {
+  await withCountingApp(async ({ get }) => {
+    const { alerts } = await (await get(MAP_PATH)).json();
+
+    expect(alerts.features.map(({ id }: { id: string }) => id)).toEqual([
+      ZONE_ALERT.id,
+      "urn:oid:tornado-update",
+    ]);
+  }, Effect.succeed(SUPERSEDING_AREAS));
+});
+
+it(`GET ${MAP_PATH} still reports standings when the live pull fails`, async () => {
+  await withCountingApp(async ({ get }) => {
+    const response = await get(MAP_PATH);
+    const { facilities, alerts } = await response.json();
+
+    expect([
+      response.status,
+      alerts,
+      facilities.map(
+        ({
+          name,
+          aqi,
+          standing,
+        }: {
+          name: string;
+          aqi: unknown;
+          standing: unknown;
+        }) => [name, aqi, standing],
+      ),
+    ]).toEqual([
+      HTTP_OK,
+      null,
+      [
+        ["Fargo Service Center", null, NOT_EVALUATED],
+        ["Kansas City Area Service Center", null, NOT_EVALUATED],
+        ["Lafayette Service Center", null, NOT_EVALUATED],
+        ["Yakima Service Center", null, NOT_EVALUATED],
+      ],
+    ]);
+  }, Effect.fail(ALERTS_DOWN));
 });
