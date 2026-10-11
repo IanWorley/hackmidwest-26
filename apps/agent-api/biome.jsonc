@@ -11,7 +11,8 @@
       "nursery": {
         // These builders keep inferred return types. The Elysia instances are
         // route contracts, AgentApiServices is derived from the Layer that
-        // agentApiLayer returns, and the Eden client type follows the API's App.
+        // agentApiLayer returns, and step and stepSchema carry each run step's
+        // tool literal into the run log's type.
         "useExplicitReturnType": {
           "level": "error",
           "options": {
@@ -20,8 +21,10 @@
               "createApp",
               "createHealthModule",
               "createNarrateModule",
+              "createOrchestrateModule",
               "createTaskSummaryModule",
-              "createTasksApiClient"
+              "step",
+              "stepSchema"
             ]
           }
         }
@@ -30,12 +33,53 @@
   },
   "overrides": [
     {
-      // Effect service keys are classes, and runtime.ts is the one place
-      // every service key is declared and provided.
-      "includes": ["src/runtime.ts"],
+      // Effect service keys and tagged errors are classes. runtime.ts is the
+      // one place every service key is declared and provided, and
+      // api-client.ts declares the errors its ports fail with.
+      "includes": ["src/runtime.ts", "src/api-client.ts"],
       "linter": {
         "rules": {
           "style": { "noExcessiveClassesPerFile": "off" }
+        }
+      }
+    },
+    {
+      // Features reach apps/api only through the narrow ports in runtime.ts, so
+      // none can call a route the ports leave out, such as decisions or dispatch.
+      // Override options replace the root's, so `patterns` repeats the root
+      // list verbatim; test/module-boundaries.test.ts fails if it drifts.
+      "includes": ["src/features/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["../**/*/src/**", "!../**/../src/**"],
+                    "message": "Import another workspace through its package name, not a relative path into its source."
+                  },
+                  {
+                    "group": ["**/packages/*", "**/packages/*/**"],
+                    "message": "Import a shared package through its package exports, never from its folder."
+                  },
+                  {
+                    "group": ["@/**/../**"],
+                    "message": "The @/ alias reaches only the web app's src; import other workspaces through their package names."
+                  },
+                  {
+                    "group": ["**/node_modules/**"],
+                    "message": "Import packages by name, never through a node_modules path."
+                  }
+                ],
+                "paths": {
+                  "@elysiajs/eden": "Yield ClosureApi or TasksApi from ../runtime. Only src/api-client.ts holds the Eden client.",
+                  "@hackmidwest/api/contract": "Yield ClosureApi or TasksApi from ../runtime. Only src/api-client.ts holds the Eden client."
+                }
+              }
+            }
+          }
         }
       }
     },

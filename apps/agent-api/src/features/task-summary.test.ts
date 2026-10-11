@@ -1,21 +1,21 @@
 import { createServer, type RequestListener } from "node:http";
 import { describe, expect, it } from "vitest";
+import { createApiClients } from "../api-client";
 import { createApp } from "../app";
 import { templateLlm } from "../llm";
 import {
   createAgentApiRuntime,
   HTTP_INTERNAL_SERVER_ERROR,
+  HTTP_NOT_FOUND,
   HTTP_OK,
   INTERNAL_ERROR_MESSAGE,
 } from "../runtime";
-import { createTasksApiClient } from "../tasks-api";
 import { TASK_SUMMARY_PATH } from "./task-summary";
 
 const REQUEST_ORIGIN = "http://agent-api.test";
 const LOOPBACK_HOST = "127.0.0.1";
 const ANY_FREE_PORT = 0;
 const TASKS_API_LIST_PATH = "/api/tasks";
-const HTTP_NOT_FOUND = 404;
 
 interface TasksApiReply {
   readonly status: number;
@@ -42,10 +42,10 @@ async function withTasksApi(
   if (address === null || typeof address === "string") {
     throw new Error("Expected the stub tasks API to listen on a TCP port");
   }
-  const runtime = createAgentApiRuntime(
-    createTasksApiClient(`http://${LOOPBACK_HOST}:${address.port}`),
-    templateLlm,
-  );
+  const runtime = createAgentApiRuntime({
+    ...createApiClients(`http://${LOOPBACK_HOST}:${address.port}`),
+    llm: templateLlm,
+  });
   try {
     await run(createApp({ runRequest: runtime.runRequest }));
   } finally {
