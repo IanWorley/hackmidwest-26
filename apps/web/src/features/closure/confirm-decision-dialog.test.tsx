@@ -7,54 +7,73 @@ import {
 } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { ConfirmDecisionDialog } from "./confirm-decision-dialog";
+import type { DecideOutcome, DecisionRequest } from "./decision-api";
 import { PREVIEW, TIMEZONE } from "./notification-test-fixtures";
-import {
-  type ConfirmDialogState,
-  useConfirmedSubmit,
-} from "./use-confirmed-submit";
+import { useConfirmedDecision } from "./use-confirmed-decision";
 
-interface Body {
-  readonly action: "accept";
-}
+const ACCEPT: DecisionRequest = { action: "accept", decidedById: 1 };
+const OVERRIDE: DecisionRequest = {
+  action: "override",
+  chosenPosture: "full_closure",
+  decidedById: 1,
+  reason: { category: "local_conditions", text: "Water main break on site" },
+};
+const RECORDED: DecideOutcome = { kind: "recorded" };
+const OVERRIDE_NOTE =
+  "This list is for the recommended posture. The notice for your chosen posture is built after you record the decision.";
 
-const BODY: Body = { action: "accept" };
+type Record = (request: DecisionRequest) => Promise<DecideOutcome>;
 
-function requestConfirmation(submit: (body: Body) => Promise<void>): {
-  readonly current: () => ConfirmDialogState;
-} {
-  const { result } = renderHook(() => useConfirmedSubmit(submit));
-  act(() => result.current.request(BODY));
+/** Starts a submit the way the decision panel does and renders the dialog it opens. */
+function startSubmit(
+  record: Record,
+  request: DecisionRequest,
+): Promise<DecideOutcome> {
+  const { result } = renderHook(() => useConfirmedDecision(record));
+  let pending: Promise<DecideOutcome> = Promise.resolve(RECORDED);
+  act(() => {
+    pending = result.current.submitDecision(request);
+  });
   render(
     <ConfirmDecisionDialog
       {...result.current.dialogProps}
-      chosenDiffersFromRecommended={false}
       preview={PREVIEW}
       timezone={TIMEZONE}
     />,
   );
-  return { current: () => result.current.dialogProps };
+  return pending;
 }
 
-it("lists who will be notified before submitting, then submits the body once on confirm", async () => {
-  const submit = vi.fn<(body: Body) => Promise<void>>(() => Promise.resolve());
-  const dialog = requestConfirmation(submit);
+it("lists who will be notified, then records once and answers the panel on confirm", async () => {
+  const record = vi.fn<Record>(() => Promise.resolve(RECORDED));
+  const outcome = startSubmit(record, ACCEPT);
 
   expect(
     screen.getByRole("dialog", { name: "Confirm and notify" }).textContent,
   ).toContain("Grace Hopper");
-  expect(submit).not.toHaveBeenCalled();
+  expect(record).not.toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole("button", { name: "Record decision" }));
-  await vi.waitFor(() => expect(dialog.current().open).toBe(false));
-  expect(submit.mock.calls).toEqual([[BODY]]);
+
+  expect(await outcome).toEqual(RECORDED);
+  expect(record.mock.calls).toEqual([[ACCEPT]]);
 });
 
-it("submits nothing when the manager goes back", () => {
-  const submit = vi.fn<(body: Body) => Promise<void>>(() => Promise.resolve());
-  const dialog = requestConfirmation(submit);
+it("sends nothing and settles as cancelled when the manager goes back", async () => {
+  const record = vi.fn<Record>(() => Promise.resolve(RECORDED));
+  const outcome = startSubmit(record, ACCEPT);
 
   fireEvent.click(screen.getByRole("button", { name: "Back" }));
 
-  expect(dialog.current().open).toBe(false);
-  expect(submit).not.toHaveBeenCalled();
+  expect(await outcome).toEqual({ kind: "cancelled" });
+  expect(record).not.toHaveBeenCalled();
+});
+
+it("says the list is for the recommended posture when the manager overrides", async () => {
+  const outcome = startSubmit(vi.fn<Record>(), OVERRIDE);
+
+  expect(screen.getByText(OVERRIDE_NOTE).textContent).toBe(OVERRIDE_NOTE);
+
+  fireEvent.click(screen.getByRole("button", { name: "Back" }));
+  expect(await outcome).toEqual({ kind: "cancelled" });
 });

@@ -41,6 +41,8 @@ function settle(action: HumanAction, outcome: DecideOutcome): PanelState {
       return { status: "invalid", action, field: outcome.field };
     case "failed":
       return { status: "failed", action };
+    case "cancelled":
+      return { status: "deciding", action };
     default:
       return outcome satisfies never;
   }

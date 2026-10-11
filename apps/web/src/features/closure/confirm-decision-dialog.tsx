@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import type { NotificationPreview } from "./notification-api";
 import { NotificationRecipients } from "./notification-recipients";
-import type { ConfirmDialogState } from "./use-confirmed-submit";
+import type { ConfirmDialogState } from "./use-confirmed-decision";
 
 const TITLE = "Confirm and notify";
 const DESCRIPTION =
@@ -19,6 +19,8 @@ const OVERRIDE_NOTE =
   "This list is for the recommended posture. The notice for your chosen posture is built after you record the decision.";
 const CONFIRM_LABEL = "Record decision";
 const BACK_LABEL = "Back";
+const PREVIEW_UNAVAILABLE_TEXT =
+  "The notification list could not be loaded. Recording still works, and the decided package is built afterward.";
 
 function OverrideNote({ show }: { show: boolean }): JSX.Element | null {
   if (!show) {
@@ -27,18 +29,30 @@ function OverrideNote({ show }: { show: boolean }): JSX.Element | null {
   return <p className="text-muted-foreground">{OVERRIDE_NOTE}</p>;
 }
 
+function Recipients({
+  preview,
+  timezone,
+}: {
+  preview: NotificationPreview | null;
+  timezone: string;
+}): JSX.Element {
+  if (preview === null) {
+    return <p role="status">{PREVIEW_UNAVAILABLE_TEXT}</p>;
+  }
+  return <NotificationRecipients pkg={preview} timezone={timezone} />;
+}
+
 export function ConfirmDecisionDialog({
   open,
   pending,
   onConfirm,
   onCancel,
+  request,
   preview,
   timezone,
-  chosenDiffersFromRecommended,
 }: ConfirmDialogState & {
-  preview: NotificationPreview;
+  preview: NotificationPreview | null;
   timezone: string;
-  chosenDiffersFromRecommended: boolean;
 }): JSX.Element {
   const onOpenChange = useCallback(
     (next: boolean): void => {
@@ -55,8 +69,8 @@ export function ConfirmDecisionDialog({
           <DialogTitle>{TITLE}</DialogTitle>
           <DialogDescription>{DESCRIPTION}</DialogDescription>
         </DialogHeader>
-        <OverrideNote show={chosenDiffersFromRecommended} />
-        <NotificationRecipients pkg={preview} timezone={timezone} />
+        <OverrideNote show={request?.action === "override"} />
+        <Recipients preview={preview} timezone={timezone} />
         <DialogFooter>
           <Button disabled={pending} onClick={onCancel} variant="outline">
             {BACK_LABEL}

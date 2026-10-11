@@ -27,7 +27,9 @@ type DecideOutcome =
   | { readonly kind: "recorded" }
   | { readonly kind: "invalid"; readonly field: FormField }
   | { readonly kind: "conflict"; readonly conflict: Conflict }
-  | { readonly kind: "failed" };
+  | { readonly kind: "failed" }
+  /** The manager went back from the confirmation step; nothing was sent. */
+  | { readonly kind: "cancelled" };
 
 type DirectiveOutcome =
   | { readonly kind: "issued" }
