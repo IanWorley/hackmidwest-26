@@ -15,7 +15,12 @@
         "useExplicitReturnType": {
           "level": "error",
           "options": {
-            "allowedNames": ["apiLayer", "createApp", "createTasksModule"]
+            "allowedNames": [
+              "apiLayer",
+              "createApp",
+              "createNwsLiveModule",
+              "createTasksModule"
+            ]
           }
         }
       }
