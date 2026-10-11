@@ -14,16 +14,18 @@ type RecommendationRow = typeof recommendations.$inferSelect;
 type DecisionMakerRow = typeof decisionMakers.$inferSelect;
 type DecisionContent = RecordContent<DecisionRow>;
 
+const newerDecisionConflict = t.Object({
+  conflict: t.Literal("newer_decision"),
+  // Null when the recommendation has no decision yet, so there is nothing to supersede.
+  latestDecisionId: t.Nullable(t.Integer()),
+});
+
 const conflictResponse = t.Union([
   t.Object({
     conflict: t.Literal("newer_recommendation"),
     latestRecommendationId: t.Integer(),
   }),
-  t.Object({
-    conflict: t.Literal("newer_decision"),
-    // Null when the recommendation has no decision yet, so there is nothing to supersede.
-    latestDecisionId: t.Nullable(t.Integer()),
-  }),
+  newerDecisionConflict,
 ]);
 type ConflictBody = typeof conflictResponse.static;
 
@@ -196,6 +198,7 @@ export {
   conflictResponse,
   DECIDER_NOT_ELIGIBLE_MESSAGE,
   decisionBasis,
+  newerDecisionConflict,
   planDecision,
   RECOMMENDATION_NOT_FOUND,
 };

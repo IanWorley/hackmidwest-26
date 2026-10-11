@@ -19,6 +19,7 @@
               "apiLayer",
               "createApp",
               "createDecisionsModule",
+              "createDirectivesModule",
               "createFacilitiesModule",
               "createFloodLiveModule",
               "createNwsLiveModule",
