@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import type { IConfiguration } from "dependency-cruiser";
 
 // The graph contains only imports that survive compilation (`tsPreCompilationDeps: false`):
@@ -12,6 +13,10 @@ function inPackage(name: string): string {
   return `(^|node_modules/)${name}(/|$)`;
 }
 
+// Absolute, because TypeScript resolves a relative tsconfig's `extends` against the wrong directory.
+const WEB_TSCONFIG = fileURLToPath(
+  new URL("apps/web/tsconfig.json", import.meta.url),
+);
 const WORKSPACES = "^(apps|packages)/";
 const WEB_SRC = "^apps/web/src/";
 const BACKEND_APP = "apps/(?!web/)[^/]+";
@@ -139,6 +144,8 @@ export default {
   ],
   options: {
     tsPreCompilationDeps: false,
+    // Resolves the web app's `@/` alias, so web rules still see aliased imports.
+    tsConfig: { fileName: WEB_TSCONFIG },
     doNotFollow: { path: ["node_modules", BUILD_OUTPUT] },
     enhancedResolveOptions: {
       exportsFields: ["exports"],

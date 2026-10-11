@@ -13,7 +13,6 @@ interface ApiConfig {
   readonly webOrigin: string;
   readonly database: DatabaseLocation;
   readonly nwsUserAgent: string;
-  readonly airNowApiKey: string | undefined;
 }
 
 function tcpPort(name: string): z.ZodType<number, string> {
@@ -62,7 +61,6 @@ export function readApiConfig(environment: NodeJS.ProcessEnv): ApiConfig {
         error:
           "NWS_USER_AGENT must be configured; NWS requires an app name and contact",
       }),
-      AIRNOW_API_KEY: z.string().optional(),
     },
     // createEnv deletes blank keys from runtimeEnv, so it gets a copy. Bun
     // loads `KEY=` as "", which then reads as unset.
@@ -75,6 +73,5 @@ export function readApiConfig(environment: NodeJS.ProcessEnv): ApiConfig {
     webOrigin: env.WEB_ORIGIN,
     database: readDatabaseLocation(environment),
     nwsUserAgent: env.NWS_USER_AGENT,
-    airNowApiKey: env.AIRNOW_API_KEY,
   };
 }

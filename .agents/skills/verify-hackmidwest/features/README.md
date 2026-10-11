@@ -22,7 +22,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 ## Proof and skip reporting
 
 - Capture the user action and the resulting state, not only the final screen.
-- UI proof includes an ARIA snapshot and a screenshot (`snap`) with the title `Hack Midwest tasks` in the snapshot header.
+- UI proof includes an ARIA snapshot and a screenshot (`snap`) with the page title in the snapshot header (`Hack Midwest tasks` on `/`, `Tasks · Hack Midwest` on `/tasks`).
 - API proof includes the saved request, status line, headers, and body (`*.http.txt`).
 - Mutation proof includes a read-only second view: a `db` row and the item rendered on `/tasks`.
 - Name artifacts `<feature>-<step>` so each one maps back to a feature and entry point.
@@ -42,8 +42,9 @@ Keep implementation details out of the map. Name only user paths, stable handles
 
 ## Features
 
-- [Home page](./home-navigation.md) covers the landing link and client-side navigation to the task list.
+- [Home page](./home-navigation.md) covers the landing link, the header navigation, and client-side navigation to the task list.
 - [Task list](./tasks-list.md) covers the server-rendered `/tasks` page, its ordering, and completion state.
 - [Create a task](./create-task.md) covers `POST /api/tasks`, its validation, and seeing the new task on `/tasks`.
 - [Agent API](./agent-api.md) covers the separate agent API: its `GET /health` liveness and its `GET /tasks/summary` read of the tasks API over HTTP.
+- [NWS live pull](./nws-live.md) covers the temporary `GET /api/nws/live` route: a live National Weather Service pull for one point, its range validation, and its 500 outside NWS coverage.
 - [Task list load failure](./tasks-load-error.md) covers the error alert shown when the API is unreachable or its storage fails, and the API's generic 500.

@@ -2,6 +2,7 @@ import {
   AGENT_API_CRUISE_PROBES,
   AGENT_API_LINT_PROBES,
 } from "./agent-api-boundary-probes";
+import { API_INTEGRATION_TEST_LINT_PROBES } from "./api-integration-test-probes";
 import {
   type BoundaryProbe,
   DB_CONNECTION_STUB,
@@ -50,6 +51,14 @@ export const CRUISE_PROBES: readonly BoundaryProbe[] = [
     behavior: "web cannot load an Elysia subpath at runtime",
     files: { "apps/web/src/probe.ts": 'import "elysia/adapter/bun";\n' },
     violatedRules: ["web-no-server-code"],
+  },
+  {
+    behavior: "web code reached through the @/ alias is still checked",
+    files: {
+      "apps/api/src/app.ts": 'import "elysia";\n',
+      "apps/web/src/probe.ts": 'import "@/../../api/src/app";\n',
+    },
+    violatedRules: ["apps-are-independent", "web-no-server-code"],
   },
   {
     behavior: "database code cannot load an HTTP framework",
@@ -195,6 +204,26 @@ export const LINT_PROBES: readonly BoundaryProbe[] = [
     violatedRules: ["style/noRestrictedImports"],
   },
   {
+    behavior:
+      "web cannot import another workspace's source through the @/ alias",
+    files: {
+      ...API_APP_STUB,
+      "apps/web/src/probe.ts":
+        'import type { App } from "@/../../api/src/app";\nexport type Probe = App;\n',
+    },
+    violatedRules: ["style/noRestrictedImports"],
+  },
+  {
+    behavior:
+      "web cannot climb out of src through a traversal nested in an @/ path",
+    files: {
+      ...API_APP_STUB,
+      "apps/web/src/probe.ts":
+        'import type { App } from "@/features/../../../api/src/app";\nexport type Probe = App;\n',
+    },
+    violatedRules: ["style/noRestrictedImports"],
+  },
+  {
     behavior: "API code cannot import database source by relative path",
     files: {
       ...DB_SCHEMA_STUB,
@@ -263,4 +292,5 @@ export const LINT_PROBES: readonly BoundaryProbe[] = [
     violatedRules: ["style/noRestrictedGlobals"],
   },
   ...AGENT_API_LINT_PROBES,
+  ...API_INTEGRATION_TEST_LINT_PROBES,
 ];

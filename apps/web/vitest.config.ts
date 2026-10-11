@@ -6,6 +6,7 @@ import { reactPlugins } from "./react-plugins";
 export default defineProject({
   root: fileURLToPath(new URL(".", import.meta.url)),
   plugins: reactPlugins(),
+  resolve: { tsconfigPaths: true },
   test: {
     name: "web",
     environment: "jsdom",

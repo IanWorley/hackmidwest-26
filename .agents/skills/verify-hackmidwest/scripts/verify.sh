@@ -13,7 +13,7 @@ STOP_POLL_SECONDS=0.5
 LOG_TAIL_LINES=40
 HOST="localhost"
 NWS_USER_AGENT_VALUE="(verify-hackmidwest, verify@example.com)"
-APP_TITLE="Hack Midwest tasks"
+TASKS_PAGE_TITLE="Tasks · Hack Midwest"
 TASKS_API_PATH="/api/tasks"
 TASKS_PAGE_PATH="/tasks"
 AGENT_HEALTH_PATH="/health"
@@ -42,7 +42,7 @@ require_run() {
 serves_app() {
   local response
   response="$(curl -s -w '\n%{http_code}' "$1")"
-  [[ "${response##*$'\n'}" == "$2" ]] && grep -q "<title>$APP_TITLE</title>" <<< "$response"
+  [[ "${response##*$'\n'}" == "$2" ]] && grep -q "<title>$TASKS_PAGE_TITLE</title>" <<< "$response"
 }
 
 free_port() {
@@ -152,7 +152,7 @@ cmd_doctor() {
     check "GET $API_URL$TASKS_API_PATH returns a JSON array" \
       "curl -sf '$API_URL$TASKS_API_PATH' | jq -e 'type == \"array\"' > /dev/null"
   fi
-  check "GET $WEB_URL$TASKS_PAGE_PATH answers $EXPECTED_STATUS and serves '$APP_TITLE'" \
+  check "GET $WEB_URL$TASKS_PAGE_PATH answers $EXPECTED_STATUS and serves '$TASKS_PAGE_TITLE'" \
     "serves_app '$WEB_URL$TASKS_PAGE_PATH' '$EXPECTED_STATUS'"
   check "GET $AGENT_API_URL$AGENT_HEALTH_PATH answers $HTTP_STATUS_OK" \
     "[[ \"\$(curl -s -o /dev/null -w '%{http_code}' '$AGENT_API_URL$AGENT_HEALTH_PATH')\" == '$HTTP_STATUS_OK' ]]"
