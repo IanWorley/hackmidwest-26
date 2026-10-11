@@ -123,6 +123,28 @@
       }
     },
     {
+      // Label tables are keyed by status and posture names, which are
+      // snake_case domain values from the API contract.
+      "includes": ["src/features/closure/roster-filter.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "selector": { "kind": "objectLiteralProperty" },
+                    "formats": ["camelCase", "snake_case"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       // The build-time plugin list shared by vite.config.ts and
       // vitest.config.ts; its imports are build tools.
       "includes": ["react-plugins.ts"],
@@ -140,6 +162,13 @@
   ],
   "linter": {
     "rules": {
+      "performance": {
+        // React Compiler (react-plugins.ts) memoizes handlers, and CONTRIBUTING
+        // bans useCallback for performance, so inline handlers cost nothing.
+        "noJsxPropsBind": "off",
+        // A Solid rule that misreads React; restating this group re-enables it.
+        "useSolidForComponent": "off"
+      },
       "style": {
         "noRestrictedGlobals": {
           "level": "error",
@@ -179,6 +208,7 @@
               "loadHistory",
               "loadLatestRecommendation",
               "loadRecorders",
+              "loadFacilityPersonnel",
               "loadTasks"
             ]
           }
