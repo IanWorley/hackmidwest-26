@@ -8,7 +8,6 @@ import { ReadingSchema } from "./readings";
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 const facilityColumns = createSelectSchema(facilities).properties;
 
-/** Rejects unknown keys, so a stored snapshot cannot carry a field that is hashed but never returned. */
 const CLOSED = { additionalProperties: false } as const;
 
 const StageAtSchema = t.Object(

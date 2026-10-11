@@ -226,7 +226,6 @@ const RecommendationSchema = closed({
   rationale: t.String(),
 });
 
-/** What a recommendation row stores: everything the engine read and everything it returned. */
 const SnapshotSchema = closed({
   input: EngineInputSchema,
   output: RecommendationSchema,
@@ -249,12 +248,7 @@ type Equal<Left, Right> =
 
 type AssertTrue<Condition extends true> = Condition;
 
-/**
- * Fails to compile when the engine's types and this schema drift in either direction. Mutual
- * assignability would miss an added optional field, so this demands identical types. DeepMutable
- * reads the engine's non-empty tuples as arrays; `minItems` checks those at runtime.
- */
-type _SnapshotMirrorsEngine = AssertTrue<
+type _SnapshotTypeIsExactlyEngineTypes = AssertTrue<
   Equal<
     DeepMutable<{ input: EngineInput; output: Recommendation }>,
     DeepMutable<Snapshot>

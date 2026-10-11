@@ -22,13 +22,14 @@ const STORED_ROW = {
   },
 } as const satisfies RecommendationRow;
 
-/** SHA-256 of the row's content columns as canonical JSON, computed outside the codebase with sha256sum. */
-const STORED_ROW_DIGEST =
+const STORED_ROW_DIGEST_FROM_SHA256SUM =
   "042e094b54806b328237f2d6ae09c8568acc2fe33fa4caebdba988542aacd31e";
 
 describe("recommendationHash", () => {
   it("digests a stored row's content columns to a fixed SHA-256, so renaming a column cannot silently change hashes", () => {
-    expect(recommendationHash(STORED_ROW)).toBe(STORED_ROW_DIGEST);
+    expect(recommendationHash(STORED_ROW)).toBe(
+      STORED_ROW_DIGEST_FROM_SHA256SUM,
+    );
   });
 });
 

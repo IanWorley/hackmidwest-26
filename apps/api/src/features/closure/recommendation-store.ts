@@ -68,10 +68,7 @@ class RecommendationStorageError extends Data.TaggedError(
   readonly cause: unknown;
 }> {}
 
-/**
- * The one parser for a stored snapshot. It rejects any field the schema does not list, so nothing
- * is hashed that a reader cannot see. Throws a `TypeError` naming the first mismatches.
- */
+/** The one parser for a stored snapshot. Throws a `TypeError` naming the first mismatches, including any field the schema does not list. */
 function parseSnapshot(value: unknown): Snapshot {
   if (Value.Check(SnapshotSchema, value)) {
     return value;
@@ -84,7 +81,6 @@ function parseSnapshot(value: unknown): Snapshot {
   );
 }
 
-/** Digests every column except `id` and `contentHash`, matching what `GET /api/decisions/:id/verify` recomputes. */
 function recommendationHash({
   facilityId,
   evaluatedAt,
@@ -131,11 +127,13 @@ function inputEntries({ input }: Snapshot): TimelineEntry[] {
       at: input.gauge.observed?.validTime ?? input.gauge.asOf,
     });
   }
-  // One observation yields a reading per metric, all stamped alike.
-  const unique = new Map(
+  const distinctStamps = new Map(
     stamps.map((stamp) => [`${stamp.input} ${stamp.at}`, stamp]),
   );
-  return [...unique.values()].map((stamp) => ({ event: "input", ...stamp }));
+  return [...distinctStamps.values()].map((stamp) => ({
+    event: "input",
+    ...stamp,
+  }));
 }
 
 function hazardEntries({ output }: Snapshot): TimelineEntry[] {
@@ -152,7 +150,6 @@ function hazardEntries({ output }: Snapshot): TimelineEntry[] {
   ];
 }
 
-/** Every instant the record rests on, earliest first: inputs, the deciding hazard's window, and the deadline. */
 function timelineOf(
   row: RecommendationContent,
   snapshot: Snapshot,
@@ -213,7 +210,6 @@ const findRecommendation = Effect.fn("findRecommendation")(function* (
   return Option.fromNullishOr(row);
 });
 
-/** Rows are add-only and ids only grow, so the highest id is the latest evaluation. */
 const findLatestRecommendation = Effect.fn("findLatestRecommendation")(
   function* (facilityId: number) {
     const db = yield* Database;

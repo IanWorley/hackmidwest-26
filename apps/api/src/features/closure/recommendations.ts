@@ -94,21 +94,16 @@ function recommendationNotFound(): ElysiaCustomStatusResponse<
   return status(HTTP_NOT_FOUND, { message: RECOMMENDATION_NOT_FOUND_MESSAGE });
 }
 
-/** Runs the engine and parses its output through the stored schema, so what is hashed is exactly what a reader gets back. */
 function evaluateSnapshot(input: EngineInput): Snapshot {
   return parseSnapshot({ input, output: evaluatePosture(input) });
 }
 
-/**
- * Reads the clock once. An `asOf` changes only the engine's `now`; the data is pulled live and the
- * missed-deadline check uses the clock, because nobody deciding is a fact about real time.
- */
 const evaluateFacility = Effect.fn("evaluateFacility")(function* (
   facility: Facility,
   requestedAsOf: string | undefined,
 ) {
-  const now = yield* DateTime.now;
-  const evaluatedAt = DateTime.formatIso(now);
+  const clockReading = yield* DateTime.now;
+  const evaluatedAt = DateTime.formatIso(clockReading);
   let asOf = evaluatedAt;
   if (requestedAsOf !== undefined) {
     asOf = new Date(requestedAsOf).toISOString();
@@ -118,7 +113,7 @@ const evaluateFacility = Effect.fn("evaluateFacility")(function* (
   );
   const previous = yield* findLatestRecommendation(facility.id);
   if (Option.isSome(previous)) {
-    yield* recordMissedDecision(previous.value.id, now);
+    yield* recordMissedDecision(previous.value.id, clockReading);
   }
   const row = yield* insertRecommendation({
     facilityId: facility.id,
@@ -168,7 +163,6 @@ const latestRequest = Effect.fn("latestRequest")(function* (
   return toRecord(row.value);
 });
 
-/** Loads one recommendation by its decimal id and answers with `respond`, or a 404. */
 const withRecommendation = Effect.fn("withRecommendation")(function* <A>(
   decimalId: string,
   respond: (row: RecommendationRow) => A,
