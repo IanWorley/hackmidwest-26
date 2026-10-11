@@ -8,15 +8,14 @@ permissions:
   contents: read
   packages: write
 
+env:
+  TARGETS: api agent-api web
+
 jobs:
-  image:
-    name: Publish ${{ matrix.target }} image
+  images:
+    name: Build and publish images
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [api, agent-api, web]
     steps:
-      # Checked in every leg, not only web, so missing config cannot publish a partial release.
       - name: Require public web config
         env:
           PUBLIC_WEB_ORIGIN: ${{ vars.PUBLIC_WEB_ORIGIN }}
@@ -33,25 +32,39 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # metadata-action lowercases the image name, which ghcr.io requires.
-      - id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository }}-${{ matrix.target }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest
-      - uses: docker/build-push-action@v7
-        with:
-          context: .
-          target: ${{ matrix.target }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            WEB_ORIGIN=${{ vars.PUBLIC_WEB_ORIGIN }}
-            VITE_API_BASE_URL=${{ vars.PUBLIC_API_BASE_URL }}
-          cache-from: type=gha,scope=${{ matrix.target }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+      # Every image builds before any is pushed, so a failed build cannot leave
+      # latest pointing at a mix of old and new apps. The push pass reuses the
+      # builder's local cache from the build pass, so it does not rebuild.
+      - name: Build images
+        env:
+          PUBLIC_WEB_ORIGIN: ${{ vars.PUBLIC_WEB_ORIGIN }}
+          PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+        run: |
+          for target in $TARGETS; do
+            docker buildx build . --target "$target" \
+              --build-arg WEB_ORIGIN="$PUBLIC_WEB_ORIGIN" \
+              --build-arg VITE_API_BASE_URL="$PUBLIC_API_BASE_URL"
+          done
+      - name: Push images
+        env:
+          PUBLIC_WEB_ORIGIN: ${{ vars.PUBLIC_WEB_ORIGIN }}
+          PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          minor="${version%.*}"
+          major="${version%%.*}"
+          # ghcr.io rejects uppercase image names.
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}"
+          for target in $TARGETS; do
+            image="$repository-$target"
+            docker buildx build . --target "$target" --push \
+              --build-arg WEB_ORIGIN="$PUBLIC_WEB_ORIGIN" \
+              --build-arg VITE_API_BASE_URL="$PUBLIC_API_BASE_URL" \
+              --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+              --label "org.opencontainers.image.version=$version" \
+              --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              --tag "$image:$version" \
+              --tag "$image:$minor" \
+              --tag "$image:$major" \
+              --tag "$image:latest"
+          done

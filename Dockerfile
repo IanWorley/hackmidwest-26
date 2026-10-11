@@ -60,7 +60,9 @@ RUN mkdir .data && chown bun:bun .data
 VOLUME /app/.data
 USER bun
 EXPOSE ${API_PORT}
-CMD ["sh", "-c", "bun packages/db/scripts/migrate.ts && echo 'Migrations applied' && exec bun apps/api/dist/index.js"]
+# Startup never migrates. Run `bun packages/db/scripts/migrate.ts` in this image
+# as a one-shot step first; compose.yaml does that with its migrate service.
+CMD ["bun", "apps/api/dist/index.js"]
 
 FROM runtime AS agent-api
 ENV AGENT_API_PORT=3002

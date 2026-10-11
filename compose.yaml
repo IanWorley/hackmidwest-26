@@ -4,12 +4,26 @@
 # Host networking lets VITE_API_BASE_URL and TASKS_API_URL use the host's
 # public origin or localhost, and resolve the same from SSR and the browser.
 services:
+  # The one migration operator: it finishes before the API starts, and the API
+  # never migrates on its own.
+  migrate:
+    image: ghcr.io/ianworley/hackmidwest-26-api:${TAG:-latest}
+    command: ["bun", "packages/db/scripts/migrate.ts"]
+    network_mode: none
+    env_file: .env
+    volumes:
+      - api-data:/app/.data
+    restart: "no"
+
   api:
     image: ghcr.io/ianworley/hackmidwest-26-api:${TAG:-latest}
     network_mode: host
     env_file: .env
     volumes:
       - api-data:/app/.data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   agent-api:
