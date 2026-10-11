@@ -17,7 +17,11 @@ import {
   TileLayer,
   Tooltip,
 } from "react-leaflet";
-import { POSTURE_CLASSES } from "@/features/closure/posture";
+import {
+  DECISION_STATUSES,
+  effectivePosture,
+} from "@/features/closure/decision-status";
+import { POSTURE_CLASSES, POSTURE_LABELS } from "@/features/closure/posture";
 import {
   AsOfMarker,
   DecideByCountdown,
@@ -26,7 +30,15 @@ import {
 import { ALERT_SEVERITY_CLASSES } from "./alert-severity";
 import { aqiCategory } from "./aqi";
 import type { MapLayer } from "./layers";
-import type { AlertFeature, MapData, MapFacility, Standing } from "./load-map";
+import type {
+  AlertCollection,
+  AlertFeature,
+  EvaluatedStanding,
+  MapData,
+  MapFacility,
+  Standing,
+  StandingPosture,
+} from "./load-map";
 import { BASE_TILES, RADAR_TILES } from "./tiles";
 
 const MARKER_SIZE_PX = 18;
@@ -39,7 +51,7 @@ const CONTIGUOUS_US_SOUTH_LAT = 24.5;
 const CONTIGUOUS_US_WEST_LON = -125;
 const CONTIGUOUS_US_NORTH_LAT = 49.4;
 const CONTIGUOUS_US_EAST_LON = -66.9;
-const DECIDED_TEXT = "Decided";
+const RECOMMENDED_PREFIX = "Recommended:";
 const OPEN_FACILITY_PREFIX = "Open";
 const HAZARD_WINDOW_SEPARATOR = " → ";
 const AQI_SEPARATOR = " · ";
@@ -74,20 +86,52 @@ function aqiRingClass(facility: MapFacility, showAqi: boolean): string {
   return cn(AQI_RING_CLASS, aqiCategory(facility.aqi.value).ringClassName);
 }
 
-function DecisionDeadline({
-  decideBy,
-  decided,
-}: {
-  decideBy: string;
-  decided: boolean;
-}): JSX.Element {
-  if (decided) {
-    return <span className="text-xs">{DECIDED_TEXT}</span>;
+/** The posture in effect, so a pin reflects a decision that changed the recommendation. */
+function pinPosture(standing: Standing): StandingPosture {
+  if (standing.posture === "not_evaluated") {
+    return standing.posture;
   }
-  return <DecideByCountdown decideBy={decideBy} />;
+  return effectivePosture(standing);
 }
 
-function DecisionStatus({
+function RecommendedPosture({
+  standing,
+}: {
+  standing: EvaluatedStanding;
+}): JSX.Element | null {
+  if (effectivePosture(standing) === standing.posture) {
+    return null;
+  }
+  return (
+    <span className="text-muted-foreground text-xs">
+      {`${RECOMMENDED_PREFIX} ${POSTURE_LABELS[standing.posture]}`}
+    </span>
+  );
+}
+
+function DecisionDeadline({
+  standing,
+}: {
+  standing: EvaluatedStanding;
+}): JSX.Element {
+  const { decideBy, decision } = standing;
+  if (decision === null) {
+    return <DecideByCountdown decideBy={decideBy} />;
+  }
+  const { label, awaitsDecision } = DECISION_STATUSES[decision.action];
+  const statusText = <span className="text-xs">{label}</span>;
+  if (!awaitsDecision) {
+    return statusText;
+  }
+  return (
+    <>
+      {statusText}
+      <DecideByCountdown decideBy={decideBy} />
+    </>
+  );
+}
+
+function StandingDetails({
   standing,
 }: {
   standing: Standing;
@@ -97,10 +141,8 @@ function DecisionStatus({
   }
   return (
     <>
-      <DecisionDeadline
-        decideBy={standing.decideBy}
-        decided={standing.decided}
-      />
+      <RecommendedPosture standing={standing} />
+      <DecisionDeadline standing={standing} />
       <AsOfMarker asOf={standing.asOf} />
     </>
   );
@@ -131,10 +173,11 @@ function FacilityMarker({
   facility: MapFacility;
   showAqi: boolean;
 }): JSX.Element {
+  const posture = pinPosture(facility.standing);
   const icon = divIcon({
     className: cn(
       MARKER_CLASS,
-      POSTURE_CLASSES[facility.standing.posture],
+      POSTURE_CLASSES[posture],
       aqiRingClass(facility, showAqi),
     ),
     iconSize: [MARKER_SIZE_PX, MARKER_SIZE_PX],
@@ -148,8 +191,8 @@ function FacilityMarker({
       <Tooltip direction="right" offset={[LABEL_OFFSET_PX, 0]} permanent={true}>
         <div className="flex flex-col items-start gap-1">
           <span className="font-medium">{facility.name}</span>
-          <PostureBadge posture={facility.standing.posture} />
-          <DecisionStatus standing={facility.standing} />
+          <PostureBadge posture={posture} />
+          <StandingDetails standing={facility.standing} />
           <AqiText facility={facility} showAqi={showAqi} />
         </div>
       </Tooltip>
@@ -200,7 +243,7 @@ export function ConditionsMap({
   onRadarError,
 }: {
   facilities: MapData["facilities"];
-  alerts: MapData["alerts"];
+  alerts: AlertCollection | null;
   layers: readonly MapLayer[];
   onRadarError: () => void;
 }): JSX.Element {
@@ -221,7 +264,7 @@ export function ConditionsMap({
         />
       )}
       {layers.includes("alerts") &&
-        alerts.features.map((alert) => (
+        alerts?.features.map((alert) => (
           <AlertArea alert={alert} key={alert.id} />
         ))}
       {facilities.map((facility) => (
