@@ -54,7 +54,11 @@
     {
       // Label tables are keyed by posture, action, reason, and directive
       // names, which are snake_case domain values from the API contract.
-      "includes": ["src/features/closure/labels.ts"],
+      "includes": [
+        "src/features/closure/labels.ts",
+        "src/features/closure/posture-labels.ts",
+        "src/features/closure/notification-labels.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
