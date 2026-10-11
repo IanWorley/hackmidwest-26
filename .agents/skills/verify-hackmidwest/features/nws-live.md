@@ -9,6 +9,7 @@
 - `nws-live-alert-window` gives each alert a `hazardWindow` whose `endBasis` is `ends`, or `expires` when NWS gave no end time.
 - `nws-live-out-of-range` returns `422` for a latitude outside -90..90.
 - `nws-live-outside-coverage` returns `500` with body exactly `{"message":"Internal server error"}` for a point NWS does not cover.
+- `nws-live-no-storage` leaves the database unchanged; a live pull stores nothing.
 
 ## How to get to it (user POV)
 
@@ -24,6 +25,7 @@ Preconditions:
 - **Live pull.** Ask for Kansas City. Run `RUN_ID=<id> $V api nws-live-ok GET '/api/nws/live?lat=39.0997&lon=-94.5786'`. Status `200 OK`; `point` is exactly `{"lat":39.0997,"lon":-94.5786}`; `forecast` and `hourlyForecast` are non-empty arrays of periods; every `readings` entry has `"source":"nws"`, a `unit` of `degC`, `km/h`, or `m`, and a `rawRef` under `https://api.weather.gov/stations/`. `alerts` is often `[]`; when it is not, each alert has a `hazardWindow` with `start`, `end`, and `endBasis`.
 - **Out of range.** Ask for a latitude past the pole. Run `RUN_ID=<id> $V api nws-live-out-of-range GET '/api/nws/live?lat=91&lon=-94.5786'`. Status `422 Unprocessable Entity`.
 - **Outside coverage.** Ask for London. Run `RUN_ID=<id> $V api nws-live-outside-coverage GET '/api/nws/live?lat=51.5&lon=-0.12'`. Status `500`; body is exactly `{"message":"Internal server error"}`. After `down`, `dev.log` shows `NWS request failed (HTTP 404): https://api.weather.gov/points/51.5,-0.12`.
+- **Storage untouched.** After the pulls, read the tasks table. Run `RUN_ID=<id> $V db nws-live-no-storage "select id, title, completed from tasks order by id"`. Exactly one row: `1`, `Build the Hack Midwest demo`, `0`.
 
 ## Gotchas
 
