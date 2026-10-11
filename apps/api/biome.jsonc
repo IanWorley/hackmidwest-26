@@ -21,6 +21,7 @@
               "createDecisionsModule",
               "createFacilitiesModule",
               "createFloodLiveModule",
+              "createMapModule",
               "createNwsLiveModule",
               "createRecommendationsModule",
               "createTasksModule"
