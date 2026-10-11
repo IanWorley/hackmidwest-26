@@ -1,0 +1,28 @@
+# Build from source: docker compose -f compose.yaml -f compose.build.yaml up --build
+services:
+  migrate:
+    build:
+      context: .
+      target: api
+    image: hackmidwest-26-api:local
+
+  api:
+    build:
+      context: .
+      target: api
+    image: hackmidwest-26-api:local
+
+  agent-api:
+    build:
+      context: .
+      target: agent-api
+    image: hackmidwest-26-agent-api:local
+
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        WEB_ORIGIN: ${WEB_ORIGIN:?set WEB_ORIGIN in .env}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?set VITE_API_BASE_URL in .env}
+    image: hackmidwest-26-web:local
