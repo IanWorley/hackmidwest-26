@@ -1,0 +1,636 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "79a07696-2ae2-4a4a-adc5-548938ea300a",
+  "prevId": "24930990-4aa4-4235-a01c-5ce37ece7f71",
+  "tables": {
+    "building_roster_entries": {
+      "name": "building_roster_entries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "building_id": {
+          "name": "building_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "listed_name": {
+          "name": "listed_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "building_roster_entries_building_id_buildings_id_fk": {
+          "name": "building_roster_entries_building_id_buildings_id_fk",
+          "tableFrom": "building_roster_entries",
+          "tableTo": "buildings",
+          "columnsFrom": ["building_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "building_roster_entries_employee_id_employees_id_fk": {
+          "name": "building_roster_entries_employee_id_employees_id_fk",
+          "tableFrom": "building_roster_entries",
+          "tableTo": "employees",
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "buildings": {
+      "name": "buildings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "buildings_facility_id_facilities_id_fk": {
+          "name": "buildings_facility_id_facilities_id_fk",
+          "tableFrom": "buildings",
+          "tableTo": "facilities",
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "decision_makers": {
+      "name": "decision_makers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "employee_status_events": {
+      "name": "employee_status_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reported_by_id": {
+          "name": "reported_by_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reported_at": {
+          "name": "reported_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "employee_status_events_employee_id_employees_id_fk": {
+          "name": "employee_status_events_employee_id_employees_id_fk",
+          "tableFrom": "employee_status_events",
+          "tableTo": "employees",
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "employee_status_events_reported_by_id_decision_makers_id_fk": {
+          "name": "employee_status_events_reported_by_id_decision_makers_id_fk",
+          "tableFrom": "employee_status_events",
+          "tableTo": "decision_makers",
+          "columnsFrom": ["reported_by_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "employee_status_events_status": {
+          "name": "employee_status_events_status",
+          "value": "\"employee_status_events\".\"status\" in ('working_onsite', 'teleworking', 'not_working')"
+        },
+        "employee_status_events_not_working_requires_note": {
+          "name": "employee_status_events_not_working_requires_note",
+          "value": "not (\"employee_status_events\".\"status\" = 'not_working') or \"employee_status_events\".\"note\" is not null"
+        },
+        "employee_status_events_reported_at_format": {
+          "name": "employee_status_events_reported_at_format",
+          "value": "\"employee_status_events\".\"reported_at\" glob '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9][0-9][0-9]Z'"
+        },
+        "employee_status_events_effective_from_format": {
+          "name": "employee_status_events_effective_from_format",
+          "value": "\"employee_status_events\".\"effective_from\" glob '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9][0-9][0-9]Z'"
+        }
+      }
+    },
+    "employees": {
+      "name": "employees",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "assigned_building_id": {
+          "name": "assigned_building_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "mobile_phone": {
+          "name": "mobile_phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "preferred_channel": {
+          "name": "preferred_channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "essential_personnel": {
+          "name": "essential_personnel",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "telework_eligible": {
+          "name": "telework_eligible",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "accessibility_needs": {
+          "name": "accessibility_needs",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "shift_start": {
+          "name": "shift_start",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "shift_end": {
+          "name": "shift_end",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "commute_minutes": {
+          "name": "commute_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "employees_assigned_building_id_buildings_id_fk": {
+          "name": "employees_assigned_building_id_buildings_id_fk",
+          "tableFrom": "employees",
+          "tableTo": "buildings",
+          "columnsFrom": ["assigned_building_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "employees_preferred_channel": {
+          "name": "employees_preferred_channel",
+          "value": "\"employees\".\"preferred_channel\" in ('email', 'sms')"
+        },
+        "employees_sms_requires_mobile_phone": {
+          "name": "employees_sms_requires_mobile_phone",
+          "value": "not (\"employees\".\"preferred_channel\" = 'sms') or \"employees\".\"mobile_phone\" is not null"
+        },
+        "employees_shift": {
+          "name": "employees_shift",
+          "value": "(\"employees\".\"shift_start\" is null) = (\"employees\".\"shift_end\" is null) and \"employees\".\"shift_start\" glob '[0-2][0-9]:[0-5][0-9]' and \"employees\".\"shift_end\" glob '[0-2][0-9]:[0-5][0-9]' and \"employees\".\"shift_start\" < \"employees\".\"shift_end\""
+        },
+        "employees_commute_minutes_positive": {
+          "name": "employees_commute_minutes_positive",
+          "value": "\"employees\".\"commute_minutes\" > 0"
+        }
+      }
+    },
+    "facilities": {
+      "name": "facilities",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nws_zone": {
+          "name": "nws_zone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "opens_at": {
+          "name": "opens_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "closes_at": {
+          "name": "closes_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "arrival_window_start": {
+          "name": "arrival_window_start",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "arrival_window_end": {
+          "name": "arrival_window_end",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "departure_window_start": {
+          "name": "departure_window_start",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "departure_window_end": {
+          "name": "departure_window_end",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "typical_commute_minutes": {
+          "name": "typical_commute_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decision_deadline": {
+          "name": "decision_deadline",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "notification_lead_minutes": {
+          "name": "notification_lead_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decision_maker_id": {
+          "name": "decision_maker_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "backup_decision_maker_id": {
+          "name": "backup_decision_maker_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "facilities_decision_maker_id_decision_makers_id_fk": {
+          "name": "facilities_decision_maker_id_decision_makers_id_fk",
+          "tableFrom": "facilities",
+          "tableTo": "decision_makers",
+          "columnsFrom": ["decision_maker_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "facilities_backup_decision_maker_id_decision_makers_id_fk": {
+          "name": "facilities_backup_decision_maker_id_decision_makers_id_fk",
+          "tableFrom": "facilities",
+          "tableTo": "decision_makers",
+          "columnsFrom": ["backup_decision_maker_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "facilities_latitude_range": {
+          "name": "facilities_latitude_range",
+          "value": "\"facilities\".\"latitude\" between -90 and 90"
+        },
+        "facilities_longitude_range": {
+          "name": "facilities_longitude_range",
+          "value": "\"facilities\".\"longitude\" between -180 and 180"
+        },
+        "facilities_hours": {
+          "name": "facilities_hours",
+          "value": "\"facilities\".\"opens_at\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"closes_at\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"opens_at\" < \"facilities\".\"closes_at\""
+        },
+        "facilities_arrival_window": {
+          "name": "facilities_arrival_window",
+          "value": "\"facilities\".\"arrival_window_start\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"arrival_window_end\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"arrival_window_start\" < \"facilities\".\"arrival_window_end\""
+        },
+        "facilities_departure_window": {
+          "name": "facilities_departure_window",
+          "value": "\"facilities\".\"departure_window_start\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"departure_window_end\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"departure_window_start\" < \"facilities\".\"departure_window_end\""
+        },
+        "facilities_decision_deadline_format": {
+          "name": "facilities_decision_deadline_format",
+          "value": "\"facilities\".\"decision_deadline\" glob '[0-2][0-9]:[0-5][0-9]'"
+        },
+        "facilities_typical_commute_minutes_positive": {
+          "name": "facilities_typical_commute_minutes_positive",
+          "value": "\"facilities\".\"typical_commute_minutes\" > 0"
+        },
+        "facilities_notification_lead_minutes_positive": {
+          "name": "facilities_notification_lead_minutes_positive",
+          "value": "\"facilities\".\"notification_lead_minutes\" > 0"
+        },
+        "facilities_backup_differs": {
+          "name": "facilities_backup_differs",
+          "value": "\"facilities\".\"decision_maker_id\" <> \"facilities\".\"backup_decision_maker_id\""
+        }
+      }
+    },
+    "facility_hazards": {
+      "name": "facility_hazards",
+      "columns": {
+        "facility_id": {
+          "name": "facility_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hazard": {
+          "name": "hazard",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "facility_hazards_facility_id_facilities_id_fk": {
+          "name": "facility_hazards_facility_id_facilities_id_fk",
+          "tableFrom": "facility_hazards",
+          "tableTo": "facilities",
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "facility_hazards_facility_id_hazard_pk": {
+          "columns": ["facility_id", "hazard"],
+          "name": "facility_hazards_facility_id_hazard_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "facility_hazards_hazard": {
+          "name": "facility_hazards_hazard",
+          "value": "\"facility_hazards\".\"hazard\" in ('winter_storm', 'severe_wind', 'air_quality')"
+        }
+      }
+    },
+    "tasks": {
+      "name": "tasks",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "completed": {
+          "name": "completed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "tasks_title_length": {
+          "name": "tasks_title_length",
+          "value": "length(\"tasks\".\"title\") between 1 and 120"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

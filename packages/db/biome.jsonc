@@ -55,6 +55,16 @@
       }
     },
     {
+      // Drizzle marks only primaryKey's positional overload deprecated; the
+      // object form the schema uses is current, but the rule flags the import.
+      "includes": ["src/schema.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": { "noDeprecatedImports": "off" }
+        }
+      }
+    },
+    {
       // Operator CLI scripts read the environment once at startup.
       "includes": ["scripts/**"],
       "linter": {
