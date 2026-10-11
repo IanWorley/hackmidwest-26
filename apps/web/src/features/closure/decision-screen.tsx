@@ -27,13 +27,14 @@ const NO_RECOMMENDATION_TEXT =
   "No recommendation yet. Re-evaluate to pull live conditions and get one.";
 const REEVALUATE_LABEL = "Re-evaluate";
 const EVALUATING_LABEL = "Evaluating…";
+const EVALUATED_TEXT = "New recommendation loaded.";
 const EVALUATE_FAILED_TEXT =
   "Re-evaluation failed. The weather services may be unavailable; try again.";
 
 /** A deferral or a missed deadline sets no posture, so only these take directives. */
 const ACTIONS_TAKING_DIRECTIVES: readonly string[] = ["accept", "override"];
 
-type EvaluateState = "idle" | "evaluating" | "failed";
+type EvaluateState = "idle" | "evaluating" | "evaluated" | "failed";
 
 interface ScreenProps {
   readonly screen: DecisionScreen;
@@ -79,7 +80,7 @@ function ReevaluateButton({
     setState("evaluating");
     if (await evaluateFacility(facilityId)) {
       await onReload();
-      setState("idle");
+      setState("evaluated");
       return;
     }
     setState("failed");
@@ -95,6 +96,11 @@ function ReevaluateButton({
       >
         {label}
       </Button>
+      {state === "evaluated" && (
+        <p className="basis-full" role="status">
+          {EVALUATED_TEXT}
+        </p>
+      )}
       {state === "failed" && (
         <Alert className="basis-full" role="alert" variant="destructive">
           <AlertTitle>{EVALUATE_FAILED_TEXT}</AlertTitle>
