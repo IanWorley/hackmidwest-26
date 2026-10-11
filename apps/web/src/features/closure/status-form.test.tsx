@@ -149,3 +149,36 @@ it("drops a not-working reason when the person is recorded as working again", as
     });
   });
 });
+
+it("starts over from the person's new status when it changes under an open form", () => {
+  const recordStatus = vi.fn<RecordStatus>();
+  const { rerender } = render(
+    <UpdateStatusDialog
+      person={AVERY}
+      recorders={personnel([AVERY]).recorders}
+      recordStatus={recordStatus}
+    />,
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Update status for Avery Calloway" }),
+  );
+  fireEvent.change(screen.getByRole("combobox", { name: "Status" }), {
+    target: { value: "teleworking" },
+  });
+
+  const reloaded = gideonOnLeave();
+  rerender(
+    <UpdateStatusDialog
+      person={{ ...AVERY, baseline: reloaded.baseline }}
+      recorders={personnel([AVERY]).recorders}
+      recordStatus={recordStatus}
+    />,
+  );
+
+  expect(
+    screen.getByRole<HTMLSelectElement>("combobox", { name: "Status" }).value,
+  ).toBe("not_working");
+  expect(screen.getByRole("status").textContent).toBe(
+    "Avery Calloway's status changed while this form was open. The form now shows the current status.",
+  );
+});

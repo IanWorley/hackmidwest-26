@@ -36,6 +36,10 @@ const SUBMIT_TEXT = "Save status";
 const CANCEL_TEXT = "Cancel";
 const OPEN_TEXT = "Update status";
 const NO_RECORDER = "";
+const BASELINE_CHANGED_SUFFIX =
+  "'s status changed while this form was open. The form now shows the current status.";
+/** Keys the form for a person with no recorded status event yet. */
+const NO_BASELINE_EVENT = "none";
 
 function parseStatus(value: string): EmployeeStatus | undefined {
   return FORM_STATUSES.find((status) => status === value);
@@ -93,6 +97,7 @@ export function StatusForm({
   onRecorded,
   saving,
   onSavingChange,
+  baselineChanged,
 }: {
   person: Person;
   recorders: readonly Recorder[];
@@ -101,6 +106,8 @@ export function StatusForm({
   /** Owned by the dialog, which must not close while a save is in flight. */
   saving: boolean;
   onSavingChange: (saving: boolean) => void;
+  /** The person's status changed after the dialog opened, so the form was reset to it. */
+  baselineChanged: boolean;
 }): JSX.Element {
   const baseId = useId();
   const [status, setStatus] = useState<EmployeeStatus>(person.baseline.status);
@@ -134,6 +141,11 @@ export function StatusForm({
 
   return (
     <form className="grid gap-4" noValidate={true} onSubmit={submit}>
+      {baselineChanged && (
+        <p className="text-sm" role="status">
+          {`${person.name}${BASELINE_CHANGED_SUFFIX}`}
+        </p>
+      )}
       <div className="grid gap-2">
         <Label htmlFor={`${baseId}-status`}>{STATUS_LABEL}</Label>
         <NativeSelect
@@ -214,11 +226,14 @@ export function UpdateStatusDialog({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const baselineEventId = person.baseline.event?.id ?? NO_BASELINE_EVENT;
+  const [openedOn, setOpenedOn] = useState(baselineEventId);
   const title = `${OPEN_TEXT} for ${person.name}`;
   return (
     <Dialog
       onOpenChange={(next): void => {
         if (saving === false) {
+          setOpenedOn(baselineEventId);
           setOpen(next);
         }
       }}
@@ -234,7 +249,12 @@ export function UpdateStatusDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{person.email}</DialogDescription>
         </DialogHeader>
+        {/* A reload under an open form (a status taking effect, the day rolling over) can change the
+            person's status; keying by it starts the form over, so a save never builds on an old one.
+            While saving, the change is this save's own and the dialog is about to close. */}
         <StatusForm
+          baselineChanged={saving === false && openedOn !== baselineEventId}
+          key={baselineEventId}
           onRecorded={(): void => setOpen(false)}
           onSavingChange={setSaving}
           person={person}
