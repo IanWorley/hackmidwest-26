@@ -162,25 +162,31 @@ const findRecommendation = Effect.fn("findRecommendation")(function* (
   return Option.fromNullishOr(row);
 });
 
+const latestRecommendationOf = Effect.fn("latestRecommendationOf")(function* (
+  facilityId: number,
+) {
+  const db = yield* Database;
+  const [row] = yield* Effect.tryPromise({
+    try: () =>
+      db
+        .select()
+        .from(recommendations)
+        .where(eq(recommendations.facilityId, facilityId))
+        .orderBy(desc(recommendations.id))
+        .limit(1),
+    catch: (cause) =>
+      new RecommendationStorageError({ operation: "latest", cause }),
+  });
+  return Option.fromNullishOr(row);
+});
+
 const findLatestRecommendation = Effect.fn("findLatestRecommendation")(
   function* (decimalFacilityId: string) {
     const facilityId = parseDecimalId(decimalFacilityId);
     if (Option.isNone(facilityId)) {
       return Option.none();
     }
-    const db = yield* Database;
-    const [row] = yield* Effect.tryPromise({
-      try: () =>
-        db
-          .select()
-          .from(recommendations)
-          .where(eq(recommendations.facilityId, facilityId.value))
-          .orderBy(desc(recommendations.id))
-          .limit(1),
-      catch: (cause) =>
-        new RecommendationStorageError({ operation: "latest", cause }),
-    });
-    return Option.fromNullishOr(row);
+    return yield* latestRecommendationOf(facilityId.value);
   },
 );
 
@@ -189,6 +195,7 @@ export {
   findLatestRecommendation,
   findRecommendation,
   insertRecommendation,
+  latestRecommendationOf,
   RecommendationRecordSchema,
   recommendationHash,
   toRecord,
