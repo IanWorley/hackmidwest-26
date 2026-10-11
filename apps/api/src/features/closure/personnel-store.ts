@@ -16,7 +16,7 @@ import { listDirectives } from "./directive-history";
 import { parseDecimalId } from "./facilities";
 import { postureOfDecision } from "./facility-posture";
 import type { CurrentPosture, PersonnelRecords } from "./personnel-view";
-import type { Recommendation } from "./recommendation";
+import { parseSnapshot } from "./recommendation-store";
 
 type DecisionMakerRow = typeof decisionMakers.$inferSelect;
 type DecisionRow = typeof decisions.$inferSelect;
@@ -28,11 +28,6 @@ type NewestDecision = Pick<
 class PersonnelStorageError extends Data.TaggedError("PersonnelStorageError")<{
   readonly cause: unknown;
 }> {}
-
-// PENDING(#72'): replaced by the recommendation store's parseSnapshot(row.snapshot).output.
-function recommendationOf(snapshot: unknown): Recommendation {
-  return snapshot as Recommendation;
-}
 
 function recordersOf(
   db: DrizzleDatabase,
@@ -156,7 +151,7 @@ const loadPersonnelRecords = Effect.fn("loadPersonnelRecords")(function* (
   const { snapshot, chosenPosture, ...decision } = current;
   const posture: CurrentPosture = postureOfDecision(
     { action: decision.action, chosenPosture },
-    recommendationOf(snapshot),
+    parseSnapshot(snapshot).output,
   );
   return Option.some<PersonnelRecords>({
     ...records,

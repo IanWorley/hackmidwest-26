@@ -13,6 +13,7 @@ import {
   UNKNOWN_ID,
 } from "./decision-test-fixtures";
 import { evaluatePosture } from "./engine";
+import type { EngineInput } from "./engine-input";
 import {
   AFTERNOON_HOUR,
   ALL_DAY_END,
@@ -22,7 +23,7 @@ import {
   nwsAlert,
 } from "./engine-test-fixtures";
 import type { PersonnelResponse } from "./personnel-schema";
-import type { Recommendation } from "./recommendation";
+import { parseSnapshot, type Snapshot } from "./recommendation-store";
 import { contentHash, type JsonValue } from "./records";
 
 const withApp = appRunner(createTestDatabaseWithDemoFacilities);
@@ -34,14 +35,12 @@ const HANA_ACCESSIBILITY_NEEDS = 8;
 const LATER = "2026-10-02T14:00:00.000Z";
 const WIND_RELEASE_AT = "2026-01-14T17:45:00.000Z";
 const EARLIER_RELEASE_AT = "2026-01-14T16:30:00.000Z";
-const SUSTAINED_WIND_DISMISSAL = evaluatePosture(
-  input(["wind"], { forecast: forecast([...AFTERNOON_HOUR, "40 mph"]) }),
-);
-const ALL_DAY_CLOSURE = evaluatePosture(
-  input(["winter"], {
-    alerts: alerts(nwsAlert("Winter Storm Warning", "Severe", ALL_DAY_END)),
-  }),
-);
+const SUSTAINED_WIND_DISMISSAL = input(["wind"], {
+  forecast: forecast([...AFTERNOON_HOUR, "40 mph"]),
+});
+const ALL_DAY_CLOSURE = input(["winter"], {
+  alerts: alerts(nwsAlert("Winter Storm Warning", "Severe", ALL_DAY_END)),
+});
 const REASON = {
   category: "road_reports",
   text: "County reports the highway closed.",
@@ -49,19 +48,20 @@ const REASON = {
 
 const PERSONNEL_PATH = `/api/facilities/${FACILITY_ID}/personnel`;
 
-function jsonOf(recommendation: Recommendation): JsonValue {
-  return JSON.parse(JSON.stringify(recommendation));
+function jsonOf(snapshot: Snapshot): JsonValue {
+  return JSON.parse(JSON.stringify(snapshot));
 }
 
-/** Stores a recommendation for facility 1 whose snapshot is `recommendation`, and returns its id. */
+/** Stores the engine's recommendation for `engineInput` at facility 1, and returns its id. */
 async function stageRecommendation(
   db: Db,
-  recommendation: Recommendation,
+  engineInput: EngineInput,
 ): Promise<number> {
+  const output = evaluatePosture(engineInput);
   const content = {
     ...RECOMMENDATION,
-    posture: recommendation.status.posture,
-    snapshot: jsonOf(recommendation),
+    posture: output.status.posture,
+    snapshot: jsonOf(parseSnapshot({ input: engineInput, output })),
   };
   const [row] = await db
     .insert(recommendations)
