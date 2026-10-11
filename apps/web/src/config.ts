@@ -1,37 +1,65 @@
-import { Type } from "@sinclair/typebox";
-import { Value } from "@sinclair/typebox/value";
+import { createEnv, type StandardSchemaV1 } from "@t3-oss/env-core";
+import { z } from "zod";
 
-const MIN_URL_LENGTH = 1;
-const HTTP_PROTOCOL = "http:";
-const HTTPS_PROTOCOL = "https:";
+const CLIENT_PREFIX = "VITE_";
+const HTTP_PROTOCOLS: readonly string[] = ["http:", "https:"];
 const ORIGIN_PATH = "/";
-const PublicApiUrlSchema = Type.String({ minLength: MIN_URL_LENGTH });
 
 interface WebConfig {
   readonly apiBaseUrl: string;
 }
 
+/** Vite's `loadEnv` output and `import.meta.env` both satisfy this. */
+type WebEnvironment = Readonly<Record<string, string | boolean | undefined>>;
+
+// This runs in the browser, and URL.parse is newer than Vite's default target
+// (Safari 18, Chrome 126), so parse with the constructor instead.
+function parseUrl(value: string): URL | null {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+
+function isHttpOrigin(value: string): boolean {
+  const url = parseUrl(value);
+  return (
+    url !== null &&
+    HTTP_PROTOCOLS.includes(url.protocol) &&
+    url.pathname === ORIGIN_PATH &&
+    url.username === "" &&
+    url.password === "" &&
+    url.search === "" &&
+    url.hash === ""
+  );
+}
+
+function httpOrigin(name: string): z.ZodType<string, string> {
+  return z
+    .string({ error: `${name} must be configured` })
+    .refine(
+      isHttpOrigin,
+      `${name} must be an HTTP(S) origin without credentials or a path`,
+    )
+    .transform((value) => new URL(value).origin);
+}
+
+function throwConfigError(issues: readonly StandardSchemaV1.Issue[]): never {
+  throw new Error(issues.map((issue) => issue.message).join("\n"));
+}
+
 /** Accept a public HTTP origin usable by both Start SSR and browser navigation. */
-export function readWebConfig({
-  apiBaseUrl,
-}: {
-  apiBaseUrl: unknown;
-}): WebConfig {
-  if (!Value.Check(PublicApiUrlSchema, apiBaseUrl)) {
-    throw new Error("VITE_API_BASE_URL must be configured");
-  }
-  const url = new URL(apiBaseUrl);
-  if (
-    (url.protocol !== HTTP_PROTOCOL && url.protocol !== HTTPS_PROTOCOL) ||
-    url.pathname !== ORIGIN_PATH ||
-    url.username !== "" ||
-    url.password !== "" ||
-    url.search !== "" ||
-    url.hash !== ""
-  ) {
-    throw new Error(
-      "VITE_API_BASE_URL must be an HTTP(S) origin without credentials or a path",
-    );
-  }
-  return { apiBaseUrl: url.origin };
+export function readWebConfig(environment: WebEnvironment): WebConfig {
+  // No isServer: with only client variables, the server and browser branches
+  // of createEnv validate the same schema.
+  const env = createEnv({
+    clientPrefix: CLIENT_PREFIX,
+    client: { VITE_API_BASE_URL: httpOrigin("VITE_API_BASE_URL") },
+    // createEnv deletes blank keys from runtimeEnv, so it gets a copy.
+    runtimeEnv: { ...environment },
+    emptyStringAsUndefined: true,
+    onValidationError: throwConfigError,
+  });
+  return { apiBaseUrl: env.VITE_API_BASE_URL };
 }

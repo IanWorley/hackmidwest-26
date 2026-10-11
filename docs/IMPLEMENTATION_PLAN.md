@@ -105,8 +105,8 @@ apps/web/src/
 - [ ] Add to `.env.example`: `NWS_USER_AGENT` (NWS asks for a descriptive contact string),
       `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` (optional, agent API only).
 - [ ] Extend `apps/api/src/config.ts` and `apps/agent-api/src/config.ts` with the new variables, validated
-      with the same TypeBox + `Value.Check` pattern already used for ports and origins. Optional keys are
-      typed as `string | undefined`, never read elsewhere.
+      with the same t3env (`@t3-oss/env-core`) + Zod schemas already used for ports and origins. Optional
+      keys are typed as `string | undefined`, never read elsewhere.
 - [ ] Add the new feature files to the `verify-hackmidwest` feature map
       (`.agents/skills/verify-hackmidwest/features/`) as each entry point lands; AGENTS.md requires this in
       the same PR as the feature.

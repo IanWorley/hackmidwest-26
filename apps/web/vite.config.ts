@@ -24,7 +24,7 @@ function requireEnv(environment: Record<string, string>, key: string): string {
 
 export default defineConfig(({ mode }) => {
   const environment = loadEnv(mode, ROOT_ENV_DIRECTORY, "");
-  readWebConfig({ apiBaseUrl: environment.VITE_API_BASE_URL });
+  readWebConfig(environment);
   // WEB_ORIGIN is also the API's CORS origin, so the dev port has one source.
   const webPort = Number(new URL(requireEnv(environment, "WEB_ORIGIN")).port);
   return {
