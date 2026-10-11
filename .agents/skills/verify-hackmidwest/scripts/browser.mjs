@@ -82,6 +82,8 @@ async function runStep(verb, args) {
       return;
     case "press":
       await page.keyboard.press(args[0]);
+      // Widgets such as Radix roving focus move focus in a timer queued by the key; let it run before the next key, as a person's typing would.
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve)));
       return;
     case "block-api":
       await page.route(`${API_URL}/**`, (route) =>
