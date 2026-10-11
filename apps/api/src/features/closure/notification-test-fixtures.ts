@@ -1,3 +1,4 @@
+import type { EmployeeStatus } from "@hackmidwest/db";
 import type { StatusEvent } from "./baseline";
 import type { Directive, DirectiveKind, DirectiveScope } from "./directives";
 import type { Employee, FacilityPosture } from "./effective-status";
@@ -27,6 +28,7 @@ const PHONE = "+18165550111";
 const NOW = "2026-10-12T05:00:00.000Z";
 const DEFAULT_SEND_BY = "2026-10-12T09:55:00.000Z";
 const AFTER_DEFAULT_SEND_BY = "2026-10-12T10:00:00.000Z";
+const AT_WORK = "2026-10-12T12:00:00.000Z";
 const RELEASE_AFTER_START = "2026-10-12T19:00:00.000Z";
 const ARRIVAL_WINDOW_START = "2026-10-12T11:30:00.000Z";
 const FACILITY_NAME = "Kansas City Area Service Center";
@@ -76,12 +78,16 @@ function dismissedAt(effectiveAt: string): Directive {
   return directive("dismissed", undefined, effectiveAt);
 }
 
-function teleworkingSince(employeeId: number, at: string): StatusEvent {
+function statusSince(
+  employeeId: number,
+  status: EmployeeStatus,
+  at: string,
+): StatusEvent {
   return {
     id: employeeId,
     employeeId,
-    status: "teleworking",
-    note: null,
+    status,
+    note: "On approved leave.",
     reportedById: 1,
     reportedAt: at,
     effectiveFrom: at,
@@ -120,6 +126,7 @@ export type { PackageFields };
 export {
   AFTER_DEFAULT_SEND_BY,
   ARRIVAL_WINDOW_START,
+  AT_WORK,
   DECIDED,
   DEFAULT_SEND_BY,
   decidedPackage,
@@ -133,5 +140,5 @@ export {
   packageInput,
   RELEASE_AFTER_START,
   SUPERSEDING,
-  teleworkingSince,
+  statusSince,
 };
