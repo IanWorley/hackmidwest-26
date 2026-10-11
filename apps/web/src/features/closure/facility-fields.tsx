@@ -4,7 +4,7 @@ import type { Facility, Hazard } from "./load-facilities";
 
 const HOURS_SEPARATOR = "–";
 
-const HAZARD_LABELS: Record<Hazard, string> = {
+export const HAZARD_LABELS: Record<Hazard, string> = {
   winter: "Winter storm",
   wind: "High wind",
   airQuality: "Air quality",
