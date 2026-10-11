@@ -90,18 +90,22 @@ export function StatusForm({
   recorders,
   recordStatus,
   onRecorded,
+  saving,
+  onSavingChange,
 }: {
   person: Person;
   recorders: readonly Recorder[];
   recordStatus: RecordStatus;
   onRecorded: () => void;
+  /** Owned by the dialog, which must not close while a save is in flight. */
+  saving: boolean;
+  onSavingChange: (saving: boolean) => void;
 }): JSX.Element {
   const baseId = useId();
   const [status, setStatus] = useState<EmployeeStatus>(person.baseline.status);
   const [note, setNote] = useState(initialNote(person));
   const [recorderId, setRecorderId] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
-  const [saving, setSaving] = useState(false);
 
   async function submit(event: SubmitEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -109,7 +113,7 @@ export function StatusForm({
       setError(RECORDER_REQUIRED_MESSAGE);
       return;
     }
-    setSaving(true);
+    onSavingChange(true);
     try {
       const outcome = await recordStatus(
         person.employeeId,
@@ -123,7 +127,7 @@ export function StatusForm({
     } catch {
       setError(SAVE_FAILED_MESSAGE);
     } finally {
-      setSaving(false);
+      onSavingChange(false);
     }
   }
 
@@ -185,7 +189,7 @@ export function StatusForm({
       <FormError id={`${baseId}-error`} message={error} />
       <DialogFooter>
         <DialogClose asChild={true}>
-          <Button type="button" variant="outline">
+          <Button disabled={saving} type="button" variant="outline">
             {CANCEL_TEXT}
           </Button>
         </DialogClose>
@@ -208,9 +212,17 @@ export function UpdateStatusDialog({
   recordStatus: RecordStatus;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const title = `${OPEN_TEXT} for ${person.name}`;
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
+    <Dialog
+      onOpenChange={(next): void => {
+        if (saving === false) {
+          setOpen(next);
+        }
+      }}
+      open={open}
+    >
       <DialogTrigger asChild={true}>
         <Button aria-label={title} size="sm" variant="outline">
           {OPEN_TEXT}
@@ -223,9 +235,11 @@ export function UpdateStatusDialog({
         </DialogHeader>
         <StatusForm
           onRecorded={(): void => setOpen(false)}
+          onSavingChange={setSaving}
           person={person}
           recorders={recorders}
           recordStatus={recordStatus}
+          saving={saving}
         />
       </DialogContent>
     </Dialog>

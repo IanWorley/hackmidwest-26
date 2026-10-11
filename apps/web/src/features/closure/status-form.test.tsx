@@ -102,3 +102,26 @@ it("starts a not-working person's note from their current reason", () => {
     screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Note" }).value,
   ).toBe(LEAVE_NOTE);
 });
+
+it("stays open while a save is in flight", async () => {
+  openDialog(
+    AVERY,
+    vi.fn<RecordStatus>(() => new Promise<never>(() => undefined)),
+  );
+  fireEvent.change(screen.getByRole("combobox", { name: "Recorded by" }), {
+    target: { value: "1" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save status" }));
+  await waitFor(() => {
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { name: "Cancel" })
+        .disabled,
+    ).toBe(true);
+  });
+
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+
+  expect(
+    screen.getByRole("dialog", { name: "Update status for Avery Calloway" }),
+  ).toBeTruthy();
+});

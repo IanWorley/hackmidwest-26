@@ -113,7 +113,7 @@ function averyWith(
 
 it("names a scheduled status that has not started yet", () => {
   expect(formatScheduled(averyWith(SCHEDULED_LEAVE), CHICAGO)).toBe(
-    "then not working from Fri, Oct 16 14:00",
+    "then not working from Fri, Oct 16, 2026 14:00",
   );
 });
 

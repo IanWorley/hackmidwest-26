@@ -81,7 +81,7 @@ export function formatFacilityDay(facilityDate: string): string {
 }
 
 /**
- * The status a person is scheduled to move to, such as `then not working from Fri, Oct 16 14:00`.
+ * The status a person is scheduled to move to, such as `then not working from Fri, Oct 16, 2026 14:00`.
  * The baseline is the newest event already in effect, so a reported event that starts after it
  * has not started yet.
  */
@@ -105,6 +105,7 @@ export function formatScheduled(
     weekday: "short",
     month: "short",
     day: "numeric",
+    year: "numeric",
   }).format(new Date(latestEvent.effectiveFrom));
   return `${SCHEDULED_PREFIX} ${STATUS_LABELS[latestEvent.status]} from ${day} ${formatClock(latestEvent.effectiveFrom, timeZone)}`;
 }
