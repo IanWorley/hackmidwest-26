@@ -46,6 +46,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [Home page](./home-navigation.md) covers the landing links, the header navigation, and client-side navigation to the task list.
 - [Task list](./tasks-list.md) covers the server-rendered `/tasks` page, its ordering, and completion state.
 - [Facility list and detail](./facilities-list.md) covers the server-rendered `/facilities` page, the link from each row to `/facilities/<id>`, the not-found page, and `GET /api/facilities` and `GET /api/facilities/:id`.
+- [Decision screen](./decision-screen.md) covers the decision UI on `/facilities/<id>`: the live recommendation and countdown, Re-evaluate, Accept / Override / Defer with the Recorded-by select, directives, the standing decision across re-evaluation, the stale-view and failed-submit alerts, the earlier-day and backup notices, and `GET /api/facilities/:id/recorders`, `/buildings`, and `/facility-date`.
 - [Create a task](./create-task.md) covers `POST /api/tasks`, its validation, and seeing the new task on `/tasks`.
 - [Agent API](./agent-api.md) covers the separate agent API: its `GET /health` liveness and its `GET /tasks/summary` read of the tasks API over HTTP.
 - [NWS live pull](./nws-live.md) covers the temporary `GET /api/nws/live` route: a live National Weather Service pull for one point, its range validation, and its 500 outside NWS coverage.

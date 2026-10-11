@@ -11,7 +11,15 @@ const STEP_ARGS = {
   click: ["role", "name"],
   expect: ["role", "name"],
   "expect-text": ["text"],
+  "expect-focus": ["role", "name"],
+  "expect-focus-text": ["text"],
   "block-api": [],
+  "unblock-api": [],
+  fill: ["label", "text"],
+  select: ["label", "option"],
+  tab: ["name"],
+  within: ["role", "name"],
+  "within-page": [],
   snap: ["name"],
 };
 
@@ -23,25 +31,11 @@ const logFile = join(ARTIFACTS, "browser.log");
 
 const steps = parseSteps(process.argv.slice(2));
 const browser = await chromium.launch();
-const page = await browser.newPage();
-page.setDefaultTimeout(STEP_TIMEOUT_MS);
-page.on("console", (message) => {
-  if (message.type() === "error") {
-    log(`console.error ${message.text()}`);
-  }
-});
-page.on("requestfinished", async (request) => {
-  if (!request.url().startsWith(API_URL)) {
-    return;
-  }
-  const response = await request.response();
-  log(`net ${request.method()} ${request.url()} -> ${response?.status()}`);
-});
-page.on("requestfailed", (request) => {
-  log(
-    `net ${request.method()} ${request.url()} -> FAILED ${request.failure()?.errorText}`,
-  );
-});
+const pages = new Map();
+let tabName = "main";
+let page = await openTab(tabName);
+/** Where `click`, `fill`, `select`, and `expect` look; the whole page unless `within` narrowed it. */
+let scope = page;
 
 try {
   for (const [verb, ...args] of steps) {
@@ -69,38 +63,98 @@ async function runStep(verb, args) {
       await page.goto(new URL(args[0], WEB_URL).href, {
         waitUntil: "networkidle",
       });
+      scope = page;
       return;
     case "click":
-      await page.getByRole(args[0], { name: args[1], exact: true }).click();
+      await scope.getByRole(args[0], { name: args[1], exact: true }).click();
       return;
     case "expect":
-      await page.getByRole(args[0], { name: args[1], exact: true }).waitFor();
+      await scope.getByRole(args[0], { name: args[1], exact: true }).waitFor();
       return;
     case "expect-text":
       await page.getByText(args[0], { exact: true }).waitFor();
       return;
+    case "expect-focus":
+    case "expect-focus-text":
+      await expectFocus(verb, args);
+      return;
+    case "fill":
+      await scope.getByLabel(args[0], { exact: true }).fill(args[1]);
+      return;
+    case "select":
+      await scope
+        .getByLabel(args[0], { exact: true })
+        .selectOption({ label: args[1] });
+      return;
+    case "tab":
+      [tabName] = args;
+      page = pages.get(tabName) ?? (await openTab(tabName));
+      scope = page;
+      await page.bringToFront();
+      return;
+    case "within":
+      scope = page.getByRole(args[0], { name: args[1], exact: true });
+      return;
+    case "within-page":
+      scope = page;
+      return;
     case "block-api":
-      await page.route(`${API_URL}/**`, (route) =>
-        route.abort("connectionrefused"),
-      );
+    case "unblock-api":
+      await setApiBlocked(verb === "block-api");
       return;
-    case "snap": {
-      const aria = await page.locator("body").ariaSnapshot();
-      const header = `# url: ${page.url()}\n# title: ${await page.title()}\n`;
-      writeFileSync(
-        join(ARTIFACTS, `${args[0]}.aria.yml`),
-        `${header}${aria}\n`,
-      );
-      await page.screenshot({
-        path: join(ARTIFACTS, `${args[0]}.png`),
-        fullPage: true,
-      });
-      log(`  saved ${args[0]}.aria.yml ${args[0]}.png`);
+    case "snap":
+      await snap(args[0]);
       return;
-    }
     default:
       throw new Error(`unhandled step '${verb}'`);
   }
+}
+
+/**
+ * Drops the current tab's API requests as a refused connection, or lets them through again.
+ * @param {boolean} blocked
+ */
+async function setApiBlocked(blocked) {
+  const apiRequests = `${API_URL}/**`;
+  if (blocked) {
+    await page.route(apiRequests, (route) => route.abort("connectionrefused"));
+    return;
+  }
+  await page.unroute(apiRequests);
+}
+
+/**
+ * Waits for keyboard focus on an element by role and name, or on whatever element has exactly this text.
+ * @param {"expect-focus" | "expect-focus-text"} verb
+ * @param {string[]} args
+ */
+async function expectFocus(verb, args) {
+  if (verb === "expect-focus-text") {
+    await page.waitForFunction(
+      (text) => document.activeElement?.textContent?.trim() === text,
+      args[0],
+    );
+    return;
+  }
+  const target = await scope
+    .getByRole(args[0], { name: args[1], exact: true })
+    .elementHandle();
+  await page.waitForFunction(
+    (element) => element === document.activeElement,
+    target,
+  );
+}
+
+/** @param {string} name */
+async function snap(name) {
+  const aria = await page.locator("body").ariaSnapshot();
+  const header = `# url: ${page.url()}\n# title: ${await page.title()}\n`;
+  writeFileSync(join(ARTIFACTS, `${name}.aria.yml`), `${header}${aria}\n`);
+  await page.screenshot({
+    path: join(ARTIFACTS, `${name}.png`),
+    fullPage: true,
+  });
+  log(`  saved ${name}.aria.yml ${name}.png`);
 }
 
 /**
@@ -127,9 +181,48 @@ function parseSteps(argv) {
   return parsed;
 }
 
-/** @param {string} line */
-function log(line) {
-  const entry = `${new Date().toISOString()} ${line}`;
+/**
+ * A tab is a second person at another browser on the same app, so one run can stage a conflict.
+ * @param {string} name
+ */
+async function openTab(name) {
+  const tab = await browser.newPage();
+  /** @param {string} line */
+  function tabLog(line) {
+    log(line, name);
+  }
+  tab.setDefaultTimeout(STEP_TIMEOUT_MS);
+  tab.on("console", (message) => {
+    if (message.type() === "error") {
+      tabLog(`console.error ${message.text()}`);
+    }
+  });
+  tab.on("requestfinished", async (request) => {
+    if (!request.url().startsWith(API_URL)) {
+      return;
+    }
+    const response = await request.response();
+    tabLog(`net ${request.method()} ${request.url()} -> ${response?.status()}`);
+  });
+  tab.on("requestfailed", (request) => {
+    tabLog(
+      `net ${request.method()} ${request.url()} -> FAILED ${request.failure()?.errorText}`,
+    );
+  });
+  pages.set(name, tab);
+  return tab;
+}
+
+/**
+ * @param {string} line
+ * @param {string} [tab] the tab the line is about; defaults to the one steps drive
+ */
+function log(line, tab = tabName) {
+  let prefix = "";
+  if (tab !== "main") {
+    prefix = `[${tab}] `;
+  }
+  const entry = `${new Date().toISOString()} ${prefix}${line}`;
   console.log(entry);
   appendFileSync(logFile, `${entry}\n`);
 }

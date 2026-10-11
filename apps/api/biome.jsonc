@@ -21,6 +21,7 @@
               "createDecisionsModule",
               "createDirectivesModule",
               "createFacilitiesModule",
+              "createFacilityDateModule",
               "createFloodLiveModule",
               "createNwsLiveModule",
               "createRecommendationsModule",
