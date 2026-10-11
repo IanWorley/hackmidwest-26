@@ -1,5 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { expect, it, vi } from "vitest";
+import {
+  ANNEX_DISMISSAL,
+  KANSAS_CITY_ACCEPT,
+} from "../../../test/decision-fixture";
 import type {
   Building,
   DirectiveOutcome,
@@ -29,6 +34,7 @@ function renderSection(
   >(() => Promise.resolve(outcome));
   render(
     <DirectivesSection
+      {...STANDING}
       buildings={BUILDINGS}
       directives={[]}
       onReload={reloadNothing}
@@ -38,6 +44,27 @@ function renderSection(
     />,
   );
   return submitDirective;
+}
+
+const STANDING = {
+  decision: KANSAS_CITY_ACCEPT,
+  posture: "delayed_arrival",
+  isOnShownRecommendation: true,
+} as const;
+
+function sectionProps(
+  overrides: Partial<ComponentProps<typeof DirectivesSection>> = {},
+): ComponentProps<typeof DirectivesSection> {
+  return {
+    ...STANDING,
+    buildings: BUILDINGS,
+    directives: [],
+    onReload: reloadNothing,
+    recorders: RECORDERS,
+    submitDirective: () => Promise.resolve({ kind: "issued" }),
+    timeZone: "America/Chicago",
+    ...overrides,
+  };
 }
 
 function reloadNothing(): Promise<void> {
@@ -57,6 +84,7 @@ it("issues an employee directive with its reason and recorder", async () => {
   const onReload = vi.fn<() => Promise<void>>(() => Promise.resolve());
   render(
     <DirectivesSection
+      {...STANDING}
       buildings={BUILDINGS}
       directives={[]}
       onReload={onReload}
@@ -120,4 +148,94 @@ it("focuses the top-most missing field of an empty directive", async () => {
   });
   expect(document.activeElement).toBe(scope);
   expect(submitDirective).not.toHaveBeenCalled();
+});
+
+it("starts the draft over when another decision becomes current", () => {
+  const { rerender } = render(<DirectivesSection {...sectionProps()} />);
+  choose("Applies to", "building:2");
+  fireEvent.change(screen.getByRole("textbox", { name: "Reason" }), {
+    target: { value: "Drafted for the accept." },
+  });
+
+  rerender(
+    <DirectivesSection
+      {...sectionProps({ decision: { ...KANSAS_CITY_ACCEPT, id: 2 } })}
+    />,
+  );
+
+  expect(screen.getByRole("combobox", { name: "Applies to" })).toHaveProperty(
+    "value",
+    "",
+  );
+  expect(screen.getByRole("textbox", { name: "Reason" })).toHaveProperty(
+    "value",
+    "",
+  );
+});
+
+it("lists a directive's release time, reason category, and recorded issuer", () => {
+  render(
+    <DirectivesSection {...sectionProps({ directives: [ANNEX_DISMISSAL] })} />,
+  );
+
+  expect(
+    screen.getByRole("list", { name: "Issued directives" }).textContent,
+  ).toBe(
+    "Annex: Dismissed, released at Sun, Oct 11, 11:30 CDT" +
+      "Local conditions: The Annex has no heat." +
+      "Sun, Oct 11, 03:45 CDT, issued by Marcus Oyelaran, State Administrative Officer (unverified)",
+  );
+});
+
+it("gives a shared name its id so each option names one person or building", () => {
+  render(
+    <DirectivesSection
+      {...sectionProps({
+        buildings: [
+          {
+            id: 2,
+            name: "Annex",
+            employees: [
+              { id: 8, name: "Jordan Lee" },
+              { id: 9, name: "Hana Kowalczyk" },
+            ],
+          },
+          { id: 3, name: "Annex", employees: [{ id: 10, name: "Jordan Lee" }] },
+        ],
+      })}
+    />,
+  );
+
+  const labels = Array.from(
+    screen.getByRole<HTMLSelectElement>("combobox", { name: "Applies to" })
+      .options,
+    (option) => option.textContent,
+  );
+  expect(labels).toEqual([
+    "Choose…",
+    "Whole facility",
+    "Essential personnel",
+    "Annex (ID 2)",
+    "Annex (ID 3)",
+    "Jordan Lee (ID 8)",
+    "Hana Kowalczyk",
+    "Jordan Lee (ID 10)",
+  ]);
+});
+
+it("says a newer undecided recommendation leaves the standing decision in force", () => {
+  render(
+    <DirectivesSection {...sectionProps({ isOnShownRecommendation: false })} />,
+  );
+
+  expect(
+    screen.getByText(
+      "Standing decision: Accepted, Delayed arrival, recorded Sun, Oct 11, 03:40 CDT.",
+    ),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(
+      "The recommendation above is newer and nobody has decided on it, so this decision still stands.",
+    ),
+  ).toBeTruthy();
 });

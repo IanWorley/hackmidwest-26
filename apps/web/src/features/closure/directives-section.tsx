@@ -16,9 +16,11 @@ import {
 } from "@/components/ui/native-select";
 import type {
   Building,
+  Decision,
   Directive,
   DirectiveOutcome,
   DirectiveRequest,
+  Posture,
   Recorder,
 } from "./decision-api";
 import { FIELD_NAMES, type FormField, focusFieldError } from "./decision-form";
@@ -36,11 +38,21 @@ import {
   RecordedByField,
   SelectField,
 } from "./form-fields";
-import { DIRECTIVE_KIND_LABELS, labeledOptions } from "./labels";
+import { formatFacilityTime } from "./format-time";
+import {
+  ACTION_LABELS,
+  DIRECTIVE_KIND_LABELS,
+  labeledOptions,
+  POSTURE_LABELS,
+} from "./labels";
 
 const SECTION_HEADING = "Directives";
 const SECTION_INTRO =
-  "Tell a building, the essential group, or one employee to do something other than the posture says. The most specific directive wins.";
+  "Tell a building, the essential group, or one employee to do something other than the posture says. The most specific directive wins, and between two for the same people, the later one wins.";
+const STANDING_PREFIX = "Standing decision:";
+const RECORDED = "recorded";
+const NEWER_RECOMMENDATION_TEXT =
+  "The recommendation above is newer and nobody has decided on it, so this decision still stands.";
 const SCOPE_LABEL = "Applies to";
 const KIND_LABEL = "Directive";
 const SUBMIT_LABEL = "Issue directive";
@@ -136,7 +148,7 @@ function ScopeField({
       {options.employeesByBuilding.map((group) => (
         <NativeSelectOptGroup
           key={group.building.id}
-          label={`${EMPLOYEES_IN} ${group.building.name}`}
+          label={`${EMPLOYEES_IN} ${group.label}`}
         >
           <ScopeOptionList options={group.options} />
         </NativeSelectOptGroup>
@@ -162,6 +174,11 @@ function KindField(fieldProps: FieldProps): JSX.Element {
 }
 
 interface DirectivesSectionProps {
+  /** The facility's current decision, which every directive here qualifies. */
+  readonly decision: Decision;
+  readonly posture: Posture;
+  /** False after a same-day re-evaluation nobody has decided on yet. */
+  readonly isOnShownRecommendation: boolean;
   readonly directives: readonly Directive[];
   readonly buildings: readonly Building[];
   readonly recorders: readonly Recorder[];
@@ -225,10 +242,13 @@ function DirectiveForm(props: DirectivesSectionProps): JSX.Element {
       onSubmit={submit}
     >
       <SectionNotice ref={noticeRef} state={state} />
-      <ScopeField buildings={props.buildings} {...fieldProps} />
-      <KindField {...fieldProps} />
-      <ReasonFields required={true} {...fieldProps} />
-      <RecordedByField recorders={props.recorders} {...fieldProps} />
+      {/* A draft was written for one decision, so a new current decision starts it over. */}
+      <div className="space-y-4" key={props.decision.id}>
+        <ScopeField buildings={props.buildings} {...fieldProps} />
+        <KindField {...fieldProps} />
+        <ReasonFields required={true} {...fieldProps} />
+        <RecordedByField recorders={props.recorders} {...fieldProps} />
+      </div>
       <FieldError field="form" {...fieldProps} />
       <Button disabled={state.status === "submitting"} type="submit">
         {submitLabel}
@@ -245,10 +265,15 @@ export function DirectivesSection(props: DirectivesSectionProps): JSX.Element {
         {SECTION_HEADING}
       </h2>
       <p className="text-muted-foreground">{SECTION_INTRO}</p>
+      <p>
+        {`${STANDING_PREFIX} ${ACTION_LABELS[props.decision.action]}, ${POSTURE_LABELS[props.posture]}, ${RECORDED} ${formatFacilityTime(props.decision.decidedAt, props.timeZone)}.`}
+      </p>
+      {!props.isOnShownRecommendation && (
+        <p className="text-muted-foreground">{NEWER_RECOMMENDATION_TEXT}</p>
+      )}
       <DirectiveList
         buildings={props.buildings}
         directives={props.directives}
-        recorders={props.recorders}
         timeZone={props.timeZone}
       />
       <DirectiveForm {...props} />

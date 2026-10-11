@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { expect, it, vi } from "vitest";
 import type { DecideOutcome, DecisionRequest, Recorder } from "./decision-api";
 import { DecisionPanel } from "./decision-panel";
@@ -6,6 +7,10 @@ import { DecisionPanel } from "./decision-panel";
 const NOW = Date.parse("2026-10-12T08:00:00Z");
 const DECIDE_BY = "2026-10-12T10:00:00.000Z";
 const CURRENT_DECISION_ID = 7;
+const RECOMMENDATION_ID = 3;
+const NEWER_RECOMMENDATION_ID = 4;
+// Fifteen minutes before DECIDE_BY, so even the shortest re-check would land on the deadline.
+const LAST_QUARTER_HOUR = Date.parse("2026-10-12T09:45:00Z");
 const RECORDERS: Recorder[] = [
   { id: 1, name: "Dana Whitfield", role: "County Executive Director" },
   { id: 2, name: "Marcus Oyelaran", role: "State Administrative Officer" },
@@ -27,16 +32,28 @@ function renderPanel(
   const onReload = vi.fn<() => Promise<void>>(reload);
   render(
     <DecisionPanel
-      currentDecisionId={currentDecisionId}
-      decideBy={DECIDE_BY}
-      now={NOW}
-      onReload={onReload}
-      recommendedPosture="delayed_arrival"
-      recorders={RECORDERS}
-      submitDecision={submitDecision}
+      {...panelProps({ submitDecision, onReload })}
+      supersedesDecisionId={currentDecisionId}
     />,
   );
   return { submitDecision, onReload };
+}
+
+function panelProps(
+  overrides: Partial<ComponentProps<typeof DecisionPanel>> = {},
+): ComponentProps<typeof DecisionPanel> {
+  return {
+    decideBy: DECIDE_BY,
+    hasCurrentDecision: false,
+    now: NOW,
+    onReload: () => Promise.resolve(),
+    recommendationId: RECOMMENDATION_ID,
+    recommendedPosture: "delayed_arrival",
+    recorders: RECORDERS,
+    submitDecision: () => Promise.resolve({ kind: "recorded" }),
+    supersedesDecisionId: undefined,
+    ...overrides,
+  };
 }
 
 function choose(label: string, value: string): void {
@@ -189,4 +206,71 @@ it("holds the refusal notice until the reload has finished", async () => {
   expect((await screen.findByRole("alert")).textContent).toBe(
     "A newer recommendation exists.Nothing was saved. The newer recommendation is now shown above; review it before you decide.",
   );
+});
+
+it("closes an open draft when a newer recommendation loads", () => {
+  const { rerender } = render(<DecisionPanel {...panelProps()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Override" }));
+  type("Reason", "Written for the old recommendation.");
+
+  rerender(
+    <DecisionPanel
+      {...panelProps({ recommendationId: NEWER_RECOMMENDATION_ID })}
+    />,
+  );
+
+  expect(
+    screen.queryByRole("heading", { name: "Override the recommendation" }),
+  ).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Override" }));
+  expect(screen.getByRole("textbox", { name: "Reason" })).toHaveProperty(
+    "value",
+    "",
+  );
+});
+
+it("keeps the refusal notice when its reload brings the newer recommendation", async () => {
+  const props = panelProps({
+    submitDecision: () =>
+      Promise.resolve({ kind: "conflict", conflict: "newerRecommendation" }),
+    onReload: () => {
+      rerender(
+        <DecisionPanel {...props} recommendationId={NEWER_RECOMMENDATION_ID} />,
+      );
+      return Promise.resolve();
+    },
+  });
+  const { rerender } = render(<DecisionPanel {...props} />);
+  fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+  choose("Recorded by", "1");
+  fireEvent.click(screen.getByRole("button", { name: "Record acceptance" }));
+
+  expect((await screen.findByRole("alert")).textContent).toBe(
+    "A newer recommendation exists.Nothing was saved. The newer recommendation is now shown above; review it before you decide.",
+  );
+});
+
+it("offers no deferral once no re-check time fits before the deadline", () => {
+  render(<DecisionPanel {...panelProps({ now: LAST_QUARTER_HOUR })} />);
+
+  expect(screen.getByRole("button", { name: "Defer" })).toHaveProperty(
+    "disabled",
+    true,
+  );
+  expect(
+    screen.getByText(
+      "No re-check time fits before the decision deadline, so this cannot be deferred.",
+    ),
+  ).toBeTruthy();
+});
+
+it("disables Record deferral when the deadline closes in on an open deferral", () => {
+  const { rerender } = render(<DecisionPanel {...panelProps()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Defer" }));
+
+  rerender(<DecisionPanel {...panelProps({ now: LAST_QUARTER_HOUR })} />);
+
+  expect(
+    screen.getByRole("button", { name: "Record deferral" }),
+  ).toHaveProperty("disabled", true);
 });

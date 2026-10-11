@@ -20,7 +20,8 @@ type PanelEvent =
   | { readonly type: "cancel" }
   | { readonly type: "submit" }
   | { readonly type: "reject"; readonly field: FormField }
-  | { readonly type: "settle"; readonly outcome: DecideOutcome };
+  | { readonly type: "settle"; readonly outcome: DecideOutcome }
+  | { readonly type: "recommendationChanged" };
 
 const INITIAL_PANEL_STATE: PanelState = { status: "viewing" };
 
@@ -68,6 +69,9 @@ function panelReducer(state: PanelState, event: PanelEvent): PanelState {
       return { status: "invalid", action, field: event.field };
     case "settle":
       return settle(action, event.outcome);
+    // A draft was written against the old recommendation, so it closes; a notice about the last submit stays true.
+    case "recommendationChanged":
+      return INITIAL_PANEL_STATE;
     default:
       return event satisfies never;
   }

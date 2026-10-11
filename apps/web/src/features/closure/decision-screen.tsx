@@ -10,12 +10,14 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DecideByCountdown } from "./decide-by-countdown";
 import {
+  type Decision,
   type DecisionRequest,
   type DecisionScreen,
   type DirectiveRequest,
   decide,
   evaluateFacility,
   issueDirective,
+  type Posture,
   type Recommendation,
 } from "./decision-api";
 import { BackupNotice, DecisionHistory } from "./decision-history";
@@ -41,9 +43,6 @@ const EARLIER_DAY_PREFIX = "This recommendation is for";
 const EARLIER_DAY_SUFFIX = "Re-evaluate for today.";
 const EVALUATE_FAILED_TEXT =
   "Re-evaluation failed. The recommendation shown is unchanged; try again.";
-
-/** A deferral or a missed deadline sets no posture, so only these take directives. */
-const ACTIONS_TAKING_DIRECTIVES: readonly string[] = ["accept", "override"];
 
 type EvaluateState = "idle" | "evaluating" | "evaluated" | "failed";
 
@@ -203,13 +202,15 @@ function RecommendationDecision({
 
   return (
     <DecisionPanel
-      currentDecisionId={screen.currentDecision?.id}
       decideBy={recommendation.decideBy}
+      hasCurrentDecision={screen.currentDecision !== null}
       now={now}
       onReload={onReload}
+      recommendationId={recommendation.id}
       recommendedPosture={recommendation.posture}
       recorders={screen.recorders}
       submitDecision={submitDecision}
+      supersedesDecisionId={screen.latestDecisionId}
     />
   );
 }
@@ -217,17 +218,26 @@ function RecommendationDecision({
 function CurrentDirectives({
   screen,
   onReload,
-  decisionId,
-}: ScreenProps & { readonly decisionId: number }): JSX.Element {
+  decision,
+  posture,
+}: ScreenProps & {
+  readonly decision: Decision;
+  readonly posture: Posture;
+}): JSX.Element {
   const submitDirective = useCallback(
     (request: DirectiveRequest): ReturnType<typeof issueDirective> =>
-      issueDirective(decisionId, request),
-    [decisionId],
+      issueDirective(decision.id, request),
+    [decision.id],
   );
 
   return (
     <DirectivesSection
       buildings={screen.buildings}
+      decision={decision}
+      isOnShownRecommendation={
+        decision.recommendationId === screen.latestRecommendation?.id
+      }
+      posture={posture}
       directives={screen.directives}
       onReload={onReload}
       recorders={screen.recorders}
@@ -243,6 +253,16 @@ export function DecisionScreenView({
 }: ScreenProps): JSX.Element {
   const now = useNow(screen.loadedAt);
   const { facility, latestRecommendation, currentDecision, history } = screen;
+
+  // Past closing time the facility day, and with it what is decidable, changes, so the loader runs again.
+  useEffect(() => {
+    const timer = setTimeout(
+      onReload,
+      Date.parse(screen.rollsOverAt) - Date.now(),
+    );
+    return (): void => clearTimeout(timer);
+  }, [screen.rollsOverAt, onReload]);
+
   return (
     <article className="space-y-8">
       <div className="space-y-4">
@@ -260,14 +280,14 @@ export function DecisionScreenView({
             screen={screen}
           />
         )}
-      {currentDecision !== null &&
-        ACTIONS_TAKING_DIRECTIVES.includes(currentDecision.action) && (
-          <CurrentDirectives
-            decisionId={currentDecision.id}
-            onReload={onReload}
-            screen={screen}
-          />
-        )}
+      {currentDecision !== null && currentDecision.chosenPosture !== null && (
+        <CurrentDirectives
+          decision={currentDecision}
+          onReload={onReload}
+          posture={currentDecision.chosenPosture}
+          screen={screen}
+        />
+      )}
       <DecisionHistory history={history} timeZone={facility.timezone} />
     </article>
   );
