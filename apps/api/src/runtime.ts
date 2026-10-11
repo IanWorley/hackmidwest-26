@@ -1,6 +1,7 @@
 import type { Database as DrizzleDatabase } from "@hackmidwest/db";
 import { Context, Effect, Layer, ManagedRuntime } from "effect";
 import { type ElysiaCustomStatusResponse, status, t } from "elysia";
+import type { AirNowClientShape } from "./clients/airnow";
 import type { NwsClientShape } from "./clients/nws";
 
 type InternalServerFailure = ElysiaCustomStatusResponse<
@@ -11,12 +12,14 @@ type InternalServerFailure = ElysiaCustomStatusResponse<
 /** Outbound API clients the process builds once and every request shares. */
 interface ApiClients {
   readonly nws: NwsClientShape;
+  readonly airNow: AirNowClientShape;
 }
 
 function apiLayer(db: DrizzleDatabase, clients: ApiClients) {
   return Layer.mergeAll(
     Layer.succeed(Database, db),
     Layer.succeed(NwsClient, clients.nws),
+    Layer.succeed(AirNowClient, clients.airNow),
   );
 }
 
@@ -27,6 +30,11 @@ export class Database extends Context.Service<Database, DrizzleDatabase>()(
 export class NwsClient extends Context.Service<NwsClient, NwsClientShape>()(
   "@hackmidwest/api/NwsClient",
 ) {}
+
+export class AirNowClient extends Context.Service<
+  AirNowClient,
+  AirNowClientShape
+>()("@hackmidwest/api/AirNowClient") {}
 
 export const HTTP_OK = 200;
 export const HTTP_INTERNAL_SERVER_ERROR = 500;

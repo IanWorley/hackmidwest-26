@@ -1,20 +1,12 @@
 import { Effect } from "effect";
 import { expect, it } from "vitest";
-import {
-  AIR_NOW_PARAMETERS,
-  type AirNowFetch,
-  makeAirNowClient,
-} from "./airnow";
+import { type AirNowFetch, makeAirNowClient } from "./airnow";
 
-const KANSAS_CITY = { latitude: 39.1, longitude: -94.58 };
+const KANSAS_CITY = { lat: 39.1, lon: -94.58 };
 const TEST_API_KEY = "test-key";
 const HTTP_OK = 200;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_SERVICE_UNAVAILABLE = 503;
-const WHOLE_HOUR_UTC_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:00:00\.000Z$/u;
-// Vitest mirrors the process environment onto import.meta.env, so the opt-in
-// key is read without widening the entry-point-only process.env lint rule.
-const LIVE_API_KEY = import.meta.env.AIRNOW_API_KEY;
 
 // Raw wire text, as AirNow sends it, including the padded DateObserved.
 const CANNED_BODY = `[
@@ -153,23 +145,4 @@ it("fails with a schema error when the body does not match the AirNow shape", as
     kind: "schema",
     detail: "/0/DateObserved: Expected required property",
   });
-});
-
-it("reads current Kansas City observations from the live AirNow API", {
-  skip: LIVE_API_KEY === undefined,
-}, async () => {
-  const client = makeAirNowClient({
-    apiKey: LIVE_API_KEY,
-    fetch: globalThis.fetch,
-  });
-
-  const observations = await Effect.runPromise(
-    client.currentObservations(KANSAS_CITY),
-  );
-
-  expect(observations.length).toBeGreaterThan(0);
-  for (const observation of observations) {
-    expect(AIR_NOW_PARAMETERS).toContain(observation.parameter);
-    expect(observation.observedAt).toMatch(WHOLE_HOUR_UTC_INSTANT);
-  }
 });

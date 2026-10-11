@@ -141,7 +141,7 @@ apps/web/src/
       typed error rather than deep inside the engine.
 - [ ] Normalize into one `Reading` type (`features/closure/readings.ts`):
       `{ source, observedAt, metric, value, unit, rawRef }`.
-- [ ] Supplementary signal: `AirNowClient` with the same service/stub pattern, producing AQI `Reading`s.
+- [x] Supplementary signal: `AirNowClient` with the same service/stub pattern, producing AQI `Reading`s.
       State DOT road conditions stay optional.
 
 **Why these fields matter:** NWS `severity` (Extreme/Severe/Moderate/Minor), `certainty`
@@ -479,4 +479,7 @@ a web page (Step 7.1), an agent API feature (Step 8), and verify recipes (Step 1
 
 - `docs/steering/*.md` still describe a Python layout. They should be rewritten to match this plan in a
   follow-up so Kiro and other agents stop reading the old structure.
-- Supplementary signal: AirNow (needs a free key) or a keyless source? AirNow is assumed above.
+- Supplementary signal: **decided, AirNow** (#20). AirNow is EPA's monitor-observed AQI, the same scale
+  the air-quality cutoffs in Step 5 are defined on. The keyless alternative, Open-Meteo, returns a modeled
+  (CAMS forecast) US AQI rather than observations. Without `AIRNOW_API_KEY` the client yields no readings
+  and the engine lowers confidence. Swapping to Open-Meteo later only touches `clients/airnow.ts`.

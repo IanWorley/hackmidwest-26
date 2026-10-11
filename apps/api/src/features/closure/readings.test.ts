@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { observationReadings } from "./readings";
+import { airQualityReadings, observationReadings } from "./readings";
 
 const OBSERVATION_URL =
   "https://api.weather.gov/stations/KMKC/observations/2026-10-11T00:30:00+00:00";
@@ -31,6 +31,30 @@ it("normalizes known units and skips null values and unknown unit codes", () => 
       value: 16.668,
       unit: "km/h",
       rawRef: OBSERVATION_URL,
+    },
+  ]);
+});
+
+it("turns each AirNow pollutant observation into an AQI reading", () => {
+  const readings = airQualityReadings([
+    {
+      parameter: "PM2.5",
+      aqi: 158,
+      category: "Unhealthy",
+      reportingArea: "Kansas City",
+      observedAt: "2026-10-11T00:00:00.000Z",
+      rawRef: "airnow:Kansas City:PM2.5:2026-10-11T00:00:00.000Z",
+    },
+  ]);
+
+  expect(readings).toEqual([
+    {
+      source: "airnow",
+      observedAt: "2026-10-11T00:00:00.000Z",
+      metric: "aqi",
+      value: 158,
+      unit: "AQI",
+      rawRef: "airnow:Kansas City:PM2.5:2026-10-11T00:00:00.000Z",
     },
   ]);
 });

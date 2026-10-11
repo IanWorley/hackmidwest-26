@@ -1,6 +1,7 @@
 import { createTestDatabase } from "@hackmidwest/db/testing";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app";
+import { makeAirNowClient } from "../clients/airnow";
 import { makeNwsClient } from "../clients/nws";
 import {
   createApiRuntime,
@@ -21,6 +22,7 @@ async function withApp(
   const store = await createTestDatabase();
   const runtime = createApiRuntime(store.db, {
     nws: makeNwsClient({ userAgent: "tasks test, never sent" }),
+    airNow: makeAirNowClient({ apiKey: undefined, fetch: globalThis.fetch }),
   });
   try {
     await run(

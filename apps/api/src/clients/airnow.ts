@@ -1,6 +1,7 @@
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
-import { Cause, Context, Data, Effect, Schedule } from "effect";
+import { Cause, Data, Effect, Schedule } from "effect";
+import type { GeoPoint } from "./nws-model";
 
 const AIR_NOW_OBSERVATIONS_URL =
   "https://www.airnowapi.org/aq/observation/latLong/current/";
@@ -75,19 +76,9 @@ type ObservationsEffect = Effect.Effect<
   AirNowError
 >;
 
-interface GeoPoint {
-  readonly latitude: number;
-  readonly longitude: number;
-}
-
 interface AirNowClientShape {
   readonly currentObservations: (point: GeoPoint) => ObservationsEffect;
 }
-
-// Function-style key because the strict lint config allows one class per file.
-const AirNowClient = Context.Service<AirNowClientShape>(
-  "@hackmidwest/api/AirNowClient",
-);
 
 /** The slice of `fetch` the client uses, so tests can pass a plain function. */
 type AirNowFetch = (
@@ -120,8 +111,8 @@ function schemaError(detail: string): AirNowError {
 function observationsUrl(point: GeoPoint, apiKey: string): URL {
   const url = new URL(AIR_NOW_OBSERVATIONS_URL);
   url.searchParams.set("format", RESPONSE_FORMAT);
-  url.searchParams.set("latitude", String(point.latitude));
-  url.searchParams.set("longitude", String(point.longitude));
+  url.searchParams.set("latitude", String(point.lat));
+  url.searchParams.set("longitude", String(point.lon));
   url.searchParams.set("distance", String(SEARCH_RADIUS_MILES));
   url.searchParams.set("API_KEY", apiKey);
   return url;
@@ -246,6 +237,5 @@ export type {
   AirNowFetch,
   AirNowObservation,
   AirNowParameter,
-  GeoPoint,
 };
-export { AIR_NOW_PARAMETERS, AirNowClient, AirNowError, makeAirNowClient };
+export { AIR_NOW_PARAMETERS, AirNowError, makeAirNowClient };

@@ -2,6 +2,7 @@ import { createTestDatabase } from "@hackmidwest/db/testing";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app";
+import { makeAirNowClient } from "../clients/airnow";
 import { type NwsClientShape, NwsError } from "../clients/nws";
 import {
   createApiRuntime,
@@ -61,7 +62,10 @@ const outsideCoverage: NwsClientShape = {
 
 async function getLive(nws: NwsClientShape, query: string): Promise<Response> {
   const store = await createTestDatabase();
-  const runtime = createApiRuntime(store.db, { nws });
+  const runtime = createApiRuntime(store.db, {
+    nws,
+    airNow: makeAirNowClient({ apiKey: undefined, fetch: globalThis.fetch }),
+  });
   try {
     const app = createApp({
       runRequest: runtime.runRequest,

@@ -1,6 +1,7 @@
 import process from "node:process";
 import { openDatabase } from "@hackmidwest/db/connection";
 import { createApp } from "./app";
+import { makeAirNowClient } from "./clients/airnow";
 import { makeNwsClient } from "./clients/nws";
 import { readApiConfig } from "./config";
 import { createApiRuntime } from "./runtime";
@@ -9,6 +10,10 @@ const config = readApiConfig(process.env);
 const store = openDatabase(config.database);
 const runtime = createApiRuntime(store.db, {
   nws: makeNwsClient({ userAgent: config.nwsUserAgent }),
+  airNow: makeAirNowClient({
+    apiKey: config.airNowApiKey,
+    fetch: globalThis.fetch,
+  }),
 });
 const app = createApp({
   runRequest: runtime.runRequest,
