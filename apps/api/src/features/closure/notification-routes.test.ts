@@ -94,6 +94,9 @@ const KANSAS_CITY_RECIPIENT_IDS = Array.from(
   (_, index) => index + 1,
 ).filter((id) => !STAYING_AWAY_IDS.includes(id));
 
+const EXCUSED_EMPLOYEE_ID = 1;
+const DECIDER_ID = 1;
+
 function employeeIds(recipients: readonly { employeeId: number }[]): number[] {
   return recipients.map(({ employeeId }) => employeeId);
 }
@@ -117,6 +120,41 @@ it("previews who the recommendation would notify without recording a dispatch", 
       { posture: "full_closure" },
       KANSAS_CITY_RECIPIENT_IDS,
       0,
+    ]);
+  });
+});
+
+it("leaves out an employee a stored directive excuses", async () => {
+  await withApp(async ({ db, request }) => {
+    await recommend(db, STORM);
+    await request(decide(NEWER_RECOMMENDATION_ID), ACCEPT);
+    await request(`/api/decisions/${FIRST_DECISION_ID}/directives`, {
+      scope: { kind: "employee", employeeId: EXCUSED_EMPLOYEE_ID },
+      directive: "excused",
+      reason: {
+        category: "other",
+        text: "Approved leave for a family emergency.",
+      },
+      issuedById: DECIDER_ID,
+    });
+
+    const body = await (await request(notifications())).json();
+
+    expect([
+      employeeIds(body.package.recipients),
+      body.package.exclusions.filter(
+        ({ kind }: { kind: string }) => kind === "excused",
+      ),
+    ]).toEqual([
+      KANSAS_CITY_RECIPIENT_IDS.filter((id) => id !== EXCUSED_EMPLOYEE_ID),
+      [
+        {
+          kind: "excused",
+          employeeId: EXCUSED_EMPLOYEE_ID,
+          name: "Avery Calloway",
+          reason: "Approved leave for a family emergency.",
+        },
+      ],
     ]);
   });
 });
