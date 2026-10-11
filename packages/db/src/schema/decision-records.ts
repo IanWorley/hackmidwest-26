@@ -44,6 +44,9 @@ export const ACTIONS_WITH_CHOSEN_POSTURE = [
   "accept",
   "override",
 ] as const satisfies readonly DecisionAction[];
+export const ACTIONS_WITH_RECHECK = [
+  "defer",
+] as const satisfies readonly DecisionAction[];
 export const ACTIONS_REQUIRING_REASON = [
   "override",
   "defer",
@@ -123,6 +126,7 @@ export const decisions = sqliteTable(
     }).notNull(),
     reasonCategory: text("reason_category", { enum: REASON_CATEGORIES }),
     reasonText: text("reason_text"),
+    recheckAt: text("recheck_at"),
     supersedesDecisionId: integer("supersedes_decision_id").references(
       (): AnySQLiteColumn => decisions.id,
     ),
@@ -154,6 +158,10 @@ export const decisions = sqliteTable(
     check(
       "decisions_reason_pair",
       sql`(${table.reasonCategory} is null) = (${table.reasonText} is null) and (${table.reasonCategory} is null or ${inArray(table.reasonCategory, REASON_CATEGORIES)} and ${isNonBlank(table.reasonText)})`.inlineParams(),
+    ),
+    check(
+      "decisions_recheck_at",
+      sql`(${table.recheckAt} is not null) = (${inArray(table.action, ACTIONS_WITH_RECHECK)}) and ${isUtcInstant(table.recheckAt)}`.inlineParams(),
     ),
     check(
       "decisions_override_and_defer_require_reason",

@@ -1,0 +1,1210 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "613ba4b2-5efa-43a6-adef-3e8956d053bc",
+  "prevId": "2b81f2a9-ec1e-4100-9cdf-154bbcc1ee52",
+  "tables": {
+    "building_roster_entries": {
+      "name": "building_roster_entries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "building_id": {
+          "name": "building_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "listed_name": {
+          "name": "listed_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "building_roster_entries_building_id_buildings_id_fk": {
+          "name": "building_roster_entries_building_id_buildings_id_fk",
+          "tableFrom": "building_roster_entries",
+          "tableTo": "buildings",
+          "columnsFrom": ["building_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "building_roster_entries_employee_id_employees_id_fk": {
+          "name": "building_roster_entries_employee_id_employees_id_fk",
+          "tableFrom": "building_roster_entries",
+          "tableTo": "employees",
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "building_roster_entries_listed_name_not_blank": {
+          "name": "building_roster_entries_listed_name_not_blank",
+          "value": "trim(\"building_roster_entries\".\"listed_name\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        }
+      }
+    },
+    "buildings": {
+      "name": "buildings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "buildings_facility_id_facilities_id_fk": {
+          "name": "buildings_facility_id_facilities_id_fk",
+          "tableFrom": "buildings",
+          "tableTo": "facilities",
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "buildings_name_not_blank": {
+          "name": "buildings_name_not_blank",
+          "value": "trim(\"buildings\".\"name\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        }
+      }
+    },
+    "decision_makers": {
+      "name": "decision_makers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "decision_makers_name_not_blank": {
+          "name": "decision_makers_name_not_blank",
+          "value": "trim(\"decision_makers\".\"name\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "decision_makers_role_not_blank": {
+          "name": "decision_makers_role_not_blank",
+          "value": "trim(\"decision_makers\".\"role\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "decision_makers_email_not_blank": {
+          "name": "decision_makers_email_not_blank",
+          "value": "trim(\"decision_makers\".\"email\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        }
+      }
+    },
+    "decisions": {
+      "name": "decisions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "recommendation_id": {
+          "name": "recommendation_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "recommendation_hash": {
+          "name": "recommendation_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "chosen_posture": {
+          "name": "chosen_posture",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "decided_by_id": {
+          "name": "decided_by_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decided_by_name": {
+          "name": "decided_by_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decided_by_role": {
+          "name": "decided_by_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "identity_verified": {
+          "name": "identity_verified",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reason_category": {
+          "name": "reason_category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reason_text": {
+          "name": "reason_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recheck_at": {
+          "name": "recheck_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "supersedes_decision_id": {
+          "name": "supersedes_decision_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "decisions_one_root_per_recommendation": {
+          "name": "decisions_one_root_per_recommendation",
+          "columns": ["recommendation_id"],
+          "isUnique": true,
+          "where": "\"decisions\".\"supersedes_decision_id\" is null"
+        },
+        "decisions_one_successor": {
+          "name": "decisions_one_successor",
+          "columns": ["supersedes_decision_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "decisions_recommendation_id_recommendations_id_fk": {
+          "name": "decisions_recommendation_id_recommendations_id_fk",
+          "tableFrom": "decisions",
+          "tableTo": "recommendations",
+          "columnsFrom": ["recommendation_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "decisions_facility_id_facilities_id_fk": {
+          "name": "decisions_facility_id_facilities_id_fk",
+          "tableFrom": "decisions",
+          "tableTo": "facilities",
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "decisions_decided_by_id_decision_makers_id_fk": {
+          "name": "decisions_decided_by_id_decision_makers_id_fk",
+          "tableFrom": "decisions",
+          "tableTo": "decision_makers",
+          "columnsFrom": ["decided_by_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "decisions_supersedes_decision_id_decisions_id_fk": {
+          "name": "decisions_supersedes_decision_id_decisions_id_fk",
+          "tableFrom": "decisions",
+          "tableTo": "decisions",
+          "columnsFrom": ["supersedes_decision_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "decisions_decided_by_name_not_blank": {
+          "name": "decisions_decided_by_name_not_blank",
+          "value": "trim(\"decisions\".\"decided_by_name\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "decisions_decided_by_role_not_blank": {
+          "name": "decisions_decided_by_role_not_blank",
+          "value": "trim(\"decisions\".\"decided_by_role\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "decisions_recommendation_hash_sha256": {
+          "name": "decisions_recommendation_hash_sha256",
+          "value": "length(\"decisions\".\"recommendation_hash\") = 64 and \"decisions\".\"recommendation_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "decisions_action": {
+          "name": "decisions_action",
+          "value": "\"decisions\".\"action\" in ('accept', 'override', 'defer', 'no_decision')"
+        },
+        "decisions_chosen_posture": {
+          "name": "decisions_chosen_posture",
+          "value": "(\"decisions\".\"chosen_posture\" is not null) = (\"decisions\".\"action\" in ('accept', 'override')) and (\"decisions\".\"chosen_posture\" is null or \"decisions\".\"chosen_posture\" in ('normal', 'delayed_arrival', 'early_dismissal', 'unscheduled_telework', 'full_closure'))"
+        },
+        "decisions_decided_at_format": {
+          "name": "decisions_decided_at_format",
+          "value": "\"decisions\".\"decided_at\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"decisions\".\"decided_at\"))"
+        },
+        "decisions_identity_verified_boolean": {
+          "name": "decisions_identity_verified_boolean",
+          "value": "\"decisions\".\"identity_verified\" in (0, 1)"
+        },
+        "decisions_reason_pair": {
+          "name": "decisions_reason_pair",
+          "value": "(\"decisions\".\"reason_category\" is null) = (\"decisions\".\"reason_text\" is null) and (\"decisions\".\"reason_category\" is null or \"decisions\".\"reason_category\" in ('local_conditions', 'road_reports', 'directive', 'essential_operations', 'data_looks_wrong', 'other') and trim(\"decisions\".\"reason_text\", char(32, 9, 10, 11, 12, 13)) <> '')"
+        },
+        "decisions_recheck_at": {
+          "name": "decisions_recheck_at",
+          "value": "(\"decisions\".\"recheck_at\" is not null) = (\"decisions\".\"action\" in ('defer')) and \"decisions\".\"recheck_at\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"decisions\".\"recheck_at\"))"
+        },
+        "decisions_override_and_defer_require_reason": {
+          "name": "decisions_override_and_defer_require_reason",
+          "value": "not (\"decisions\".\"action\" in ('override', 'defer')) or \"decisions\".\"reason_category\" is not null"
+        },
+        "decisions_supersede_requires_reason": {
+          "name": "decisions_supersede_requires_reason",
+          "value": "not (\"decisions\".\"supersedes_decision_id\" is not null) or \"decisions\".\"reason_category\" is not null"
+        },
+        "decisions_content_hash_sha256": {
+          "name": "decisions_content_hash_sha256",
+          "value": "length(\"decisions\".\"content_hash\") = 64 and \"decisions\".\"content_hash\" not glob '*[^0-9a-f]*'"
+        }
+      }
+    },
+    "employee_status_events": {
+      "name": "employee_status_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reported_by_id": {
+          "name": "reported_by_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reported_at": {
+          "name": "reported_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "employee_status_events_employee_id_employees_id_fk": {
+          "name": "employee_status_events_employee_id_employees_id_fk",
+          "tableFrom": "employee_status_events",
+          "tableTo": "employees",
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "employee_status_events_reported_by_id_decision_makers_id_fk": {
+          "name": "employee_status_events_reported_by_id_decision_makers_id_fk",
+          "tableFrom": "employee_status_events",
+          "tableTo": "decision_makers",
+          "columnsFrom": ["reported_by_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "employee_status_events_status": {
+          "name": "employee_status_events_status",
+          "value": "\"employee_status_events\".\"status\" in ('working_onsite', 'teleworking', 'not_working')"
+        },
+        "employee_status_events_not_working_requires_note": {
+          "name": "employee_status_events_not_working_requires_note",
+          "value": "not (\"employee_status_events\".\"status\" = 'not_working') or \"employee_status_events\".\"note\" is not null and trim(\"employee_status_events\".\"note\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "employee_status_events_reported_at_format": {
+          "name": "employee_status_events_reported_at_format",
+          "value": "\"employee_status_events\".\"reported_at\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"employee_status_events\".\"reported_at\"))"
+        },
+        "employee_status_events_effective_from_format": {
+          "name": "employee_status_events_effective_from_format",
+          "value": "\"employee_status_events\".\"effective_from\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"employee_status_events\".\"effective_from\"))"
+        }
+      }
+    },
+    "employees": {
+      "name": "employees",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "assigned_building_id": {
+          "name": "assigned_building_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "mobile_phone": {
+          "name": "mobile_phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "preferred_channel": {
+          "name": "preferred_channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "essential_personnel": {
+          "name": "essential_personnel",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "telework_eligible": {
+          "name": "telework_eligible",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "accessibility_needs": {
+          "name": "accessibility_needs",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "shift_start": {
+          "name": "shift_start",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "shift_end": {
+          "name": "shift_end",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "commute_minutes": {
+          "name": "commute_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "employees_assigned_building_id_buildings_id_fk": {
+          "name": "employees_assigned_building_id_buildings_id_fk",
+          "tableFrom": "employees",
+          "tableTo": "buildings",
+          "columnsFrom": ["assigned_building_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "employees_name_not_blank": {
+          "name": "employees_name_not_blank",
+          "value": "trim(\"employees\".\"name\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "employees_email_not_blank": {
+          "name": "employees_email_not_blank",
+          "value": "trim(\"employees\".\"email\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "employees_preferred_channel": {
+          "name": "employees_preferred_channel",
+          "value": "\"employees\".\"preferred_channel\" in ('email', 'sms')"
+        },
+        "employees_essential_personnel_boolean": {
+          "name": "employees_essential_personnel_boolean",
+          "value": "\"employees\".\"essential_personnel\" in (0, 1)"
+        },
+        "employees_telework_eligible_boolean": {
+          "name": "employees_telework_eligible_boolean",
+          "value": "\"employees\".\"telework_eligible\" in (0, 1)"
+        },
+        "employees_sms_requires_mobile_phone": {
+          "name": "employees_sms_requires_mobile_phone",
+          "value": "not (\"employees\".\"preferred_channel\" = 'sms') or \"employees\".\"mobile_phone\" is not null and trim(\"employees\".\"mobile_phone\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "employees_shift": {
+          "name": "employees_shift",
+          "value": "(\"employees\".\"shift_start\" is null) = (\"employees\".\"shift_end\" is null) and \"employees\".\"shift_start\" is strftime('%H:%M', julianday(\"employees\".\"shift_start\")) and \"employees\".\"shift_end\" is strftime('%H:%M', julianday(\"employees\".\"shift_end\")) and \"employees\".\"shift_start\" < \"employees\".\"shift_end\""
+        },
+        "employees_commute_minutes_positive": {
+          "name": "employees_commute_minutes_positive",
+          "value": "\"employees\".\"commute_minutes\" is null or typeof(\"employees\".\"commute_minutes\") = 'integer' and \"employees\".\"commute_minutes\" > 0"
+        }
+      }
+    },
+    "facilities": {
+      "name": "facilities",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nws_zone": {
+          "name": "nws_zone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "opens_at": {
+          "name": "opens_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "closes_at": {
+          "name": "closes_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "arrival_window_start": {
+          "name": "arrival_window_start",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "arrival_window_end": {
+          "name": "arrival_window_end",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "departure_window_start": {
+          "name": "departure_window_start",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "departure_window_end": {
+          "name": "departure_window_end",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "typical_commute_minutes": {
+          "name": "typical_commute_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decision_deadline": {
+          "name": "decision_deadline",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "notification_lead_minutes": {
+          "name": "notification_lead_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "road_class": {
+          "name": "road_class",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decision_maker_id": {
+          "name": "decision_maker_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "backup_decision_maker_id": {
+          "name": "backup_decision_maker_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "facilities_decision_maker_id_decision_makers_id_fk": {
+          "name": "facilities_decision_maker_id_decision_makers_id_fk",
+          "tableFrom": "facilities",
+          "tableTo": "decision_makers",
+          "columnsFrom": ["decision_maker_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "facilities_backup_decision_maker_id_decision_makers_id_fk": {
+          "name": "facilities_backup_decision_maker_id_decision_makers_id_fk",
+          "tableFrom": "facilities",
+          "tableTo": "decision_makers",
+          "columnsFrom": ["backup_decision_maker_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "facilities_name_not_blank": {
+          "name": "facilities_name_not_blank",
+          "value": "trim(\"facilities\".\"name\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "facilities_nws_zone_not_blank": {
+          "name": "facilities_nws_zone_not_blank",
+          "value": "trim(\"facilities\".\"nws_zone\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "facilities_timezone_not_blank": {
+          "name": "facilities_timezone_not_blank",
+          "value": "trim(\"facilities\".\"timezone\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "facilities_latitude_range": {
+          "name": "facilities_latitude_range",
+          "value": "\"facilities\".\"latitude\" between -90 and 90"
+        },
+        "facilities_longitude_range": {
+          "name": "facilities_longitude_range",
+          "value": "\"facilities\".\"longitude\" between -180 and 180"
+        },
+        "facilities_hours": {
+          "name": "facilities_hours",
+          "value": "\"facilities\".\"opens_at\" is strftime('%H:%M', julianday(\"facilities\".\"opens_at\")) and \"facilities\".\"closes_at\" is strftime('%H:%M', julianday(\"facilities\".\"closes_at\")) and \"facilities\".\"opens_at\" < \"facilities\".\"closes_at\""
+        },
+        "facilities_arrival_window": {
+          "name": "facilities_arrival_window",
+          "value": "\"facilities\".\"arrival_window_start\" is strftime('%H:%M', julianday(\"facilities\".\"arrival_window_start\")) and \"facilities\".\"arrival_window_end\" is strftime('%H:%M', julianday(\"facilities\".\"arrival_window_end\")) and \"facilities\".\"arrival_window_start\" < \"facilities\".\"arrival_window_end\""
+        },
+        "facilities_departure_window": {
+          "name": "facilities_departure_window",
+          "value": "\"facilities\".\"departure_window_start\" is strftime('%H:%M', julianday(\"facilities\".\"departure_window_start\")) and \"facilities\".\"departure_window_end\" is strftime('%H:%M', julianday(\"facilities\".\"departure_window_end\")) and \"facilities\".\"departure_window_start\" < \"facilities\".\"departure_window_end\""
+        },
+        "facilities_decision_deadline_format": {
+          "name": "facilities_decision_deadline_format",
+          "value": "\"facilities\".\"decision_deadline\" is strftime('%H:%M', julianday(\"facilities\".\"decision_deadline\"))"
+        },
+        "facilities_typical_commute_minutes_positive": {
+          "name": "facilities_typical_commute_minutes_positive",
+          "value": "typeof(\"facilities\".\"typical_commute_minutes\") = 'integer' and \"facilities\".\"typical_commute_minutes\" > 0"
+        },
+        "facilities_notification_lead_minutes_positive": {
+          "name": "facilities_notification_lead_minutes_positive",
+          "value": "typeof(\"facilities\".\"notification_lead_minutes\") = 'integer' and \"facilities\".\"notification_lead_minutes\" > 0"
+        },
+        "facilities_road_class": {
+          "name": "facilities_road_class",
+          "value": "\"facilities\".\"road_class\" in ('superCommuter', 'urbanCommuter', 'ruralCommuter', 'primary', 'secondary')"
+        },
+        "facilities_backup_differs": {
+          "name": "facilities_backup_differs",
+          "value": "\"facilities\".\"decision_maker_id\" <> \"facilities\".\"backup_decision_maker_id\""
+        }
+      }
+    },
+    "facility_hazards": {
+      "name": "facility_hazards",
+      "columns": {
+        "facility_id": {
+          "name": "facility_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hazard": {
+          "name": "hazard",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "facility_hazards_facility_id_facilities_id_fk": {
+          "name": "facility_hazards_facility_id_facilities_id_fk",
+          "tableFrom": "facility_hazards",
+          "tableTo": "facilities",
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "facility_hazards_facility_id_hazard_pk": {
+          "columns": ["facility_id", "hazard"],
+          "name": "facility_hazards_facility_id_hazard_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "facility_hazards_hazard": {
+          "name": "facility_hazards_hazard",
+          "value": "\"facility_hazards\".\"hazard\" in ('winter', 'wind', 'airQuality')"
+        }
+      }
+    },
+    "human_inputs": {
+      "name": "human_inputs",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "decision_id": {
+          "name": "decision_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reported_by": {
+          "name": "reported_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reported_at": {
+          "name": "reported_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "human_inputs_decision_id_decisions_id_fk": {
+          "name": "human_inputs_decision_id_decisions_id_fk",
+          "tableFrom": "human_inputs",
+          "tableTo": "decisions",
+          "columnsFrom": ["decision_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "human_inputs_reported_by_not_blank": {
+          "name": "human_inputs_reported_by_not_blank",
+          "value": "trim(\"human_inputs\".\"reported_by\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "human_inputs_text_not_blank": {
+          "name": "human_inputs_text_not_blank",
+          "value": "trim(\"human_inputs\".\"text\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "human_inputs_reported_at_format": {
+          "name": "human_inputs_reported_at_format",
+          "value": "\"human_inputs\".\"reported_at\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"human_inputs\".\"reported_at\"))"
+        }
+      }
+    },
+    "notification_dispatches": {
+      "name": "notification_dispatches",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "decision_id": {
+          "name": "decision_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decision_hash": {
+          "name": "decision_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "channel": {
+          "name": "channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "send_by": {
+          "name": "send_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "notification_dispatches_decision_employee": {
+          "name": "notification_dispatches_decision_employee",
+          "columns": ["decision_id", "employee_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "notification_dispatches_decision_id_decisions_id_fk": {
+          "name": "notification_dispatches_decision_id_decisions_id_fk",
+          "tableFrom": "notification_dispatches",
+          "tableTo": "decisions",
+          "columnsFrom": ["decision_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "notification_dispatches_employee_id_employees_id_fk": {
+          "name": "notification_dispatches_employee_id_employees_id_fk",
+          "tableFrom": "notification_dispatches",
+          "tableTo": "employees",
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "notification_dispatches_decision_hash_sha256": {
+          "name": "notification_dispatches_decision_hash_sha256",
+          "value": "length(\"notification_dispatches\".\"decision_hash\") = 64 and \"notification_dispatches\".\"decision_hash\" not glob '*[^0-9a-f]*'"
+        },
+        "notification_dispatches_channel": {
+          "name": "notification_dispatches_channel",
+          "value": "\"notification_dispatches\".\"channel\" in ('email', 'sms')"
+        },
+        "notification_dispatches_send_by_format": {
+          "name": "notification_dispatches_send_by_format",
+          "value": "\"notification_dispatches\".\"send_by\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"notification_dispatches\".\"send_by\"))"
+        },
+        "notification_dispatches_recorded_at_format": {
+          "name": "notification_dispatches_recorded_at_format",
+          "value": "\"notification_dispatches\".\"recorded_at\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"notification_dispatches\".\"recorded_at\"))"
+        },
+        "notification_dispatches_content_hash_sha256": {
+          "name": "notification_dispatches_content_hash_sha256",
+          "value": "length(\"notification_dispatches\".\"content_hash\") = 64 and \"notification_dispatches\".\"content_hash\" not glob '*[^0-9a-f]*'"
+        }
+      }
+    },
+    "recommendations": {
+      "name": "recommendations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "evaluated_at": {
+          "name": "evaluated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "as_of": {
+          "name": "as_of",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "posture": {
+          "name": "posture",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decide_by": {
+          "name": "decide_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "snapshot": {
+          "name": "snapshot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "recommendations_facility_id_facilities_id_fk": {
+          "name": "recommendations_facility_id_facilities_id_fk",
+          "tableFrom": "recommendations",
+          "tableTo": "facilities",
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "recommendations_evaluated_at_format": {
+          "name": "recommendations_evaluated_at_format",
+          "value": "\"recommendations\".\"evaluated_at\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"recommendations\".\"evaluated_at\"))"
+        },
+        "recommendations_as_of_format": {
+          "name": "recommendations_as_of_format",
+          "value": "\"recommendations\".\"as_of\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"recommendations\".\"as_of\"))"
+        },
+        "recommendations_posture": {
+          "name": "recommendations_posture",
+          "value": "\"recommendations\".\"posture\" in ('normal', 'delayed_arrival', 'early_dismissal', 'unscheduled_telework', 'full_closure')"
+        },
+        "recommendations_confidence": {
+          "name": "recommendations_confidence",
+          "value": "\"recommendations\".\"confidence\" in ('low', 'medium', 'high')"
+        },
+        "recommendations_decide_by_format": {
+          "name": "recommendations_decide_by_format",
+          "value": "\"recommendations\".\"decide_by\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"recommendations\".\"decide_by\"))"
+        },
+        "recommendations_snapshot_json": {
+          "name": "recommendations_snapshot_json",
+          "value": "json_valid(\"recommendations\".\"snapshot\")"
+        },
+        "recommendations_content_hash_sha256": {
+          "name": "recommendations_content_hash_sha256",
+          "value": "length(\"recommendations\".\"content_hash\") = 64 and \"recommendations\".\"content_hash\" not glob '*[^0-9a-f]*'"
+        }
+      }
+    },
+    "tasks": {
+      "name": "tasks",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "completed": {
+          "name": "completed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "tasks_title_length": {
+          "name": "tasks_title_length",
+          "value": "length(\"tasks\".\"title\") between 1 and 120"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
