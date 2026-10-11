@@ -128,3 +128,33 @@ it("announces a finding's clamped release, not the passed one its timing case ke
     posture: { posture: "early_dismissal", releaseAt: clampedAt },
   });
 });
+
+it("takes the longest delay any finding carries for an override to a delayed arrival", () => {
+  const recommendation: PostureTimings = {
+    status: { posture: "full_closure" },
+    findings: [
+      {
+        timing: {
+          status: { posture: "full_closure" },
+          timingCase: { kind: "outlastsDelayCap", delayHours: 3 },
+        },
+      },
+      {
+        timing: {
+          status: { posture: "unscheduled_telework" },
+          timingCase: { kind: "outlastsDelayCap", delayHours: 6 },
+        },
+      },
+    ],
+  };
+
+  expect(
+    postureOfDecision(
+      { action: "override", chosenPosture: "delayed_arrival" },
+      recommendation,
+    ),
+  ).toEqual({
+    kind: "decided",
+    posture: { posture: "delayed_arrival", delayMinutes: 360 },
+  });
+});
