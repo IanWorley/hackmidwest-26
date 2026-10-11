@@ -15,17 +15,16 @@ import {
   type TestApp,
   UNKNOWN_ID,
   WINTER_STORM,
-  withAppOn,
+  withStormAppOn,
 } from "./recommendation-test-app";
 
 const HTTP_UNPROCESSABLE = 422;
 const KANSAS_CITY_ID = 1;
 
 function withApp(run: (app: TestApp) => Promise<void>): Promise<void> {
-  return withAppOn(createTestDatabaseWithDemoFacilities, run);
+  return withStormAppOn(createTestDatabaseWithDemoFacilities, run);
 }
 
-// Only Date is faked, so the route's one clock read returns CLOCK while Effect's timers stay real.
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"], now: new Date(CLOCK) });
 });

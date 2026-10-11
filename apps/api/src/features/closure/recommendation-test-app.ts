@@ -64,7 +64,6 @@ const cleanAir: OpenMeteoClientShape = {
     }),
 };
 
-/** What the route should hand the engine for Kansas City at AS_OF, given the stubbed pull. */
 const EXPECTED_INPUT: EngineInput = {
   now: AS_OF,
   facility: {
@@ -113,8 +112,7 @@ function jsonBody(body: object | undefined): string | null {
   return JSON.stringify(body);
 }
 
-/** Runs against the storm stubs and the given database, which it closes afterwards. */
-async function withAppOn(
+async function withStormAppOn(
   openStore: () => Promise<DatabaseStore>,
   run: (app: TestApp) => Promise<void>,
 ): Promise<void> {
@@ -180,5 +178,5 @@ export {
   type TestApp,
   UNKNOWN_ID,
   WINTER_STORM,
-  withAppOn,
+  withStormAppOn,
 };

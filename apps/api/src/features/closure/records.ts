@@ -20,7 +20,6 @@ function byKey(
   return 0;
 }
 
-/** JSON with object keys sorted at every depth, so equal values always produce the same text. */
 function canonicalJson(value: object): string {
   return JSON.stringify(value, (_key, nested: unknown) => {
     if (!isRecord(nested)) {
@@ -30,7 +29,6 @@ function canonicalJson(value: object): string {
   });
 }
 
-/** Lowercase hex SHA-256 of the canonical JSON, the form the `content_hash` CHECKs accept. */
 function contentHash(value: object): string {
   return createHash(HASH_ALGORITHM)
     .update(canonicalJson(value))

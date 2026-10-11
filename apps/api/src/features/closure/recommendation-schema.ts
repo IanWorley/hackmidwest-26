@@ -12,10 +12,6 @@ import { type Posture, postureSchema } from "./postures";
 import { ReadingSchema } from "./readings";
 import { NWS_SEVERITIES, WIND_METRICS } from "./thresholds";
 
-// TypeBox mirrors of the engine's plain-JSON types, so a stored snapshot is parsed rather than cast and
-// Eden sees the full response. A route test compares responses with `evaluatePosture` output, so a field
-// the engine adds without a matching schema change fails there instead of being silently dropped.
-
 const MAX_SHAPE_ERRORS = 5;
 
 const INPUT_KINDS = [
@@ -24,7 +20,6 @@ const INPUT_KINDS = [
   "airQuality",
 ] as const satisfies readonly InputKind[];
 
-// Every check of every hazard is in the output, so a cutoff missing here fails the route tests.
 const CUTOFF_NAMES = [
   "stormWarning",
   "advisory",
@@ -230,7 +225,6 @@ const RecommendationSchema = t.Object({
   rationale: t.String(),
 });
 
-/** What a `recommendations` row stores: everything the engine read and everything it returned. */
 const SnapshotSchema = t.Object({
   input: EngineInputSchema,
   output: RecommendationSchema,
@@ -238,7 +232,6 @@ const SnapshotSchema = t.Object({
 
 type Snapshot = Static<typeof SnapshotSchema>;
 
-/** A value that does not match its schema: storage was edited, or the engine's output drifted from the mirror. */
 class SnapshotShapeError extends Data.TaggedError("SnapshotShapeError")<{
   readonly errors: readonly string[];
 }> {}
@@ -256,5 +249,5 @@ function parseAs<Schema extends TSchema>(
   return Effect.fail(new SnapshotShapeError({ errors }));
 }
 
-export type { Snapshot };
+export type { Snapshot, SnapshotShapeError };
 export { parseAs, RecommendationSchema, SnapshotSchema };

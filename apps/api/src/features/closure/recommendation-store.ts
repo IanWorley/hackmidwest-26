@@ -14,14 +14,12 @@ import {
 import { contentHash } from "./records";
 import { parseInstant } from "./zoned-time";
 
-/** `live` ran at the clock reading; `as_of` ran the data pulled then as of another instant. */
 const EVALUATION_MODES = ["live", "as_of"] as const;
 const INSTANT_EVENTS = ["evaluated", "asOf", "decideBy"] as const;
 const HAZARD_EVENTS = ["hazardStart", "hazardEnd", "roadsClear"] as const;
 
 type EvaluationMode = (typeof EVALUATION_MODES)[number];
 type RecommendationRow = typeof recommendations.$inferSelect;
-/** Every column the content hash covers: the whole row except its id and the hash itself. */
 type RecommendationContent = Omit<RecommendationRow, "id" | "contentHash">;
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
@@ -40,7 +38,6 @@ const TimelineEntrySchema = t.Union([
   }),
 ]);
 
-/** The stored row as written, plus how it was evaluated and its instants in time order. */
 const RecommendationRecordSchema = t.Object({
   ...createSelectSchema(recommendations).properties,
   snapshot: SnapshotSchema,
@@ -148,7 +145,6 @@ const findRecommendation = Effect.fn("findRecommendation")(function* (
   return Option.fromNullishOr(row);
 });
 
-/** Ids only grow, so the highest id is the newest evaluation. */
 const findLatestRecommendation = Effect.fn("findLatestRecommendation")(
   function* (decimalFacilityId: string) {
     const facilityId = parseDecimalId(decimalFacilityId);
@@ -171,7 +167,7 @@ const findLatestRecommendation = Effect.fn("findLatestRecommendation")(
   },
 );
 
-export type { RecommendationContent, RecommendationRow };
+export type { RecommendationRow };
 export {
   findLatestRecommendation,
   findRecommendation,

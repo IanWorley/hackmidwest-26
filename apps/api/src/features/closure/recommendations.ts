@@ -24,7 +24,9 @@ import { airQualityReadings, observationReadings } from "./readings";
 import {
   parseAs,
   RecommendationSchema,
+  type Snapshot,
   SnapshotSchema,
+  type SnapshotShapeError,
 } from "./recommendation-schema";
 import {
   findLatestRecommendation,
@@ -102,7 +104,6 @@ function recommendationNotFound(): NotFound<
   return status(HTTP_NOT_FOUND, { message: RECOMMENDATION_NOT_FOUND_MESSAGE });
 }
 
-/** Exactly the facility fields the engine reads, so the snapshot holds what drove the result and nothing else. */
 function engineFacility(facility: Facility): EngineInput["facility"] {
   return {
     timezone: facility.timezone,
@@ -131,6 +132,12 @@ const pullConditions = Effect.fn("pullConditions")(function* (point: GeoPoint) {
   );
 });
 
+function storableSnapshot(
+  input: EngineInput,
+): Effect.Effect<Snapshot, SnapshotShapeError> {
+  return parseAs(SnapshotSchema, { input, output: evaluatePosture(input) });
+}
+
 const evaluateFacility = Effect.fn("evaluateFacility")(function* (
   facility: Facility,
   requestedAsOf: string | undefined,
@@ -154,11 +161,7 @@ const evaluateFacility = Effect.fn("evaluateFacility")(function* (
     alerts,
     forecast,
   };
-  // Checked before the insert, so every stored snapshot is one the read routes can parse.
-  const snapshot = yield* parseAs(SnapshotSchema, {
-    input,
-    output: evaluatePosture(input),
-  });
+  const snapshot = yield* storableSnapshot(input);
   return yield* insertRecommendation({
     facilityId: facility.id,
     evaluatedAt,
