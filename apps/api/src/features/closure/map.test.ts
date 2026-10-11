@@ -69,7 +69,7 @@ it(`GET ${MAP_PATH} reports each facility's newest live recommendation, not a la
             recommendationId: 1,
             decideBy: "2026-01-14T11:00:00.000Z",
             asOf: CLOCK,
-            decision: null,
+            currentDecision: null,
           },
         },
         {
@@ -110,7 +110,7 @@ it(`GET ${MAP_PATH} reuses live conditions within the TTL and pulls them again a
   });
 });
 
-it(`GET ${MAP_PATH} reports the newest decision on a facility's recommendation`, async () => {
+it(`GET ${MAP_PATH} reports the newest decision on a facility's recommendation as its current decision`, async () => {
   await withStormAppOn(
     createTestDatabaseWithDemoFacilities,
     async ({ get, post }) => {
@@ -134,8 +134,9 @@ it(`GET ${MAP_PATH} reports the newest decision on a facility's recommendation`,
 
       expect(
         facilities.find(({ id }: { id: number }) => id === KANSAS_CITY_ID)
-          .standing.decision,
+          .standing.currentDecision,
       ).toEqual({
+        recommendationId: 1,
         action: "override",
         chosenPosture: "normal",
         decidedAt: CLOCK,
@@ -217,13 +218,44 @@ it(`GET ${MAP_PATH} reports a deferral's recheck time`, async () => {
 
       expect(
         facilities.find(({ id }: { id: number }) => id === KANSAS_CITY_ID)
-          .standing.decision,
+          .standing.currentDecision,
       ).toEqual({
+        recommendationId: 1,
         action: "defer",
         chosenPosture: null,
         decidedAt: CLOCK,
         recheckAt: RECHECK_AT,
       });
+    },
+  );
+});
+
+it(`GET ${MAP_PATH} keeps an accepted decision current across an undecided same-day re-evaluation`, async () => {
+  await withStormAppOn(
+    createTestDatabaseWithDemoFacilities,
+    async ({ get, post }) => {
+      await post(EVALUATE_PATH);
+      await post(DECISIONS_PATH, {
+        action: "accept",
+        decidedById: KANSAS_CITY_DECIDER,
+      });
+      await post(EVALUATE_PATH);
+
+      const { facilities } = await (await get(MAP_PATH)).json();
+
+      const { standing } = facilities.find(
+        ({ id }: { id: number }) => id === KANSAS_CITY_ID,
+      );
+      expect([standing.recommendationId, standing.currentDecision]).toEqual([
+        2,
+        {
+          recommendationId: 1,
+          action: "accept",
+          chosenPosture: "full_closure",
+          decidedAt: CLOCK,
+          recheckAt: null,
+        },
+      ]);
     },
   );
 });

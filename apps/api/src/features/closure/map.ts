@@ -1,8 +1,8 @@
 import { decisions, facilities, recommendations } from "@hackmidwest/db";
-import { and, asc, eq, inArray, max, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { createSchemaFactory } from "drizzle-typebox";
-import { Cache, Data, Effect, Option } from "effect";
+import { Cache, Data, DateTime, Effect, Option } from "effect";
 import { Elysia, t } from "elysia";
 import {
   Database,
@@ -12,20 +12,31 @@ import {
   type RunRequest,
 } from "../../runtime";
 import {
+  type CurrentDecisionRow,
+  findCurrentDecision,
+} from "./current-decision";
+import {
   AlertCollectionSchema,
   AqiSchema,
   makeLiveConditionsCache,
 } from "./map-live";
 import { postureSchema } from "./postures";
 import { LIVE_RECOMMENDATION, NEWEST_FIRST } from "./recommendation-mode";
+import { type Instant, toInstant } from "./zoned-time";
 
 const MAP_PATH = "/api/map";
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 const decisionColumns = createSelectSchema(decisions).properties;
 
-/** The newest decision on the recommendation, the tip of its chain. `chosenPosture` is set for accept and override. */
-const DecisionSchema = t.Object({
+/**
+ * The facility's current decision, as `findCurrentDecision` defines it: the newest decision on a live recommendation for
+ * today's facility day. A same-day re-evaluation leaves it in place, so `recommendationId` can name an earlier
+ * recommendation than the standing's, and then the standing's own recommendation still awaits a decision.
+ * `chosenPosture` is set for accept and override.
+ */
+const CurrentDecisionSchema = t.Object({
+  recommendationId: t.Integer(),
   action: decisionColumns.action,
   chosenPosture: decisionColumns.chosenPosture,
   decidedAt: decisionColumns.decidedAt,
@@ -41,7 +52,7 @@ const StandingSchema = t.Union([
     decideBy: t.String(),
     /** When the evaluation ran, so a reader can judge how fresh the standing is. */
     asOf: t.String(),
-    decision: t.Union([DecisionSchema, t.Null()]),
+    currentDecision: t.Union([CurrentDecisionSchema, t.Null()]),
   }),
 ]);
 
@@ -62,7 +73,7 @@ const MapResponseSchema = t.Object({
 });
 
 type Standing = typeof StandingSchema.static;
-type Decision = typeof DecisionSchema.static;
+type CurrentDecision = typeof CurrentDecisionSchema.static;
 
 class MapStorageError extends Data.TaggedError("MapStorageError")<{
   readonly cause: unknown;
@@ -71,28 +82,30 @@ class MapStorageError extends Data.TaggedError("MapStorageError")<{
 type Db = typeof Database.Service;
 type FacilityStanding = Omit<typeof MapFacilitySchema.static, "aqi">;
 
-function standingsByFacility(
-  latestRows: readonly (typeof recommendations.$inferSelect)[],
-  tipRows: readonly (Decision & { readonly recommendationId: number })[],
-): Map<number, Standing> {
-  const tips = new Map<number, Decision>(
-    tipRows.map(({ recommendationId, ...decision }) => [
-      recommendationId,
-      decision,
-    ]),
-  );
-  return new Map<number, Standing>(
-    latestRows.map((row) => [
-      row.facilityId,
-      {
-        posture: row.posture,
-        recommendationId: row.id,
-        decideBy: row.decideBy,
-        asOf: row.asOf,
-        decision: tips.get(row.id) ?? null,
-      },
-    ]),
-  );
+/** Only the columns the map shows, so the decision's id and hash stay out of the response. */
+function currentDecisionView(
+  row: CurrentDecisionRow | null,
+): CurrentDecision | null {
+  if (row === null) {
+    return null;
+  }
+  const { recommendationId, action, chosenPosture, decidedAt, recheckAt } = row;
+  return { recommendationId, action, chosenPosture, decidedAt, recheckAt };
+}
+
+async function standingOf(
+  db: Db,
+  row: typeof recommendations.$inferSelect,
+  now: Instant,
+): Promise<Standing> {
+  const current = await findCurrentDecision(db, row.facilityId, now);
+  return {
+    posture: row.posture,
+    recommendationId: row.id,
+    decideBy: row.decideBy,
+    asOf: row.asOf,
+    currentDecision: currentDecisionView(current?.decision ?? null),
+  };
 }
 
 const candidate = alias(recommendations, "candidate");
@@ -116,20 +129,18 @@ function isCurrentRecommendation(db: Db): SQL {
 }
 
 /**
- * Facilities by name, each with its current live recommendation (latest evaluation time), the one `findLatestRecommendation`
- * returns and a decision is about, and the newest decision on it. Previews never become a standing.
+ * Facilities by name, each with its current live recommendation (latest evaluation time), the one
+ * `findLatestRecommendation` returns, and the facility's current decision at `now`. Previews never become a standing.
  */
-async function queryStandings(db: Db): Promise<FacilityStanding[]> {
+async function queryStandings(
+  db: Db,
+  now: Instant,
+): Promise<FacilityStanding[]> {
   const latestIds = db
     .select({ id: candidate.id })
     .from(candidate)
     .where(isCurrentRecommendation(db));
-  const tipIds = db
-    .select({ id: max(decisions.id) })
-    .from(decisions)
-    .where(inArray(decisions.recommendationId, latestIds))
-    .groupBy(decisions.recommendationId);
-  const [facilityRows, latestRows, tipRows] = await db.batch([
+  const [facilityRows, latestRows] = await db.batch([
     db
       .select({
         id: facilities.id,
@@ -143,18 +154,15 @@ async function queryStandings(db: Db): Promise<FacilityStanding[]> {
       .select()
       .from(recommendations)
       .where(inArray(recommendations.id, latestIds)),
-    db
-      .select({
-        recommendationId: decisions.recommendationId,
-        action: decisions.action,
-        chosenPosture: decisions.chosenPosture,
-        decidedAt: decisions.decidedAt,
-        recheckAt: decisions.recheckAt,
-      })
-      .from(decisions)
-      .where(inArray(decisions.id, tipIds)),
   ]);
-  const standings = standingsByFacility(latestRows, tipRows);
+  const standings = new Map<number, Standing>(
+    await Promise.all(
+      latestRows.map(
+        async (row) =>
+          [row.facilityId, await standingOf(db, row, now)] as const,
+      ),
+    ),
+  );
   return facilityRows.map((facility) => ({
     ...facility,
     standing: standings.get(facility.id) ?? { posture: "not_evaluated" },
@@ -163,8 +171,9 @@ async function queryStandings(db: Db): Promise<FacilityStanding[]> {
 
 const readStandings = Effect.fn("readStandings")(function* () {
   const db = yield* Database;
+  const now = toInstant(DateTime.toEpochMillis(yield* DateTime.now));
   return yield* Effect.tryPromise({
-    try: () => queryStandings(db),
+    try: () => queryStandings(db, now),
     catch: (cause) => new MapStorageError({ cause }),
   });
 });
