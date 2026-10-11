@@ -14,6 +14,8 @@ const TITLE = "A newer recommendation is available";
 const UNCHANGED_TEXT =
   "Your decision is unchanged. Record a new decision to act on it.";
 const CHANGES_LABEL = "What changed";
+const SAME_TEXT =
+  "Posture, confidence, and hazard window match the recommendation you decided on.";
 const NO_HAZARD_WINDOW = "None";
 const WINDOW_SEPARATOR = "–";
 const ARROW = "→";
@@ -29,6 +31,29 @@ const CONFIDENCE_LABELS: Record<Confidence, string> = {
   medium: "Medium",
   high: "High",
 };
+
+function Changes({
+  changes,
+  timezone,
+  facilityDate,
+}: {
+  changes: readonly RecommendationChange[];
+  timezone: string;
+  facilityDate: string;
+}): JSX.Element {
+  if (changes.length === 0) {
+    return <p>{SAME_TEXT}</p>;
+  }
+  return (
+    <ul aria-label={CHANGES_LABEL}>
+      {changes.map((change) => (
+        <li key={change.field}>
+          {`${FIELD_LABELS[change.field]}: ${changeText(change, timezone, facilityDate)}`}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function windowText(
   window: HazardWindow | null,
@@ -78,13 +103,11 @@ export function NewerRecommendationBanner({
     <Alert role="status">
       <AlertTitle>{TITLE}</AlertTitle>
       <AlertDescription>
-        <ul aria-label={CHANGES_LABEL}>
-          {recommendationChanges(decided, latest).map((change) => (
-            <li key={change.field}>
-              {`${FIELD_LABELS[change.field]}: ${changeText(change, timezone, facilityDate)}`}
-            </li>
-          ))}
-        </ul>
+        <Changes
+          changes={recommendationChanges(decided, latest)}
+          facilityDate={facilityDate}
+          timezone={timezone}
+        />
         <p>{UNCHANGED_TEXT}</p>
       </AlertDescription>
     </Alert>
