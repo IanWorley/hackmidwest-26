@@ -3,7 +3,10 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "types": ["vite/client", "node"],
-    "verbatimModuleSyntax": false
+    "verbatimModuleSyntax": false,
+    // dependency-cruiser resolves `paths` against the working directory unless baseUrl is set.
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/*"] }
   },
   "include": [
     "src/**/*.ts",

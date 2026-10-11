@@ -28,6 +28,7 @@ export default defineConfig(({ mode }) => {
   const webPort = Number(new URL(requireEnv(environment, "WEB_ORIGIN")).port);
   return {
     envDir: ROOT_ENV_DIRECTORY,
+    resolve: { tsconfigPaths: true },
     server: { port: webPort, strictPort: true },
     plugins: [
       tanstackStart({

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { JSX } from "react";
-import { loadTasks } from "../features/tasks/load-tasks";
+import { loadTasks } from "@/features/tasks/load-tasks";
 import { TasksList } from "../features/tasks/tasks-list";
 
 const LOADING_TEXT = "Loading tasks...";

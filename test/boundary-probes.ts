@@ -52,6 +52,14 @@ export const CRUISE_PROBES: readonly BoundaryProbe[] = [
     violatedRules: ["web-no-server-code"],
   },
   {
+    behavior: "web code reached through the @/ alias is still checked",
+    files: {
+      "apps/api/src/app.ts": 'import "elysia";\n',
+      "apps/web/src/probe.ts": 'import "@/../../api/src/app";\n',
+    },
+    violatedRules: ["apps-are-independent", "web-no-server-code"],
+  },
+  {
     behavior: "database code cannot load an HTTP framework",
     files: { "packages/db/src/probe.ts": 'import "@elysiajs/cors";\n' },
     violatedRules: ["db-no-http"],
@@ -191,6 +199,16 @@ export const LINT_PROBES: readonly BoundaryProbe[] = [
       ...DB_SCHEMA_STUB,
       "apps/web/src/probe.ts":
         'import type { tasks } from "../../../packages/db/src/schema";\nexport type Probe = typeof tasks;\n',
+    },
+    violatedRules: ["style/noRestrictedImports"],
+  },
+  {
+    behavior:
+      "web cannot import another workspace's source through the @/ alias",
+    files: {
+      ...API_APP_STUB,
+      "apps/web/src/probe.ts":
+        'import type { App } from "@/../../api/src/app";\nexport type Probe = App;\n',
     },
     violatedRules: ["style/noRestrictedImports"],
   },

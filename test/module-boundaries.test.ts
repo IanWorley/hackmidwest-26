@@ -12,10 +12,15 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { cruise } from "dependency-cruiser";
+import {
+  cruise,
+  type ICruiseOptions,
+  type ITranspileOptions,
+} from "dependency-cruiser";
+import extractTsConfig from "dependency-cruiser/config-utl/extract-ts-config";
 import { expect, it } from "vitest";
 import config from "../.dependency-cruiser";
 import { CRUISE_PROBES, LINT_PROBES } from "./boundary-probes";
@@ -23,7 +28,7 @@ import type { BoundaryProbe } from "./probe-fixtures";
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const ROOT_BIOME_CONFIG = /^biome(?:\..+)?\.jsonc$/u;
-const WORKSPACE_FILES = ["biome.jsonc", "package.json"];
+const WORKSPACE_FILES = ["biome.jsonc", "package.json", "tsconfig.json"];
 const PACKAGE_MANIFEST = "package.json";
 // Biome's JS launcher, run with the current Node binary so the spawn works on every OS.
 const BIOME_LAUNCHER = join(
@@ -33,6 +38,9 @@ const BIOME_LAUNCHER = join(
 const BIOME_EXIT_CLEAN = 0;
 const BIOME_EXIT_DIAGNOSTICS = 1;
 const BIOME_RULE = /lint\/(?<rule>\w+\/\w+)/gu;
+const WEB_WORKSPACE = "apps/web/";
+// Every workspace tsconfig extends it.
+const TSCONFIG_BASE = "tsconfig.base.json";
 const ROOT_INSTALL_DIRECTORY = "node_modules";
 const INSTALL_DIRECTORIES = [
   ROOT_INSTALL_DIRECTORY,
@@ -62,10 +70,13 @@ function copyFromRepository(sandbox: string, path: string): void {
   copyFileSync(join(REPOSITORY_ROOT, path), join(sandbox, path));
 }
 
-/** Copies every Biome config and the manifests its dependency rules read, so probes lint as the repository does. */
+/** Copies every Biome config, the manifests its dependency rules read, and the tsconfigs its resolver reads, so probes lint as the repository does. */
 function copyLintSetup(sandbox: string): void {
   const rootFiles = readdirSync(REPOSITORY_ROOT).filter(
-    (name) => ROOT_BIOME_CONFIG.test(name) || name === PACKAGE_MANIFEST,
+    (name) =>
+      ROOT_BIOME_CONFIG.test(name) ||
+      name === PACKAGE_MANIFEST ||
+      name === TSCONFIG_BASE,
   );
   for (const name of rootFiles) {
     copyFromRepository(sandbox, name);
@@ -103,6 +114,34 @@ function linkRealInstalls(sandbox: string): void {
   }
 }
 
+/**
+ * Moves the config's tsconfig into the sandbox, so `@/` imports resolve to probe files as they resolve to
+ * repository files under the CLI. It is also passed parsed, as the CLI does, because dependency-cruiser reads
+ * its baseUrl from the parsed config. TypeScript rejects a tsconfig that matches no files, so probes without
+ * web files keep the config unchanged.
+ */
+function sandboxTsConfig(
+  sandbox: string,
+  files: BoundaryProbe["files"],
+  configured: ICruiseOptions["tsConfig"],
+): { cruise: Pick<ICruiseOptions, "tsConfig">; transpile: ITranspileOptions } {
+  const hasWebFiles = Object.keys(files).some((path) =>
+    path.startsWith(WEB_WORKSPACE),
+  );
+  if (configured?.fileName === undefined || !hasWebFiles) {
+    return { cruise: {}, transpile: {} };
+  }
+  const configPath = relative(REPOSITORY_ROOT, configured.fileName);
+  for (const file of [configPath, TSCONFIG_BASE]) {
+    copyFromRepository(sandbox, file);
+  }
+  const fileName = join(sandbox, configPath);
+  return {
+    cruise: { tsConfig: { fileName } },
+    transpile: { tsConfig: extractTsConfig(fileName) },
+  };
+}
+
 async function cruiseProbe(files: BoundaryProbe["files"]): Promise<string[]> {
   const sandbox = writeSandbox(files);
   try {
@@ -111,12 +150,19 @@ async function cruiseProbe(files: BoundaryProbe["files"]): Promise<string[]> {
     const roots = readdirSync(sandbox).filter(
       (entry) => entry !== ROOT_INSTALL_DIRECTORY,
     );
-    const { output } = await cruise(roots, {
-      ...options,
-      baseDir: sandbox,
-      validate: true,
-      ruleSet,
-    });
+    const tsConfig = sandboxTsConfig(sandbox, files, options.tsConfig);
+    const { output } = await cruise(
+      roots,
+      {
+        ...options,
+        ...tsConfig.cruise,
+        baseDir: sandbox,
+        validate: true,
+        ruleSet,
+      },
+      undefined,
+      tsConfig.transpile,
+    );
     if (typeof output === "string") {
       throw new Error("Expected a structured cruise result");
     }
