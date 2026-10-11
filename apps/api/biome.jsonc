@@ -56,6 +56,9 @@
       // are snake_case domain values from postures.ts and the DB schema.
       "includes": [
         "src/features/closure/effective-status.ts",
+        "src/features/closure/notification-messages.ts",
+        "src/features/closure/notification-person.ts",
+        "src/features/closure/notification-situation.ts",
         "src/features/closure/roster.ts"
       ],
       "linter": {
@@ -72,6 +75,28 @@
                   {
                     "selector": { "kind": "typeProperty" },
                     "formats": ["camelCase", "snake_case"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      // The channel policy is keyed by NWS urgency values (PascalCase in the
+      // CAP feed) and by snake_case timeliness.
+      "includes": ["src/features/closure/notification-plan.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "selector": { "kind": "objectLiteralProperty" },
+                    "formats": ["camelCase", "snake_case", "PascalCase"]
                   }
                 ]
               }
