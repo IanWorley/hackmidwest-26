@@ -23,7 +23,7 @@ function compareEvents(a: StatusEvent, b: StatusEvent): number {
 }
 
 /**
- * Baseline per #42: the latest event with effectiveFrom <= now, ties broken by
+ * Baseline per #42: the latest event reported and effective by now, ties broken by
  * the later reportedAt (a correction) and then the higher id. Defaults to working_onsite.
  */
 function baselineStatus(
@@ -37,6 +37,7 @@ function baselineStatus(
     if (
       event.employeeId === employeeId &&
       Date.parse(event.effectiveFrom) <= nowMs &&
+      Date.parse(event.reportedAt) <= nowMs &&
       (latest === null || compareEvents(event, latest) > 0)
     ) {
       latest = event;

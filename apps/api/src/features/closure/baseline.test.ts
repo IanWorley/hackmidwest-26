@@ -49,3 +49,17 @@ it("takes the later-reported of two events effective at the same instant", () =>
     event: correction,
   });
 });
+
+it("ignores a correction reported after now, so a replay sees only what was known", () => {
+  const known = statusEvent({ id: 1, status: "working_onsite" });
+  const laterCorrection = statusEvent({
+    id: 2,
+    status: "teleworking",
+    reportedAt: AFTER_NOW,
+  });
+
+  expect(baselineStatus(EMPLOYEE_ID, [known, laterCorrection], NOW)).toEqual({
+    status: "working_onsite",
+    event: known,
+  });
+});
