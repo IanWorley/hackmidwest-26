@@ -6,7 +6,7 @@ import { openDatabase } from "@hackmidwest/db/connection";
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { DateTime, Effect, Option } from "effect";
 import { expect, it } from "vitest";
-import { Database } from "../../runtime";
+import { Database, HTTP_CONFLICT, HTTP_CREATED } from "../../runtime";
 import {
   ACCEPT,
   AFTER_DECIDE_BY,
@@ -177,6 +177,41 @@ it("records one no_decision row when two connections race, and neither fails", a
         expect((await storedDecisions(db)).map(({ action }) => action)).toEqual(
           ["no_decision"],
         );
+      } finally {
+        other.close();
+      }
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+it("serializes a human decision with a racing missed-deadline write, so neither fails", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "decision-race-"));
+  const path = join(directory, "db.sqlite");
+  const withFileApp = appRunner(() =>
+    createTestDatabaseWithDemoFacilities({ kind: "file", path }),
+  );
+  try {
+    await withFileApp(async ({ db, request }) => {
+      const other = openDatabase({ kind: "file", path });
+      try {
+        const [response, missed] = await Promise.all([
+          request(decide(), ACCEPT),
+          runMissed(other.db, AFTER_DECIDE_BY),
+        ]);
+
+        const decidedFirst = [HTTP_CREATED, Option.none(), ["accept"]];
+        const missedFirst = [
+          HTTP_CONFLICT,
+          Option.some(FIRST_DECISION_ID),
+          ["no_decision"],
+        ];
+        expect([decidedFirst, missedFirst]).toContainEqual([
+          response.status,
+          missed,
+          (await storedDecisions(db)).map(({ action }) => action),
+        ]);
       } finally {
         other.close();
       }

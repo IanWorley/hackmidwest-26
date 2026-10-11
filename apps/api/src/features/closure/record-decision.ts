@@ -7,7 +7,7 @@ import {
   recommendations,
 } from "@hackmidwest/db";
 import { and, desc, eq, getTableColumns, or } from "drizzle-orm";
-import { Data, DateTime, Effect, Option } from "effect";
+import { Data, DateTime, Effect, Option, Semaphore } from "effect";
 import { Database } from "../../runtime";
 import type { DecisionBody } from "./decision-body";
 import {
@@ -28,6 +28,11 @@ import { contentHash } from "./records";
 
 type DecisionMakerRow = typeof decisionMakers.$inferSelect;
 type HumanInputContent = Omit<typeof humanInputs.$inferInsert, "decisionId">;
+
+// libsql opens a connection per transaction and sets no busy timeout, so two decision writes
+// started together, such as a human's and a missed deadline's, fight over SQLite's write lock. The
+// loser fails and leaves its connection unable to commit again. Every decision write queues here.
+const decisionWrites = Semaphore.makeUnsafe(1);
 
 class DecisionWriteError extends Data.TaggedError("DecisionWriteError")<{
   readonly cause: unknown;
@@ -176,8 +181,8 @@ const recordDecision = Effect.fn("recordDecision")(function* (
         decideInTransaction(tx, recommendationId.value, body, decidedAt),
       ),
     catch: (cause) => new DecisionWriteError({ cause }),
-  });
+  }).pipe(Semaphore.withPermit(decisionWrites));
 });
 
 export type { Transaction };
-export { DecisionWriteError, insertDecision, recordDecision };
+export { DecisionWriteError, decisionWrites, insertDecision, recordDecision };

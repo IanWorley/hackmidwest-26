@@ -49,6 +49,7 @@ import {
 import { LIVE_RECOMMENDATION } from "./recommendation-mode";
 import {
   DecisionWriteError,
+  decisionWrites,
   insertDecision,
   recordDecision,
   type Transaction,
@@ -59,11 +60,6 @@ const FACILITY_DECISIONS_PATH = `${FACILITIES_PATH}/:id/decisions`;
 const DECISION_VERIFY_PATH = "/api/decisions/:id/verify";
 const RECOMMENDATION_NOT_FOUND_MESSAGE = "Recommendation not found";
 const DECISION_NOT_FOUND_MESSAGE = "Decision not found";
-
-// libsql opens a connection per transaction and sets no busy timeout, so two missed-decision
-// writes started together would fight over SQLite's write lock. The loser fails, and libsql
-// leaves its connection unable to commit again. Queueing them means neither ever fails.
-const missedDecisionWrites = Semaphore.makeUnsafe(1);
 
 type RecordDecisionResponse =
   | ElysiaCustomStatusResponse<typeof HTTP_CREATED, DecisionResponse>
@@ -213,7 +209,7 @@ const recordMissedDecision = Effect.fn("recordMissedDecision")(function* (
         missedDecisionInTransaction(tx, recommendationId, now),
       ),
     catch: (cause) => new DecisionWriteError({ cause }),
-  }).pipe(Semaphore.withPermit(missedDecisionWrites));
+  }).pipe(Semaphore.withPermit(decisionWrites));
   return Option.fromNullishOr(missed);
 });
 
