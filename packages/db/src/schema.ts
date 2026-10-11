@@ -30,6 +30,17 @@ export const EMPLOYEE_STATUSES = [
 ] as const;
 export type EmployeeStatus = (typeof EMPLOYEE_STATUSES)[number];
 
+// MnDOT Maintenance Manual Ch. 2, Table 2 road classes, busiest first; a
+// quieter road takes longer to clear after a winter storm.
+export const COMMUTE_ROAD_CLASSES = [
+  "super_commuter",
+  "urban_commuter",
+  "rural_commuter",
+  "primary",
+  "secondary",
+] as const;
+export type CommuteRoadClass = (typeof COMMUTE_ROAD_CLASSES)[number];
+
 export const NOTIFICATION_CHANNELS = ["email", "sms"] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
@@ -81,6 +92,9 @@ export const facilities = sqliteTable(
     departureWindowStart: text("departure_window_start").notNull(),
     departureWindowEnd: text("departure_window_end").notNull(),
     typicalCommuteMinutes: integer("typical_commute_minutes").notNull(),
+    commuteRoadClass: text("commute_road_class", {
+      enum: COMMUTE_ROAD_CLASSES,
+    }).notNull(),
     decisionDeadline: text("decision_deadline").notNull(),
     notificationLeadMinutes: integer("notification_lead_minutes").notNull(),
     decisionMakerId: integer("decision_maker_id")
@@ -124,6 +138,10 @@ export const facilities = sqliteTable(
     check(
       "facilities_typical_commute_minutes_positive",
       isPositiveInteger(table.typicalCommuteMinutes),
+    ),
+    check(
+      "facilities_commute_road_class",
+      inArray(table.commuteRoadClass, COMMUTE_ROAD_CLASSES).inlineParams(),
     ),
     check(
       "facilities_notification_lead_minutes_positive",

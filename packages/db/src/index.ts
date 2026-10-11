@@ -3,6 +3,8 @@ export { readDatabaseLocation } from "./location";
 export {
   buildingRosterEntries,
   buildings,
+  COMMUTE_ROAD_CLASSES,
+  type CommuteRoadClass,
   decisionMakers,
   EMPLOYEE_STATUSES,
   type EmployeeStatus,
