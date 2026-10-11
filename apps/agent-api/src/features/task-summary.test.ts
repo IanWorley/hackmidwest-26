@@ -1,6 +1,7 @@
 import { createServer, type RequestListener } from "node:http";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app";
+import { templateLlm } from "../llm";
 import {
   createAgentApiRuntime,
   HTTP_INTERNAL_SERVER_ERROR,
@@ -43,6 +44,7 @@ async function withTasksApi(
   }
   const runtime = createAgentApiRuntime(
     createTasksApiClient(`http://${LOOPBACK_HOST}:${address.port}`),
+    templateLlm,
   );
   try {
     await run(createApp({ runRequest: runtime.runRequest }));
