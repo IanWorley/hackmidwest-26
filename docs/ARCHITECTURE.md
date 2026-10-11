@@ -13,11 +13,13 @@ Four Bun workspaces:
   Feature work runs as [Effect](https://effect.website) programs; Elysia stays the HTTP layer.
 - `apps/agent-api` (`@hackmidwest/agent-api`) is a second, independent Elysia backend for agent and AI callers, on
   `AGENT_API_PORT`. It follows the API's shape (its own `config.ts`, `runtime.ts`, `app.ts`, `index.ts`, and
-  `features/`), but shares no code with it. It never opens the database: features read tasks from `apps/api` over
-  HTTP through the `TasksApi` service, an Eden client typed by the same `@hackmidwest/api/contract` the web uses
-  (`TASKS_API_URL`). So `apps/api` stays the only SQLite writer and owns every task rule. It has no CORS (no browser
-  calls it) and no type contract (no client imports it yet). Today it serves `GET /health` and a placeholder
-  `GET /tasks/summary`.
+  `features/`), but shares no code with it. It never opens the database: features call `apps/api` over HTTP through
+  the narrow `ClosureApi` and `TasksApi` ports. `src/api-client.ts` implements both from one Eden client typed by the
+  same `@hackmidwest/api/contract` the web uses (`TASKS_API_URL`), and Biome stops `features/` from importing Eden or
+  the contract. `ClosureApi` can evaluate, preview notifications, and read a recommendation, and nothing else, so an
+  agent feature cannot record a decision or dispatch notifications. So `apps/api` stays the only SQLite writer and
+  owns every rule. It has no CORS (no browser calls it) and no type contract (no client imports it yet). It serves
+  `GET /health`, a placeholder `GET /tasks/summary`, and `POST /recommendations/:id/narrate`.
 - `apps/web` is TanStack Start. It imports one thing from the API: the `App` **type**, via the
   `@hackmidwest/api/contract` export (types-only condition, so a runtime import cannot resolve).
   Biome rejects relative imports into any other workspace's source.
@@ -65,7 +67,7 @@ is covered without editing them.
 - `apps-are-independent`: no app may load another app's code at runtime, even through a helper package. `App` type
   imports from `@hackmidwest/api/contract` (web and agent API) are erased, so they pass. Apps talk over HTTP.
 - `agent-api-reads-tasks-over-http`: nothing under `apps/agent-api` may load `packages/db`, even through a helper
-  package. Its features yield the `TasksApi` service instead.
+  package. Its features yield the `ClosureApi` and `TasksApi` ports instead.
 - `api-db-fixture-only-in-tests`: in a backend's `src`, only `*.test.ts` files may reach the `@hackmidwest/db/testing`
   fixture, even through another module. That includes `index.ts`.
 

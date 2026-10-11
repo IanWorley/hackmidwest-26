@@ -1,6 +1,7 @@
 import { createServer, type RequestListener } from "node:http";
 import { Effect } from "effect";
 import { expect, it } from "vitest";
+import { createApiClients } from "../api-client";
 import { createApp } from "../app";
 import {
   type LlmClient,
@@ -11,15 +12,14 @@ import {
 import {
   createAgentApiRuntime,
   HTTP_INTERNAL_SERVER_ERROR,
+  HTTP_NOT_FOUND,
   HTTP_OK,
   INTERNAL_ERROR_MESSAGE,
 } from "../runtime";
-import { createTasksApiClient } from "../tasks-api";
 
 const REQUEST_ORIGIN = "http://agent-api.test";
 const LOOPBACK_HOST = "127.0.0.1";
 const ANY_FREE_PORT = 0;
-const HTTP_NOT_FOUND = 404;
 const HTTP_UNPROCESSABLE_ENTITY = 422;
 const RECOMMENDATION_ID = 7;
 const RECOMMENDATION_PATH = `/api/recommendations/${RECOMMENDATION_ID}`;
@@ -63,10 +63,10 @@ async function withRecommendationsApi(
   if (address === null || typeof address === "string") {
     throw new Error("Expected the stub API to listen on a TCP port");
   }
-  const runtime = createAgentApiRuntime(
-    createTasksApiClient(`http://${LOOPBACK_HOST}:${address.port}`),
+  const runtime = createAgentApiRuntime({
+    ...createApiClients(`http://${LOOPBACK_HOST}:${address.port}`),
     llm,
-  );
+  });
   try {
     await run(createApp({ runRequest: runtime.runRequest }));
   } finally {

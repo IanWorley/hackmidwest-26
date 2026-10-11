@@ -1,20 +1,20 @@
-import { Data, Effect } from "effect";
+import { Effect } from "effect";
 import { Elysia, status, t } from "elysia";
+import type { RecommendationRecord } from "../api-client";
 import type { NarrationPrompt } from "../llm";
 import {
+  ClosureApi,
+  decimalIdParams,
   HTTP_INTERNAL_SERVER_ERROR,
+  HTTP_NOT_FOUND,
   HTTP_OK,
   internalServerErrorResponse,
   Llm,
+  notFoundResponse,
   type RunRequest,
-  TasksApi,
 } from "../runtime";
-import type { TasksApiClient } from "../tasks-api";
 
 const NARRATE_PATH = "/recommendations/:id/narrate";
-const HTTP_NOT_FOUND = 404;
-/** Mirrors apps/api's decimal id route params, so a malformed id gets the same 422 and never reaches the API. */
-const DECIMAL_ID_PATTERN = "^[1-9][0-9]*$";
 
 const NARRATION_INSTRUCTIONS = [
   "You rewrite a weather operating-status recommendation as the body of a short email from a federal facility manager to staff.",
@@ -23,38 +23,16 @@ const NARRATION_INSTRUCTIONS = [
   "Reply with the email body only.",
 ].join(" ");
 
-const narrateParams = t.Object({
-  id: t.String({ pattern: DECIMAL_ID_PATTERN }),
-});
-
 const narrationResponse = t.Object({
   template: t.String(),
   narrated: t.String(),
 });
 
-const notFoundResponse = t.Object({ message: t.String() });
-
-class RecommendationReadError extends Data.TaggedError(
-  "RecommendationReadError",
-)<{
-  readonly cause: unknown;
-}> {}
-
-type RecommendationRecord = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<TasksApiClient["api"]["recommendations"]>["get"]>
-  >["data"]
->;
-
-interface StoredRecommendation {
-  readonly posture: RecommendationRecord["posture"];
-  readonly rationale: string;
-}
-
 function narrationPrompt({
   posture,
-  rationale,
-}: StoredRecommendation): NarrationPrompt {
+  snapshot,
+}: RecommendationRecord): NarrationPrompt {
+  const { rationale } = snapshot.output;
   return {
     template: rationale,
     messages: [
@@ -67,37 +45,34 @@ function narrationPrompt({
   };
 }
 
-const narrate = Effect.fn("narrate")(function* (decimalId: string) {
-  const tasksApi = yield* TasksApi;
-  const result = yield* Effect.tryPromise({
-    try: (signal) =>
-      tasksApi.api
-        .recommendations({ id: decimalId })
-        .get({ fetch: { signal } }),
-    catch: (cause) => new RecommendationReadError({ cause }),
-  });
-  if (result.error?.status === HTTP_NOT_FOUND) {
-    return status(HTTP_NOT_FOUND, result.error.value);
-  }
-  if (result.error !== null) {
-    return yield* Effect.fail(
-      new RecommendationReadError({ cause: result.error.value }),
-    );
-  }
-  const prompt = narrationPrompt({
-    posture: result.data.posture,
-    rationale: result.data.snapshot.output.rationale,
-  });
+/** Phrases a stored recommendation. The posture is the stored one; the model only rewrites its rationale. */
+const narrateRecommendation = Effect.fn("narrateRecommendation")(function* (
+  recommendation: RecommendationRecord,
+) {
+  const prompt = narrationPrompt(recommendation);
   const llm = yield* Llm;
   return { template: prompt.template, narrated: yield* llm.narrate(prompt) };
 });
+
+const narrate = Effect.fn("narrate")(
+  function* (decimalRecommendationId: string) {
+    const closureApi = yield* ClosureApi;
+    const recommendation = yield* closureApi.readRecommendation(
+      decimalRecommendationId,
+    );
+    return yield* narrateRecommendation(recommendation);
+  },
+  Effect.catchTag("NotFoundError", ({ message }) =>
+    Effect.succeed(status(HTTP_NOT_FOUND, { message })),
+  ),
+);
 
 export function createNarrateModule(runRequest: RunRequest) {
   return new Elysia({ name: "narrate" }).post(
     NARRATE_PATH,
     ({ params }) => runRequest(narrate(params.id)),
     {
-      params: narrateParams,
+      params: decimalIdParams,
       response: {
         [HTTP_OK]: narrationResponse,
         [HTTP_NOT_FOUND]: notFoundResponse,
@@ -107,4 +82,4 @@ export function createNarrateModule(runRequest: RunRequest) {
   );
 }
 
-export { NARRATE_PATH };
+export { NARRATE_PATH, narrateRecommendation, narrationResponse };

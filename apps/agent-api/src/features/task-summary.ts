@@ -1,4 +1,4 @@
-import { Data, Effect } from "effect";
+import { Effect } from "effect";
 import { Elysia, t } from "elysia";
 import {
   HTTP_INTERNAL_SERVER_ERROR,
@@ -17,24 +17,14 @@ const taskSummaryResponse = t.Object({
   open: count,
 });
 
-class TasksApiError extends Data.TaggedError("TasksApiError")<{
-  readonly cause: unknown;
-}> {}
-
 const summarizeTasks = Effect.fn("summarizeTasks")(function* () {
   const tasksApi = yield* TasksApi;
-  const result = yield* Effect.tryPromise({
-    try: (signal) => tasksApi.api.tasks.get({ fetch: { signal } }),
-    catch: (cause) => new TasksApiError({ cause }),
-  });
-  if (result.error !== null) {
-    return yield* Effect.fail(new TasksApiError({ cause: result.error.value }));
-  }
-  const completed = result.data.filter((task) => task.completed).length;
+  const tasks = yield* tasksApi.listTasks();
+  const completed = tasks.filter((task) => task.completed).length;
   return {
-    total: result.data.length,
+    total: tasks.length,
     completed,
-    open: result.data.length - completed,
+    open: tasks.length - completed,
   };
 });
 
