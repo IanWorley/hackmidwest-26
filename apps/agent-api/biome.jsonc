@@ -19,6 +19,7 @@
               "agentApiLayer",
               "createApp",
               "createHealthModule",
+              "createNarrateModule",
               "createTaskSummaryModule",
               "createTasksApiClient"
             ]
@@ -28,6 +29,16 @@
     }
   },
   "overrides": [
+    {
+      // Effect service keys are classes, and runtime.ts is the one place
+      // every service key is declared and provided.
+      "includes": ["src/runtime.ts"],
+      "linter": {
+        "rules": {
+          "style": { "noExcessiveClassesPerFile": "off" }
+        }
+      }
+    },
     {
       // t3env keys its schemas by environment variable name, which is CONSTANT_CASE.
       "includes": ["src/config.ts"],
