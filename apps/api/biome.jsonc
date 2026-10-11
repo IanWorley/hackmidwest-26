@@ -65,6 +65,28 @@
       }
     },
     {
+      // The TypeBox schema mirrors AirNow's PascalCase wire field names, so
+      // object properties there may use the upstream casing.
+      "includes": ["src/clients/airnow.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "selector": { "kind": "objectLiteralProperty" },
+                    "formats": ["camelCase", "PascalCase", "CONSTANT_CASE"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       // The Bun entry point is the one place that reads the environment or
       // loads Bun modules; it passes typed config down.
       "includes": ["src/index.ts"],
