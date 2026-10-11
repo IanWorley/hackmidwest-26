@@ -263,13 +263,11 @@ it("rejects a correction that moves a chain onto a recommendation another chain 
     await store.db
       .insert(recommendations)
       .values({ ...RECOMMENDATION, id: NEWER_RECOMMENDATION_ID });
-    await store.db
-      .insert(decisions)
-      .values({
-        ...ROOT_DECISION,
-        id: undefined,
-        recommendationId: NEWER_RECOMMENDATION_ID,
-      });
+    await store.db.insert(decisions).values({
+      ...ROOT_DECISION,
+      id: undefined,
+      recommendationId: NEWER_RECOMMENDATION_ID,
+    });
 
     await expect(
       store.db
