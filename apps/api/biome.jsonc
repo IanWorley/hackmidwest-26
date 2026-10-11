@@ -40,6 +40,16 @@
       }
     },
     {
+      // Opt-in integration tests call live services. They read credentials
+      // from the environment so a run without them, such as CI, skips them.
+      "includes": ["src/**/*.integration.test.ts"],
+      "linter": {
+        "rules": {
+          "style": { "noProcessEnv": "off" }
+        }
+      }
+    },
+    {
       // Effect service keys are classes, and runtime.ts is the one place
       // every service key is declared and provided.
       "includes": ["src/runtime.ts"],

@@ -249,6 +249,20 @@ export const LINT_PROBES: readonly BoundaryProbe[] = [
     ],
   },
   {
+    behavior: "an API integration test may read process.env",
+    files: {
+      "apps/api/src/clients/probe.integration.test.ts": `${IMPORT_PROCESS}export const probe = process.env.NWS_USER_AGENT;\n`,
+    },
+    violatedRules: [],
+  },
+  {
+    behavior: "an API unit test cannot read process.env",
+    files: {
+      "apps/api/src/clients/probe.test.ts": `${IMPORT_PROCESS}export const probe = process.env.NWS_USER_AGENT;\n`,
+    },
+    violatedRules: ["style/noProcessEnv"],
+  },
+  {
     behavior: "the API entry point may read process.env",
     files: {
       "apps/api/src/index.ts": `${IMPORT_PROCESS}export const probe = process.env.API_PORT;\n`,
