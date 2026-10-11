@@ -25,6 +25,8 @@ const DECISIONS_PATH = "/api/recommendations/1/decisions";
 const PAST_TTL = "2026-01-14T09:31:01.000Z";
 const CLEAN_AIR = { value: 40, observedAt: "2026-01-14T08:00:00.000Z" };
 const NOT_EVALUATED = { posture: "not_evaluated" };
+/** Kansas City's 16:30 CST closing on the test app's day, when its facility day rolls over to 2026-01-15. */
+const KANSAS_CITY_ROLLOVER = "2026-01-14T22:30:00.000Z";
 
 function withCountingApp(
   run: (
@@ -89,6 +91,23 @@ it(`GET ${MAP_PATH} reports each facility's newest live recommendation, not a la
           standing: NOT_EVALUATED,
         },
       ]);
+    },
+  );
+});
+
+it(`GET ${MAP_PATH} reports a facility as not_evaluated once its latest recommendation's facility day rolls over`, async () => {
+  await withStormAppOn(
+    createTestDatabaseWithDemoFacilities,
+    async ({ get, post, setClock }) => {
+      await post(EVALUATE_PATH);
+      setClock(KANSAS_CITY_ROLLOVER);
+
+      const { facilities } = await (await get(MAP_PATH)).json();
+
+      expect(
+        facilities.find(({ id }: { id: number }) => id === KANSAS_CITY_ID)
+          .standing,
+      ).toEqual(NOT_EVALUATED);
     },
   );
 });

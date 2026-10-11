@@ -1,5 +1,5 @@
 import { decisions, facilities, recommendations } from "@hackmidwest/db";
-import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, inArray, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { createSchemaFactory } from "drizzle-typebox";
 import { Cache, Data, DateTime, Effect, Option } from "effect";
@@ -14,6 +14,7 @@ import {
 import {
   type CurrentDecisionRow,
   findCurrentDecision,
+  SNAPSHOT_FACILITY_DATE,
 } from "./current-decision";
 import {
   AlertCollectionSchema,
@@ -45,6 +46,7 @@ const CurrentDecisionSchema = t.Object({
 });
 
 const StandingSchema = t.Union([
+  /** No live recommendation for today's facility day: never evaluated, or last evaluated before the rollover. */
   t.Object({ posture: t.Literal("not_evaluated") }),
   t.Object({
     posture: postureSchema,
@@ -73,6 +75,8 @@ const MapResponseSchema = t.Object({
 });
 
 type Standing = typeof StandingSchema.static;
+
+const NOT_EVALUATED: Standing = { posture: "not_evaluated" };
 type CurrentDecision = typeof CurrentDecisionSchema.static;
 
 class MapStorageError extends Data.TaggedError("MapStorageError")<{
@@ -93,12 +97,24 @@ function currentDecisionView(
   return { recommendationId, action, chosenPosture, decidedAt, recheckAt };
 }
 
+type StandingRow = typeof recommendations.$inferSelect & {
+  /** `snapshot.output.facilityDate`: the facility day the recommendation was evaluated for. */
+  readonly facilityDate: string;
+};
+
+/**
+ * A recommendation for an earlier facility day no longer stands once the day rolls over, so the facility reads as
+ * not evaluated until the next evaluation, the same rule `findCurrentDecision` applies to decisions.
+ */
 async function standingOf(
   db: Db,
-  row: typeof recommendations.$inferSelect,
+  row: StandingRow,
   now: Instant,
 ): Promise<Standing> {
   const current = await findCurrentDecision(db, row.facilityId, now);
+  if (current === null || current.facilityDate !== row.facilityDate) {
+    return NOT_EVALUATED;
+  }
   return {
     posture: row.posture,
     recommendationId: row.id,
@@ -130,7 +146,8 @@ function isCurrentRecommendation(db: Db): SQL {
 
 /**
  * Facilities by name, each with its current live recommendation (latest evaluation time), the one
- * `findLatestRecommendation` returns, and the facility's current decision at `now`. Previews never become a standing.
+ * `findLatestRecommendation` returns, and the facility's current decision at `now`. Previews never become a standing,
+ * and neither does a recommendation for a facility day that has already rolled over.
  */
 async function queryStandings(
   db: Db,
@@ -151,7 +168,10 @@ async function queryStandings(
       .from(facilities)
       .orderBy(asc(facilities.name)),
     db
-      .select()
+      .select({
+        ...getTableColumns(recommendations),
+        facilityDate: SNAPSHOT_FACILITY_DATE,
+      })
       .from(recommendations)
       .where(inArray(recommendations.id, latestIds)),
   ]);
@@ -165,7 +185,7 @@ async function queryStandings(
   );
   return facilityRows.map((facility) => ({
     ...facility,
-    standing: standings.get(facility.id) ?? { posture: "not_evaluated" },
+    standing: standings.get(facility.id) ?? NOT_EVALUATED,
   }));
 }
 
