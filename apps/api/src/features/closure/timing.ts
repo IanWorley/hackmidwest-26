@@ -204,13 +204,21 @@ function toStatus(
  * The facility day a decision made at `now` is about: today in the facility's zone until today's
  * closing time, then tomorrow. Weekends and holidays are not modeled.
  */
-function facilityDay(facility: FacilitySchedule, now: Instant): FacilityDay {
+function facilityDate(
+  facility: Pick<FacilitySchedule, "timezone" | "closesAt">,
+  now: Instant,
+): CalendarDate {
   const zone = facility.timezone;
   const today = calendarDate(now, zone);
-  let date = today;
   if (now >= localInstant(today, facility.closesAt, zone)) {
-    date = addDays(today, 1);
+    return addDays(today, 1);
   }
+  return today;
+}
+
+function facilityDay(facility: FacilitySchedule, now: Instant): FacilityDay {
+  const zone = facility.timezone;
+  const date = facilityDate(facility, now);
   return {
     date,
     opensAt: localInstant(date, facility.opensAt, zone),
@@ -236,4 +244,4 @@ export type {
   TimingInput,
   TimingResult,
 };
-export { evaluateTiming };
+export { evaluateTiming, facilityDate };
