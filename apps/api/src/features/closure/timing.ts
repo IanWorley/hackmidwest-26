@@ -6,7 +6,7 @@ import {
   hazardInterval,
 } from "./hazard-window";
 import type { Posture } from "./postures";
-import { THRESHOLDS, TIMING_POLICY } from "./thresholds";
+import { postHazardBuffer, THRESHOLDS, TIMING_POLICY } from "./thresholds";
 import {
   addDays,
   type CalendarDate,
@@ -35,6 +35,7 @@ type FacilitySchedule = Pick<
   | "arrivalWindowStart"
   | "arrivalWindowEnd"
   | "typicalCommuteMinutes"
+  | "roadClass"
 >;
 
 interface TimingInput {
@@ -96,7 +97,10 @@ function evaluateTiming(input: TimingInput): TimingResult {
   const now = parseInstant(input.now);
   const zone = input.facility.timezone;
   const day = facilityDay(input.facility, now);
-  const hazard = hazardInterval(input.evidence, input.hazard);
+  const hazard = hazardInterval(
+    input.evidence,
+    postHazardBuffer(input.hazard, input.facility.roadClass).value,
+  );
   const timingCase = classify(hazard, day, input.hazard, now);
   return {
     facilityDate: formatDate(day.date),

@@ -32,6 +32,6 @@ Preconditions:
 
 - Health proves the process is serving requests. It does not check the tasks API, storage, or any model provider.
 - There is no CORS on the agent API. It is called by agents and servers, not by the browser, so do not drive it through `$V browser`.
-- The summary depends on the tasks API being up. A `500` from the summary with a healthy `GET /api/tasks` means the agent API's `TASKS_API_URL` is wrong.
-- `bun run dev` stops every process when one exits. A missing `AGENT_API_PORT` or `TASKS_API_URL` (for example an old `.env`) stops the whole instance during `up`.
+- The summary depends on the tasks API being up. `up` sets `TASKS_API_URL` from this run's API port, so a `500` from the summary with a healthy `GET /api/tasks` is not a URL typo. Look for the agent API's `TasksApiError` in `dev.log` after `down`.
+- `up` exports `AGENT_API_PORT` and `TASKS_API_URL`, which override a developer's `.env`. Outside `verify.sh`, a missing value, or a `TASKS_API_URL` with a path, query, or credentials, stops the agent API at startup, and `bun run dev` then stops every process.
 - The follows-the-API step mutates data. `down` and `up` before running another recipe that expects the baseline.

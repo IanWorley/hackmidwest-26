@@ -1,6 +1,4 @@
-import type { Hazard } from "@hackmidwest/db";
 import type { ForecastPeriod, NwsAlert } from "../../clients/nws-model";
-import { THRESHOLDS } from "./thresholds";
 import {
   type Instant,
   MS_PER_MINUTE,
@@ -70,7 +68,7 @@ function currentAlerts(alerts: readonly NwsAlert[]): NwsAlert[] {
  */
 function hazardInterval(
   evidence: HazardEvidence,
-  hazard: Hazard,
+  bufferMinutes: number,
 ): HazardInterval {
   const [first, ...rest] = evidenceSpans(evidence);
   const start = toInstant(
@@ -81,10 +79,7 @@ function hazardInterval(
     start,
     end: last.end,
     endBasis: last.endBasis,
-    clearsAt: toInstant(
-      last.end +
-        THRESHOLDS[hazard].postHazardBufferMinutes.value * MS_PER_MINUTE,
-    ),
+    clearsAt: toInstant(last.end + bufferMinutes * MS_PER_MINUTE),
   };
 }
 

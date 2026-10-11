@@ -1,53 +1,12 @@
+import { ROAD_CLASSES, type RoadClass } from "@hackmidwest/db";
 import { describe, expect, it } from "vitest";
-import type { HazardEvidence } from "./hazard-window";
 import {
   evaluateTiming,
-  type FacilitySchedule,
   type OpmStatus,
   type TimingCase,
   type TimingInput,
 } from "./timing";
-
-// 2026-01-14 is CST (UTC-6): arrival opens 13:00Z and the facility closes at 22:30Z.
-const FACILITY: FacilitySchedule = {
-  timezone: "America/Chicago",
-  opensAt: "07:30",
-  closesAt: "16:30",
-  arrivalWindowStart: "07:00",
-  arrivalWindowEnd: "09:00",
-  typicalCommuteMinutes: 35,
-};
-const NOW = "2026-01-14T09:00:00Z";
-
-type Period = HazardEvidence["exceedingPeriods"][number];
-
-function period(startTime: string, endTime: string): Period {
-  return { startTime, endTime };
-}
-
-function alert(
-  start: string,
-  end: string,
-  endBasis: "ends" | "expires" = "ends",
-  exceedingPeriods: readonly Period[] = [],
-): HazardEvidence {
-  return {
-    source: "alert",
-    window: { start, end, endBasis },
-    exceedingPeriods,
-  };
-}
-
-function timing(overrides: Partial<TimingInput>): TimingInput {
-  return {
-    now: NOW,
-    facility: FACILITY,
-    hazard: "winter",
-    crossedPosture: "full_closure",
-    evidence: alert("2026-01-14T06:00:00Z", "2026-01-14T11:00:00Z"),
-    ...overrides,
-  };
-}
+import { alert, FACILITY, period, timing } from "./timing-test-fixtures";
 
 interface RowCase {
   readonly scenario: string;
@@ -138,6 +97,61 @@ it.each(Object.entries(ROW_CASES).map(([kind, row]) => ({ kind, ...row })))(
   ({ input, timingCase, status }) => {
     const result = evaluateTiming(input);
     expect([result.timingCase, result.status]).toEqual([timingCase, status]);
+  },
+);
+
+// #49 asked for both winter edge cases per road class once #56 landed. Buffers run 180, 300, 540,
+// 720, and 2160 minutes, so only super-commuter roads keep the active-at-07:00 advisory a delay.
+const SNOW_ENDS_0500_BY_ROAD_CLASS = {
+  superCommuter: { posture: "delayed_arrival", delayHours: 1 },
+  urbanCommuter: { posture: "delayed_arrival", delayHours: 3 },
+  ruralCommuter: { posture: "full_closure" },
+  primary: { posture: "full_closure" },
+  secondary: { posture: "full_closure" },
+} satisfies Record<RoadClass, OpmStatus>;
+
+const ADVISORY_ACTIVE_0700_BY_ROAD_CLASS = {
+  superCommuter: { posture: "delayed_arrival", delayHours: 4 },
+  urbanCommuter: { posture: "unscheduled_telework" },
+  ruralCommuter: { posture: "unscheduled_telework" },
+  primary: { posture: "unscheduled_telework" },
+  secondary: { posture: "unscheduled_telework" },
+} satisfies Record<RoadClass, OpmStatus>;
+
+it.each(
+  ROAD_CLASSES.map((roadClass) => ({
+    roadClass,
+    status: SNOW_ENDS_0500_BY_ROAD_CLASS[roadClass],
+  })),
+)(
+  "snow ending 05:00 local on $roadClass roads gives $status.posture",
+  ({ roadClass, status }) => {
+    const result = evaluateTiming(
+      timing({
+        facility: { ...FACILITY, roadClass },
+        evidence: alert("2026-01-14T06:00:00Z", "2026-01-14T11:00:00Z"),
+      }),
+    );
+    expect(result.status).toEqual(status);
+  },
+);
+
+it.each(
+  ROAD_CLASSES.map((roadClass) => ({
+    roadClass,
+    status: ADVISORY_ACTIVE_0700_BY_ROAD_CLASS[roadClass],
+  })),
+)(
+  "an advisory active at 07:00 local on $roadClass roads gives $status.posture",
+  ({ roadClass, status }) => {
+    const result = evaluateTiming(
+      timing({
+        facility: { ...FACILITY, roadClass },
+        crossedPosture: "delayed_arrival",
+        evidence: alert("2026-01-14T10:00:00Z", "2026-01-14T14:00:00Z"),
+      }),
+    );
+    expect(result.status).toEqual(status);
   },
 );
 
