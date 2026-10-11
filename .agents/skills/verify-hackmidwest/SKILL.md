@@ -1,11 +1,11 @@
 ---
 name: verify-hackmidwest
-description: Launch and drive the Hack Midwest tasks app (TanStack Start web UI on top of an Elysia + SQLite API, plus a separate agent API) in an isolated instance and capture proof that a feature works for a real user. Use when asked to verify, demo, screenshot, or prove a change to the web pages (/, /tasks), the /api/tasks endpoints, the temporary /api/nws/live NWS pull, the agent API, or storage-only schema changes (add-only triggers, CHECK constraints), beyond what unit tests show.
+description: Launch and drive the Hack Midwest app (TanStack Start web UI on top of an Elysia + SQLite API, plus a separate agent API) in an isolated instance and capture proof that a feature works for a real user. Use when asked to verify, demo, screenshot, or prove a change to the web pages (/, /tasks, /facilities, /facilities/<id>), the /api/tasks or /api/facilities endpoints, the temporary /api/nws/live NWS pull, the agent API, or storage-only schema changes (add-only triggers, CHECK constraints), beyond what unit tests show.
 ---
 
-# Verify the Hack Midwest tasks app
+# Verify the Hack Midwest app
 
-The repo is a Bun monorepo: `apps/web` (TanStack Start, React, SSR), `apps/api` (Elysia on Bun, Drizzle, SQLite file), and `apps/agent-api` (Elysia on Bun, for agent and AI callers; it reads tasks from `apps/api` over HTTP and has no storage of its own). The **primary surface is the web UI**; the **secondary surface is the HTTP API** at `/api/tasks` (plus the temporary live NWS pull at `/api/nws/live`), which is currently the only way to create a task (the UI is read-only). The agent API is a third, independent HTTP surface with `GET /health` and `GET /tasks/summary` today. There is no CLI and no auth.
+The repo is a Bun monorepo: `apps/web` (TanStack Start, React, SSR), `apps/api` (Elysia on Bun, Drizzle, SQLite file), and `apps/agent-api` (Elysia on Bun, for agent and AI callers; it reads tasks from `apps/api` over HTTP and has no storage of its own). The **primary surface is the web UI**; the **secondary surface is the HTTP API** at `/api/tasks` and `/api/facilities` (plus the temporary live NWS pull at `/api/nws/live`), which is currently the only way to create a task (the UI is read-only). The agent API is a third, independent HTTP surface with `GET /health` and `GET /tasks/summary` today. There is no CLI and no auth.
 
 Everything goes through one helper. Set `V` in each shell command; it works from anywhere inside the repo:
 
@@ -39,7 +39,7 @@ $V up                         # or RUN_ID=my-check $V up to choose the id
 `up` is the repo's own documented dev flow (`db:migrate`, `db:seed`, `bun run dev`) with configuration supplied through the environment instead of `.env`:
 
 - `API_PORT`, `AGENT_API_PORT`, `WEB_ORIGIN=http://localhost:<web>`, `VITE_API_BASE_URL=http://localhost:<api>`, `TASKS_API_URL=http://localhost:<api>` use OS-assigned free ports. Shell env takes precedence over the root `.env` for both Bun's `--env-file` and Vite's `loadEnv`, so a developer's `.env` and their own `bun run dev` on 3000/3001 are never touched.
-- `DB_PATH=/tmp/verify-hackmidwest/runs/<RUN_ID>/db.sqlite`, a fresh file seeded with exactly one task (id `1`, `Build the Hack Midwest demo`, not completed) and the demo facility fixture: 4 facilities, 29 employees, one status event each. No endpoint serves the facility fixture yet.
+- `DB_PATH=/tmp/verify-hackmidwest/runs/<RUN_ID>/db.sqlite`, a fresh file seeded with exactly one task (id `1`, `Build the Hack Midwest demo`, not completed) and the demo facility fixture: 4 facilities, 29 employees, one status event each. `GET /api/facilities` and the `/facilities` page serve the facilities; no endpoint serves the rosters yet.
 - With `STORAGE=broken`, `up` skips migrate and seed and writes a one-line text file at `DB_PATH` instead. The API starts, and every query fails with `SQLITE_NOTADB`. Use it only for recipes that need a storage failure. No real database is edited.
 - The dev supervisor runs under `setsid`, so its PID is the process group `down` kills.
 
@@ -72,7 +72,7 @@ Each invocation opens a fresh headless Chromium page (no cookies or state carrie
 
 Any failing step exits 1 and saves `failure-<ts>.png`. An unknown step or a missing argument exits 2 with a usage line before the browser starts. Every step, the URL after it, every browser request to the API (`net GET …/api/tasks -> 200`), and every console error are appended to `$ARTIFACTS/browser.log`.
 
-Stable handles in the app today: navigation `Main` in the header on every page, with links `Hack Midwest` (to `/`) and `Tasks` (to `/tasks`); link `Open the project tasks` (on `/`); table `Tasks` (on `/tasks`), with one row per task and one checkbox per task named by its title (`[checked]` in the ARIA snapshot when completed); alert text `Tasks could not be loaded.`; pending text `Loading tasks...`; document title `Hack Midwest tasks` on `/` and `Tasks · Hack Midwest` on `/tasks`.
+Stable handles in the app today: navigation `Main` in the header on every page, with links `Hack Midwest` (to `/`), `Tasks` (to `/tasks`), and `Facilities` (to `/facilities`); links `Open the project tasks` and `Open the facilities` (on `/`); table `Tasks` (on `/tasks`), with one row per task and one checkbox per task named by its title (`[checked]` in the ARIA snapshot when completed); alert text `Tasks could not be loaded.`; pending text `Loading tasks...`; table `Facilities` (on `/facilities`), with one row per facility whose name is a link to `/facilities/<id>` and whose hazards are list items (`Winter storm`, `High wind`, `Air quality`); heading named by the facility on `/facilities/<id>`; text `Facility not found.` for an unknown id; alert text `Facilities could not be loaded.` and `Facility could not be loaded.` (on `/facilities/<id>`); pending texts `Loading facilities...` and `Loading facility...`; document title `Hack Midwest` on `/`, `Tasks · Hack Midwest` on `/tasks`, `Facilities · Hack Midwest` on `/facilities`, `<facility name> · Hack Midwest` on a facility page, `Facility not found · Hack Midwest` for an unknown or malformed id, and `Facility could not be loaded · Hack Midwest` when the facility API fails.
 
 ### API: `$V api` and `$V db`
 
@@ -82,7 +82,7 @@ RUN_ID=<id> $V api list GET /api/tasks
 RUN_ID=<id> $V db rows "select id, title, completed from tasks order by id"
 ```
 
-The API has exactly `GET /api/tasks`, `POST /api/tasks` (body `{"title": string 1..120}`), and the temporary `GET /api/nws/live?lat=&lon=`, which calls api.weather.gov live. The agent API has exactly `GET /health` and `GET /tasks/summary`; drive it with `RUN_ID=<id> $V agent <name> GET <path>`. `db` opens the file with `sqlite3 -readonly`; never write to the database directly. Mutate only through the API.
+The API has exactly `GET /api/tasks`, `POST /api/tasks` (body `{"title": string 1..120}`), `GET /api/facilities`, `GET /api/facilities/:id` (decimal positive integer id, `422` for `0x1` or `1e0`, `404` past the safe-integer range; `404 {"message":"Facility not found"}` for an unknown one), and the temporary `GET /api/nws/live?lat=&lon=`, which calls api.weather.gov live. The agent API has exactly `GET /health` and `GET /tasks/summary`; drive it with `RUN_ID=<id> $V agent <name> GET <path>`. `db` opens the file with `sqlite3 -readonly`; never write to the database directly. Mutate only through the API.
 
 A storage-only change (a new table, trigger, or `CHECK`) has no web or HTTP path until a route uses it. Prove it with `db-reject`, which pairs the write, the expected error, the exit code, and an unchanged-snapshot check in one `*.db.txt` transcript:
 

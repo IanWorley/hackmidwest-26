@@ -1,6 +1,6 @@
-# Hack Midwest tasks verification map
+# Hack Midwest verification map
 
-This directory is the maintained source for verifying the user-facing behavior of the Hack Midwest tasks app. Read this index before driving the app, then use the matching feature file as the recipe.
+This directory is the maintained source for verifying the user-facing behavior of the Hack Midwest app. Read this index before driving the app, then use the matching feature file as the recipe.
 
 ## Baseline preconditions
 
@@ -22,7 +22,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 ## Proof and skip reporting
 
 - Capture the user action and the resulting state, not only the final screen.
-- UI proof includes an ARIA snapshot and a screenshot (`snap`) with the page title in the snapshot header (`Hack Midwest tasks` on `/`, `Tasks · Hack Midwest` on `/tasks`).
+- UI proof includes an ARIA snapshot and a screenshot (`snap`) with the page title in the snapshot header (`Hack Midwest` on `/`, `Tasks · Hack Midwest` on `/tasks`, `Facilities · Hack Midwest` on `/facilities`).
 - API proof includes the saved request, status line, headers, and body (`*.http.txt`).
 - Mutation proof includes a read-only second view: a `db` row and the item rendered on `/tasks`.
 - Storage proof is a `db-reject` transcript with `verdict> rejected` (`*.db.txt`).
@@ -43,8 +43,9 @@ Keep implementation details out of the map. Name only user paths, stable handles
 
 ## Features
 
-- [Home page](./home-navigation.md) covers the landing link, the header navigation, and client-side navigation to the task list.
+- [Home page](./home-navigation.md) covers the landing links, the header navigation, and client-side navigation to the task list.
 - [Task list](./tasks-list.md) covers the server-rendered `/tasks` page, its ordering, and completion state.
+- [Facility list and detail](./facilities-list.md) covers the server-rendered `/facilities` page, the link from each row to `/facilities/<id>`, the not-found page, and `GET /api/facilities` and `GET /api/facilities/:id`.
 - [Create a task](./create-task.md) covers `POST /api/tasks`, its validation, and seeing the new task on `/tasks`.
 - [Agent API](./agent-api.md) covers the separate agent API: its `GET /health` liveness and its `GET /tasks/summary` read of the tasks API over HTTP.
 - [NWS live pull](./nws-live.md) covers the temporary `GET /api/nws/live` route: a live National Weather Service pull for one point, its range validation, and its 500 outside NWS coverage.

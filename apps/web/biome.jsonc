@@ -119,7 +119,14 @@
         // TanStack registers the router and loader data by their inferred types.
         "useExplicitReturnType": {
           "level": "error",
-          "options": { "allowedNames": ["getRouter", "loadTasks"] }
+          "options": {
+            "allowedNames": [
+              "getRouter",
+              "loadFacilities",
+              "loadFacility",
+              "loadTasks"
+            ]
+          }
         }
       }
     }
