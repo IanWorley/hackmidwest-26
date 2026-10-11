@@ -313,7 +313,9 @@ export function DecisionScreenView({
       <RecommendationSection now={now} onReload={onReload} screen={screen} />
       {latestRecommendation !== null &&
         isForFacilityDay(latestRecommendation, screen.facilityDate) && (
+          // A held confirmation was reviewed against one recommendation, so a reload onto another drops it.
           <RecommendationDecision
+            key={latestRecommendation.id}
             now={now}
             notices={notices}
             onReload={onReload}

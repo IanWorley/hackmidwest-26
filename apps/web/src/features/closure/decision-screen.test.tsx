@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { JSX } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   ANNEX_DISMISSAL,
@@ -181,4 +182,37 @@ it("keeps the standing decision and its directives after a same-day re-evaluatio
   expect(
     screen.getByRole("list", { name: "Issued directives" }).children,
   ).toHaveLength(1);
+});
+
+it("closes an open confirmation when a reload brings a different recommendation", () => {
+  const recorders = [
+    { id: 1, name: "Dana Whitfield", role: "County Executive Director" },
+  ];
+  function view(recommendationId: number): JSX.Element {
+    return (
+      <DecisionScreenView
+        notices={NO_NOTICES}
+        onReload={reloadNothing}
+        screen={{
+          ...SCREEN,
+          recorders,
+          latestRecommendation: {
+            ...KANSAS_CITY_RECOMMENDATION,
+            id: recommendationId,
+          },
+        }}
+      />
+    );
+  }
+  const { rerender } = render(view(KANSAS_CITY_RECOMMENDATION.id));
+  fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "Recorded by" }), {
+    target: { value: "1" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Record acceptance" }));
+  expect(screen.getByRole("dialog")).toBeTruthy();
+
+  rerender(view(KANSAS_CITY_RECOMMENDATION.id + 1));
+
+  expect(screen.queryByRole("dialog")).toBeNull();
 });
