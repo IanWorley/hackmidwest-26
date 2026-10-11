@@ -47,3 +47,36 @@ it("takes the hazard and urgency from the alert behind the deciding finding", ()
     "Immediate",
   ]);
 });
+
+it("takes the most urgent of the deciding finding's alerts, whatever their order", () => {
+  const engineInput = input(["winter"], {
+    alerts: alerts(
+      {
+        ...nwsAlert("Winter Storm Warning", "Severe", ALL_DAY_END),
+        urgency: "Future",
+      },
+      {
+        ...nwsAlert("Winter Storm Warning", "Severe", ALL_DAY_END),
+        id: "urn:oid:immediate-warning",
+        urgency: "Immediate",
+      },
+    ),
+  });
+  const snapshot = parseSnapshot(
+    JSON.parse(
+      JSON.stringify({
+        input: engineInput,
+        output: evaluatePosture(engineInput),
+      }),
+    ),
+  );
+
+  const context = noticeContext({
+    facility: packageInput({}).facility,
+    snapshot,
+    posture: { posture: "full_closure" },
+    now: NOW,
+  });
+
+  expect(context.urgency).toBe("Immediate");
+});
