@@ -139,10 +139,12 @@ export function createFacilitiesModule(runRequest: RunRequest) {
     );
 }
 
+export type { Facility };
 export {
   decimalIdParams,
   FACILITIES_PATH,
   FACILITY_NOT_FOUND_MESSAGE,
   facilityNotFoundResponse,
+  getFacility,
   parseDecimalId,
 };
