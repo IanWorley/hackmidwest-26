@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/.data
+**/.env
+**/.env.*
+**/coverage
+.git
+.github
+.claude
+.agents
+Dockerfile
+.dockerignore
+compose.yaml
