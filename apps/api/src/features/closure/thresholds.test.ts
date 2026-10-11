@@ -1,6 +1,7 @@
+import { HAZARDS } from "@hackmidwest/db";
 import { describe, expect, it } from "vitest";
 import { POSTURES } from "./postures";
-import { type Cutoff, HAZARDS, NWS_SEVERITIES, THRESHOLDS } from "./thresholds";
+import { type Cutoff, NWS_SEVERITIES, THRESHOLDS } from "./thresholds";
 
 interface CitedEntry {
   readonly path: string;

@@ -8,7 +8,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 - `$V setup` has run once on this machine.
 - `$V up` printed `ready RUN_ID=<id>`, and every later command is prefixed with `RUN_ID=<id>`.
 - `RUN_ID=<id> $V doctor` exits `0`.
-- The database holds only the seed task: id `1`, `Build the Hack Midwest demo`, not completed. A fresh `up` guarantees this; a reused instance may not.
+- The database holds only the seed data: one task (id `1`, `Build the Hack Midwest demo`, not completed) and the demo facility fixture (4 facilities, 29 employees, one status event each). A fresh `up` guarantees this; a reused instance may not.
 - Never drive an instance that was not started by this verification run.
 
 ## Driving conventions

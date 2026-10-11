@@ -38,7 +38,7 @@ $V up                         # or RUN_ID=my-check $V up to choose the id
 `up` is the repo's own documented dev flow (`db:migrate`, `db:seed`, `bun run dev`) with configuration supplied through the environment instead of `.env`:
 
 - `API_PORT`, `AGENT_API_PORT`, `WEB_ORIGIN=http://localhost:<web>`, `VITE_API_BASE_URL=http://localhost:<api>`, `TASKS_API_URL=http://localhost:<api>` use OS-assigned free ports. Shell env takes precedence over the root `.env` for both Bun's `--env-file` and Vite's `loadEnv`, so a developer's `.env` and their own `bun run dev` on 3000/3001 are never touched.
-- `DB_PATH=/tmp/verify-hackmidwest/runs/<RUN_ID>/db.sqlite`, a fresh file seeded with exactly one task: id `1`, `Build the Hack Midwest demo`, not completed.
+- `DB_PATH=/tmp/verify-hackmidwest/runs/<RUN_ID>/db.sqlite`, a fresh file seeded with exactly one task (id `1`, `Build the Hack Midwest demo`, not completed) and the demo facility fixture: 4 facilities, 29 employees, one status event each. No endpoint serves the facility fixture yet.
 - With `STORAGE=broken`, `up` skips migrate and seed and writes a one-line text file at `DB_PATH` instead. The API starts, and every query fails with `SQLITE_NOTADB`. Use it only for recipes that need a storage failure. No real database is edited.
 - The dev supervisor runs under `setsid`, so its PID is the process group `down` kills.
 
