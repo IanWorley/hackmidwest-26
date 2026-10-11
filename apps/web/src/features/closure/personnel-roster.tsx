@@ -20,6 +20,7 @@ import {
   type StatusCount,
 } from "./roster-filter";
 import { formatFacilityDay } from "./status-reason";
+import { useReloadAt } from "./use-reload-at";
 
 const FILTERS_NAME = "Filter people";
 const SUMMARY_NAME = "Status summary";
@@ -88,6 +89,23 @@ function FilterSelect({
   );
 }
 
+/**
+ * Statuses are resolved at load time, so the roster goes stale when the first scheduled
+ * event takes effect or the facility day rolls over at closing time, whichever comes first.
+ */
+function staleAt(personnel: Personnel, rollsOverAt: string): string {
+  let earliest = rollsOverAt;
+  for (const { nextEvent } of personnel.people) {
+    if (
+      nextEvent !== null &&
+      Date.parse(nextEvent.effectiveFrom) < Date.parse(earliest)
+    ) {
+      earliest = nextEvent.effectiveFrom;
+    }
+  }
+  return earliest;
+}
+
 function summaryText(counts: readonly StatusCount[]): string {
   if (counts.length === 0) {
     return NO_MATCHES_TEXT;
@@ -142,11 +160,17 @@ export function PersonnelRoster({
   personnel,
   timeZone,
   recordStatus,
+  rollsOverAt,
+  onReload,
 }: {
   personnel: Personnel;
   timeZone: string;
   recordStatus: RecordStatus;
+  /** When the facility day changes, from the facility-date route. */
+  rollsOverAt: string;
+  onReload: () => Promise<void>;
 }): JSX.Element {
+  useReloadAt(staleAt(personnel, rollsOverAt), onReload);
   const [filters, setFilters] = useState<RosterFilters>(NO_FILTERS);
   const view = filterRoster(
     personnel.people,

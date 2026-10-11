@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { JSX } from "react";
-import { expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { PersonnelRoster } from "./personnel-roster";
 import {
   ANNEX,
@@ -14,7 +14,12 @@ import {
   TELEWORKING,
 } from "./personnel-test-fixtures";
 import type { RecordOutcome } from "./record-status";
-import type { Building, EffectiveStatus, Personnel } from "./roster-filter";
+import type {
+  Building,
+  EffectiveStatus,
+  Personnel,
+  ResolvedPerson,
+} from "./roster-filter";
 
 type RosterEntry = [
   name: string,
@@ -36,16 +41,34 @@ const PEOPLE = ENTRIES.map(([name, building, essential, effective], index) =>
   resolvedPerson(index + 1, name, { building, essential, effective }),
 );
 const ROSTER = personnel(PEOPLE);
+const AS_OF_MS = Date.parse(ROSTER.asOf);
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+/** Closing time, an hour after the roster was read, so a scheduled event a minute out comes first. */
+const ROLLS_OVER_AT = new Date(AS_OF_MS + HOUR_MS).toISOString();
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+function reloadNothing(): Promise<void> {
+  return Promise.resolve();
+}
 
 function recorded(): Promise<RecordOutcome> {
   return Promise.resolve({ kind: "recorded" });
 }
 
-function roster(personnelData: Personnel): JSX.Element {
+function roster(
+  personnelData: Personnel,
+  onReload: () => Promise<void> = reloadNothing,
+): JSX.Element {
   return (
     <PersonnelRoster
+      onReload={onReload}
       personnel={personnelData}
       recordStatus={recorded}
+      rollsOverAt={ROLLS_OVER_AT}
       timeZone={CHICAGO}
     />
   );
@@ -121,4 +144,32 @@ it("names the facility day in the untimed alert", () => {
       "The posture for Thu, Jan 15 is early dismissal, but no time was recorded for it, so effective status can't be resolved.",
     ),
   ).toBeDefined();
+});
+
+it("reloads when a scheduled status takes effect before closing time", () => {
+  vi.useFakeTimers({ now: AS_OF_MS });
+  const onReload = vi.fn<() => Promise<void>>(() => Promise.resolve());
+  const effectiveFrom = new Date(AS_OF_MS + MINUTE_MS).toISOString();
+  const scheduled: ResolvedPerson = {
+    ...resolvedPerson(1, "Avery Calloway", {
+      building: MAIN_OFFICE,
+      essential: false,
+      effective: ONSITE,
+    }),
+    nextEvent: {
+      id: 1,
+      employeeId: 1,
+      status: "teleworking",
+      note: null,
+      reportedById: 1,
+      reportedAt: ROSTER.asOf,
+      effectiveFrom,
+    },
+  };
+  render(roster(personnel([scheduled]), onReload));
+
+  vi.advanceTimersByTime(MINUTE_MS - 1);
+  expect(onReload).not.toHaveBeenCalled();
+  vi.advanceTimersByTime(1);
+  expect(onReload).toHaveBeenCalledTimes(1);
 });

@@ -29,6 +29,7 @@ import { FacilityHours, HazardBadges } from "./facility-fields";
 import { formatFacilityDate } from "./format-time";
 import { RecommendationView } from "./recommendation-view";
 import { useNow } from "./use-now";
+import { useReloadAt } from "./use-reload-at";
 
 const TIME_ZONE_LABEL = "Time zone";
 const HOURS_LABEL = "Hours";
@@ -262,13 +263,7 @@ export function DecisionScreenView({
   const { facility, latestRecommendation, currentDecision, history } = screen;
 
   // Past closing time the facility day, and with it what is decidable, changes, so the loader runs again.
-  useEffect(() => {
-    const timer = setTimeout(
-      onReload,
-      Date.parse(screen.rollsOverAt) - Date.now(),
-    );
-    return (): void => clearTimeout(timer);
-  }, [screen.rollsOverAt, onReload]);
+  useReloadAt(screen.rollsOverAt, onReload);
 
   return (
     <article className="space-y-8">

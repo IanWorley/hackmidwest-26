@@ -4,7 +4,7 @@ import {
   Link,
   useRouter,
 } from "@tanstack/react-router";
-import type { JSX } from "react";
+import { type JSX, useCallback } from "react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { loadFacilityPersonnel } from "@/features/closure/load-facilities";
 import { PersonnelRoster } from "@/features/closure/personnel-roster";
@@ -48,8 +48,12 @@ function personnelTitle(
 }
 
 function PersonnelPage(): JSX.Element {
-  const { facility, personnel } = Route.useLoaderData();
+  const { facility, personnel, rollsOverAt } = Route.useLoaderData();
   const router = useRouter();
+  const reload = useCallback(
+    (): Promise<void> => router.invalidate({ sync: true }),
+    [router],
+  );
 
   async function recordStatus(
     employeeId: number,
@@ -58,12 +62,12 @@ function PersonnelPage(): JSX.Element {
     try {
       const outcome = await recordEmployeeStatus(employeeId, body);
       if (outcome.kind === "recorded") {
-        await router.invalidate({ sync: true });
+        await reload();
       }
       return outcome;
     } catch (cause) {
       // The request may have been saved before the connection failed, so show what was stored.
-      await router.invalidate({ sync: true });
+      await reload();
       throw cause;
     }
   }
@@ -87,7 +91,9 @@ function PersonnelPage(): JSX.Element {
       </header>
       <PersonnelRoster
         personnel={personnel}
+        onReload={reload}
         recordStatus={recordStatus}
+        rollsOverAt={rollsOverAt}
         timeZone={facility.timezone}
       />
     </article>
