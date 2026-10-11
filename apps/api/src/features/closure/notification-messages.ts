@@ -153,21 +153,29 @@ function draftMessage(
           intent.resumesOn,
           context.now,
         ),
-        appliesToYou:
-          "Your earlier instructions end when normal operations resume.",
-        whatToDo: resumeSchedule(intent.resumesOn, context),
+        ...allClearInstructions(intent.resumesOn, context),
       };
     default:
       return intent satisfies never;
   }
 }
 
-function resumeSchedule(resumesOn: string, context: MessageContext): string {
+/** Tied to the resume date itself, so it never implies a closure the original package did not have. */
+function allClearInstructions(
+  resumesOn: string,
+  context: MessageContext,
+): Instructions {
   const today = formatDate(calendarDate(context.now, context.zone));
   if (today >= resumesOn) {
-    return "Resume your usual schedule now.";
+    return {
+      appliesToYou: "Your earlier instructions no longer apply.",
+      whatToDo: "Resume your usual schedule now.",
+    };
   }
-  return `Return to your usual schedule on ${resumesOn}.`;
+  return {
+    appliesToYou: `Your earlier instructions stay in effect until ${resumesOn}.`,
+    whatToDo: `Return to your usual schedule on ${resumesOn}.`,
+  };
 }
 
 export type { MessageDraft, MessageIntent };
