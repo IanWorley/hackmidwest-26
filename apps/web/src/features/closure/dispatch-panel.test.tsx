@@ -2,12 +2,20 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { JSX } from "react";
 import { expect, it, vi } from "vitest";
 import { DispatchPanel } from "./dispatch-panel";
-import type { DispatchResult } from "./notification-api";
+import type {
+  DecisionNotificationsResult,
+  DispatchResult,
+} from "./notification-api";
 import { TIMEZONE, UNDISPATCHED } from "./notification-test-fixtures";
 
 const DECISION_ID = 21;
 
 const reloadNothing = vi.fn<() => Promise<void>>(() => Promise.resolve());
+
+/** The server rebuilds the same package it showed, so dispatch goes ahead. */
+function refreshUnchanged(_id: number): Promise<DecisionNotificationsResult> {
+  return Promise.resolve({ kind: "found", view: UNDISPATCHED });
+}
 
 const DISPATCHED: DispatchResult = {
   kind: "dispatched",
@@ -42,6 +50,7 @@ it("dispatches the decision and shows each notice's lead time", async () => {
       dispatch={dispatch}
       initial={UNDISPATCHED}
       onReload={reloadNothing}
+      refresh={refreshUnchanged}
       timezone={TIMEZONE}
     />,
   );
@@ -92,6 +101,7 @@ it("shows why a decision cannot be dispatched and reloads the screen", async () 
       dispatch={dispatch}
       initial={UNDISPATCHED}
       onReload={onReload}
+      refresh={refreshUnchanged}
       timezone={TIMEZONE}
     />,
   );
@@ -115,6 +125,7 @@ it("offers no dispatch when the package has nobody to tell", () => {
         package: { ...UNDISPATCHED.package, recipients: [] },
       }}
       onReload={reloadNothing}
+      refresh={refreshUnchanged}
       timezone={TIMEZONE}
     />,
   );
@@ -134,6 +145,7 @@ it("starts fresh when the page reloads with a newer decision", async () => {
         dispatch={dispatch}
         initial={UNDISPATCHED}
         onReload={reloadNothing}
+        refresh={refreshUnchanged}
         timezone={TIMEZONE}
       />
     );
@@ -161,6 +173,7 @@ it("reloads the screen after a dispatch, so the record chain check covers the ne
       dispatch={dispatch}
       initial={UNDISPATCHED}
       onReload={onReload}
+      refresh={refreshUnchanged}
       timezone={TIMEZONE}
     />,
   );
@@ -185,6 +198,7 @@ it("reloads to show what was recorded when a dispatch gets no clear answer", asy
       dispatch={dispatch}
       initial={UNDISPATCHED}
       onReload={onReload}
+      refresh={refreshUnchanged}
       timezone={TIMEZONE}
     />,
   );
@@ -199,4 +213,49 @@ it("reloads to show what was recorded when a dispatch gets no clear answer", asy
     ),
   );
   expect(onReload).toHaveBeenCalledTimes(1);
+});
+
+it("shows the rebuilt package and sends nothing when it changed since it was shown", async () => {
+  const [first, late] = UNDISPATCHED.package.recipients;
+  if (first === undefined || late === undefined) {
+    throw new Error("The fixture lists two recipients");
+  }
+  // Rebuilt later, the late notice moves from the preferred channel to the fastest one.
+  const rebuilt = {
+    ...UNDISPATCHED,
+    package: {
+      ...UNDISPATCHED.package,
+      recipients: [
+        first,
+        { ...late, channel: "sms", rule: "fastest" } as const,
+      ],
+    },
+  };
+  const dispatch = vi.fn(async (_id: number) => DISPATCHED);
+  const refresh = vi.fn(
+    (_id: number): Promise<DecisionNotificationsResult> =>
+      Promise.resolve({ kind: "found", view: rebuilt }),
+  );
+  render(
+    <DispatchPanel
+      decisionId={DECISION_ID}
+      dispatch={dispatch}
+      initial={UNDISPATCHED}
+      onReload={reloadNothing}
+      refresh={refresh}
+      timezone={TIMEZONE}
+    />,
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Dispatch notifications" }),
+  );
+
+  expect((await screen.findByRole("alert")).textContent).toBe(
+    "Who is told, or how, changed since this list was shown. Nothing was sent; review the list below and dispatch again.",
+  );
+  expect([
+    dispatch.mock.calls,
+    screen.getByRole("table", { name: "Who will be notified" }).textContent,
+  ]).toEqual([[], expect.stringContaining("Grace HopperText message")]);
 });

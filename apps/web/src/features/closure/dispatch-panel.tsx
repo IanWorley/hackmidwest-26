@@ -12,6 +12,7 @@ import {
 import { facilityClock } from "./facility-clock";
 import type {
   DecisionNotifications,
+  DecisionNotificationsResult,
   DispatchResult,
   NotificationConflict,
 } from "./notification-api";
@@ -24,11 +25,19 @@ type PanelState =
   | { readonly kind: "conflict"; readonly conflict: NotificationConflict }
   /** No clear answer came back, so the dispatch may have landed; the screen reloads to find out. */
   | { readonly kind: "checking" }
+  /** The package changed since it was shown, so the new one is shown and nothing was sent. */
+  | { readonly kind: "changed" }
+  /** The package could not be read again before dispatch, so nothing was sent. */
+  | { readonly kind: "refreshFailed" }
   | { readonly kind: "unconfirmed" }
   | { readonly kind: "failed" };
 
 const DISPATCH_LABEL = "Dispatch notifications";
 const DISPATCHED_LABEL = "Dispatched notices";
+const CHANGED_TEXT =
+  "Who is told, or how, changed since this list was shown. Nothing was sent; review the list below and dispatch again.";
+const REFRESH_FAILED_TEXT =
+  "The list could not be checked before dispatch. Nothing was sent; try again.";
 const CHECKING_TEXT =
   "The dispatch got no clear answer. Checking whether it was recorded…";
 const UNCONFIRMED_TEXT =
@@ -44,6 +53,14 @@ const UNKNOWN_RECIPIENT = "Unknown recipient";
 const READY: PanelState = { kind: "ready" };
 /** Kinds that wait on the server; another click now could dispatch twice. */
 const BUSY_KINDS: readonly PanelState["kind"][] = ["dispatching", "checking"];
+
+/** Both come from the same API serializer, so equal packages serialize identically. */
+function samePackage(
+  left: DecisionNotifications["package"],
+  right: DecisionNotifications["package"],
+): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
 
 /** What this panel did itself, tied to the decision it did it for, so a reloaded decision starts fresh. */
 interface LocalOutcome {
@@ -122,6 +139,18 @@ function StateAlert({ state }: { state: PanelState }): JSX.Element | null {
           <AlertDescription>{state.conflict.message}</AlertDescription>
         </Alert>
       );
+    case "changed":
+      return (
+        <Alert role="alert">
+          <AlertDescription>{CHANGED_TEXT}</AlertDescription>
+        </Alert>
+      );
+    case "refreshFailed":
+      return (
+        <Alert role="alert" variant="destructive">
+          <AlertDescription>{REFRESH_FAILED_TEXT}</AlertDescription>
+        </Alert>
+      );
     case "checking":
       return (
         <Alert role="alert">
@@ -164,12 +193,18 @@ export function DispatchPanel({
   initial,
   timezone,
   dispatch,
+  refresh,
   onReload,
 }: {
   decisionId: number;
   initial: DecisionNotifications;
   timezone: string;
   dispatch: (decisionId: number) => Promise<DispatchResult>;
+  /**
+   * Reads the package again right before dispatch. The server rebuilds it at dispatch time, and a
+   * notice past its send-by switches to the fastest channel, so what was shown may be out of date.
+   */
+  refresh: (decisionId: number) => Promise<DecisionNotificationsResult>;
   /** Called after every answer: a dispatch appends to the record chain, and a 409 means another tab acted. */
   onReload: () => Promise<void>;
 }): JSX.Element {
@@ -184,6 +219,23 @@ export function DispatchPanel({
       setLocal({ decisionId, state: next, dispatched });
     }
     settle({ kind: "dispatching" });
+    let fresh: DecisionNotificationsResult;
+    try {
+      fresh = await refresh(decisionId);
+    } catch {
+      settle({ kind: "refreshFailed" });
+      return;
+    }
+    if (fresh.kind === "conflict") {
+      settle({ kind: "conflict", conflict: fresh.conflict });
+      await onReload();
+      return;
+    }
+    const shown = shownFor(local, decisionId, initial).view.package;
+    if (!samePackage(fresh.view.package, shown)) {
+      settle({ kind: "changed" }, fresh.view);
+      return;
+    }
     let result: DispatchResult;
     try {
       result = await dispatch(decisionId);
@@ -204,7 +256,7 @@ export function DispatchPanel({
       settle(READY, result.view);
     }
     await onReload();
-  }, [dispatch, decisionId, onReload]);
+  }, [dispatch, refresh, decisionId, onReload, local, initial]);
 
   let content = (
     <>

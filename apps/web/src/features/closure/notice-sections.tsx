@@ -5,6 +5,7 @@ import {
   type DecisionNotificationsResult,
   type DecisionVerification,
   dispatchDecision,
+  refreshDecisionNotifications,
 } from "./notification-api";
 
 const NOTIFICATIONS_HEADING = "Notifications";
@@ -35,6 +36,7 @@ export function NotificationsSection({
           dispatch={dispatchDecision}
           initial={result.view}
           onReload={onReload}
+          refresh={refreshDecisionNotifications}
           timezone={timezone}
         />
       )}

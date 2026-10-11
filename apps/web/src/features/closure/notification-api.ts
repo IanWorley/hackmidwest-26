@@ -86,6 +86,16 @@ async function loadDecisionNotifications({
   });
 }
 
+/** The decided package as the server would build it now, read on demand rather than by the route loader. */
+function refreshDecisionNotifications(
+  decisionId: number,
+): Promise<DecisionNotificationsResult> {
+  return loadDecisionNotifications({
+    decisionId,
+    signal: new AbortController().signal,
+  });
+}
+
 async function dispatchDecision(decisionId: number): Promise<DispatchResult> {
   const result = await api.api.decisions({ id: decisionId }).dispatch.post();
   if (result.error === null) {
@@ -132,4 +142,5 @@ export {
   loadDecisionVerification,
   loadNotificationPreview,
   loadRecommendation,
+  refreshDecisionNotifications,
 };
