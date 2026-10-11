@@ -42,15 +42,21 @@ function reportedAfter(a: StatusEvent, b: StatusEvent): boolean {
   );
 }
 
-/** The newest event reported, which may take effect later than now. */
+/**
+ * The newest event reported by `now`, which may take effect later. An event recorded while the
+ * page was being read is left for the next read, so `latestEvent` never postdates `asOf`.
+ */
 function latestReported(
   employeeId: number,
   statusEvents: readonly StatusEvent[],
+  now: string,
 ): StatusEvent | null {
+  const nowMs = Date.parse(now);
   let latest: StatusEvent | null = null;
   for (const event of statusEvents) {
     if (
       event.employeeId === employeeId &&
+      Date.parse(event.reportedAt) <= nowMs &&
       (latest === null || reportedAfter(event, latest))
     ) {
       latest = event;
@@ -109,7 +115,7 @@ function personnelView(
           preferredChannel: employee.preferredChannel,
           hasAccessibilityNeeds: employee.accessibilityNeeds !== null,
           baseline,
-          latestEvent: latestReported(employee.id, records.statusEvents),
+          latestEvent: latestReported(employee.id, records.statusEvents, now),
         },
         effective,
       };
