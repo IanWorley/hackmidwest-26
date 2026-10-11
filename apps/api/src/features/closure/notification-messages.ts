@@ -1,21 +1,25 @@
-import type { EmployeeStatus } from "@hackmidwest/db";
 import type { DirectiveScopeKind } from "./directives";
 import type {
   Cause,
   EffectiveStatus,
   EffectiveStatusKind,
   PersonnelStatus,
-  Release,
 } from "./effective-status";
+import {
+  delayedArrival,
+  dismissal,
+  type Instructions,
+  type MessageContext,
+  type PersonContext,
+  reportInPerson,
+  workFromHome,
+} from "./notification-person";
 import {
   allClearHappening,
   happening,
   headline,
-  localTime,
-  type Situation,
 } from "./notification-situation";
-import { releaseTiming } from "./release-timing";
-import { type Instant, MS_PER_MINUTE, toInstant } from "./zoned-time";
+import { calendarDate, formatDate } from "./zoned-time";
 
 /** Three parts per #29: what is happening, whether it applies to you, what to do. */
 interface MessageDraft {
@@ -32,34 +36,10 @@ type MessageIntent =
   | { readonly kind: "withdrawn" }
   | { readonly kind: "all_clear"; readonly resumesOn: string };
 
-interface MessageContext extends Situation {
-  /** This person's shift start, else the arrival window start, on the facility date. */
-  readonly workStartsAt: Instant;
-  /** Null when they have no shift of their own. */
-  readonly workEndsAt: Instant | null;
-  readonly now: Instant;
-}
-
-/** `whereabouts` is their baseline status: where they would be today without this decision. */
-interface PersonContext extends MessageContext {
-  readonly whereabouts: EmployeeStatus;
-}
-
-interface Instructions {
-  readonly appliesToYou: string;
-  readonly whatToDo: string;
-}
-
 type StatusTemplate<K extends EffectiveStatusKind> = (
   status: Extract<EffectiveStatus, { readonly kind: K }>,
   context: PersonContext,
 ) => Instructions;
-
-interface DismissalCopy {
-  readonly stayHome: (context: PersonContext) => string;
-  readonly stopAt: (time: string, context: PersonContext) => string;
-  readonly stopNow: (context: PersonContext) => string;
-}
 
 const UPDATED_PREFIX = "Updated: ";
 const REPLACES_EARLIER_NOTICE =
@@ -69,7 +49,7 @@ const WITHDRAWN: Instructions = {
     "The notice sent for the earlier decision no longer applies to you.",
   whatToDo: "Follow your usual schedule.",
 };
-const STAY_OFF_WORK = "Stay off work as planned.";
+const SHIFT_OVER = "Your shift today has ended, so no action is needed.";
 
 const DIRECTIVE_SCOPE_PHRASE: Readonly<Record<DirectiveScopeKind, string>> = {
   facility: "A manager issued a directive for the whole facility",
@@ -78,35 +58,16 @@ const DIRECTIVE_SCOPE_PHRASE: Readonly<Record<DirectiveScopeKind, string>> = {
   employee: "A manager issued a directive for you",
 };
 
-/** Nobody is told to leave a building they are not in. */
-const DISMISSAL_COPY: Readonly<Record<EmployeeStatus, DismissalCopy>> = {
-  working_onsite: {
-    stayHome: ({ facilityName }) => `Do not report to ${facilityName} today.`,
-    stopAt: (time, { facilityName }) => `Leave ${facilityName} at ${time}.`,
-    stopNow: ({ facilityName }) => `Leave ${facilityName} now.`,
-  },
-  teleworking: {
-    stayHome: () => "Do not work today.",
-    stopAt: (time) => `Stop work at ${time}.`,
-    stopNow: () => "Stop work now.",
-  },
-  not_working: {
-    stayHome: () => STAY_OFF_WORK,
-    stopAt: () => STAY_OFF_WORK,
-    stopNow: () => STAY_OFF_WORK,
-  },
-};
-
 const STATUS_TEMPLATES: {
   readonly [K in EffectiveStatusKind]: StatusTemplate<K>;
 } = {
   working_onsite: (_status, context) => ({
     appliesToYou: "The office stays open for you.",
-    whatToDo: `Report to ${context.facilityName} at ${startTime(context)} as usual.`,
+    whatToDo: reportInPerson(context),
   }),
-  teleworking: (_status, { facilityName }) => ({
+  teleworking: (_status, context) => ({
     appliesToYou: "You are teleworking today.",
-    whatToDo: `Work from home. Do not travel to ${facilityName}.`,
+    whatToDo: workFromHome(context),
   }),
   delayed_arrival: ({ delayMinutes }, context) =>
     delayedArrival(delayMinutes, context),
@@ -120,95 +81,6 @@ const STATUS_TEMPLATES: {
     whatToDo: "Do not report today.",
   }),
 };
-
-function delayedArrival(
-  delayMinutes: number,
-  context: PersonContext,
-): Instructions {
-  const arriveAt = toInstant(
-    context.workStartsAt + delayMinutes * MS_PER_MINUTE,
-  );
-  const appliesToYou = `Your arrival is delayed by ${delayMinutes} minutes.`;
-  if (context.workEndsAt !== null && arriveAt >= context.workEndsAt) {
-    return {
-      appliesToYou: `${appliesToYou} Your shift ends at ${localTime(context.workEndsAt, context)}, before the delayed arrival.`,
-      whatToDo: `Do not report to ${context.facilityName} today.`,
-    };
-  }
-  if (arriveAt <= context.now) {
-    return {
-      appliesToYou,
-      whatToDo: `Report to ${context.facilityName} now.`,
-    };
-  }
-  return {
-    appliesToYou,
-    whatToDo: `Arrive by ${localTime(arriveAt, context)} instead of ${startTime(context)}.`,
-  };
-}
-
-/** "As usual" only for someone who normally works onsite; anyone else is told when, or now. */
-function reportInPerson(context: PersonContext): string {
-  const { facilityName } = context;
-  if (context.whereabouts === "working_onsite") {
-    return `Report to ${facilityName} at ${startTime(context)} as usual.`;
-  }
-  if (context.workStartsAt <= context.now) {
-    return `Report to ${facilityName} now.`;
-  }
-  return `Report to ${facilityName} by ${startTime(context)}.`;
-}
-
-function dismissal(release: Release, context: PersonContext): Instructions {
-  const copy = DISMISSAL_COPY[context.whereabouts];
-  const timing = releaseTiming(
-    release,
-    context.workStartsAt,
-    context.workEndsAt,
-  );
-  switch (timing.kind) {
-    case "all_day":
-      if (context.workStartsAt <= context.now) {
-        return {
-          appliesToYou: "You are dismissed for the rest of the day.",
-          whatToDo: copy.stopNow(context),
-        };
-      }
-      return {
-        appliesToYou: "You are dismissed for the day.",
-        whatToDo: copy.stayHome(context),
-      };
-    case "before_start":
-      return {
-        appliesToYou: `Your release time, ${localTime(timing.at, context)}, is no later than your ${startTime(context)} start.`,
-        whatToDo: copy.stayHome(context),
-      };
-    case "during_shift": {
-      const time = localTime(timing.at, context);
-      if (timing.at <= context.now) {
-        return {
-          appliesToYou: `You were released early at ${time}.`,
-          whatToDo: copy.stopNow(context),
-        };
-      }
-      return {
-        appliesToYou: `You are released early at ${time}.`,
-        whatToDo: copy.stopAt(time, context),
-      };
-    }
-    case "after_shift":
-      return {
-        appliesToYou: `Your shift ends at ${localTime(timing.endsAt, context)}, no later than the ${localTime(timing.at, context)} release.`,
-        whatToDo: "Work your normal hours.",
-      };
-    default:
-      return timing satisfies never;
-  }
-}
-
-function startTime(context: MessageContext): string {
-  return localTime(context.workStartsAt, context);
-}
 
 function template<K extends EffectiveStatusKind>(
   status: Extract<EffectiveStatus, { readonly kind: K }>,
@@ -233,6 +105,12 @@ function instructionsFor(
     ...context,
     whereabouts: baseline.status,
   });
+  if (context.phase === "after_shift") {
+    return {
+      appliesToYou: withCause(appliesToYou, effective.cause),
+      whatToDo: SHIFT_OVER,
+    };
+  }
   return { appliesToYou: withCause(appliesToYou, effective.cause), whatToDo };
 }
 
@@ -277,11 +155,19 @@ function draftMessage(
         ),
         appliesToYou:
           "Your earlier instructions end when normal operations resume.",
-        whatToDo: `Return to your usual schedule on ${intent.resumesOn}.`,
+        whatToDo: resumeSchedule(intent.resumesOn, context),
       };
     default:
       return intent satisfies never;
   }
+}
+
+function resumeSchedule(resumesOn: string, context: MessageContext): string {
+  const today = formatDate(calendarDate(context.now, context.zone));
+  if (today >= resumesOn) {
+    return "Resume your usual schedule now.";
+  }
+  return `Return to your usual schedule on ${resumesOn}.`;
 }
 
 export type { MessageDraft, MessageIntent };
