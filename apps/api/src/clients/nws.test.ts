@@ -200,7 +200,7 @@ it("keeps the hourly forecast's update time and URL", async () => {
 
 it("reads each active alert with its inline geometry and affected zone URLs", async () => {
   const polygon = { type: "Polygon", coordinates: [squareRing(KANSAS_CITY)] };
-  const { client } = clientFor([
+  const { client, sent } = clientFor([
     Response.json({
       features: [
         {
@@ -216,7 +216,13 @@ it("reads each active alert with its inline geometry and affected zone URLs", as
 
   const [area] = await Effect.runPromise(client.activeAlertAreas(KANSAS_CITY));
 
-  expect([area?.alert.id, area?.geometry, area?.affectedZones]).toEqual([
+  expect([
+    sent.map(({ url }) => url),
+    area?.alert.id,
+    area?.geometry,
+    area?.affectedZones,
+  ]).toEqual([
+    ["http://nws.test/alerts/active?point=39.0997,-94.5786&status=actual"],
     "urn:oid:alert-2",
     polygon,
     ["http://nws.test/zones/forecast/MOZ037"],

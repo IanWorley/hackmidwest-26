@@ -38,6 +38,8 @@ const HTTP_TOO_MANY_REQUESTS = 429;
 const GRID_POINT_TTL = Duration.hours(24);
 const GRID_POINT_CACHE_CAPACITY = 1000;
 const HTTP_SERVER_ERROR_MIN = 500;
+/** Leaves out Test, Exercise, System, and Draft notices, which are not hazards. */
+const ACTUAL_ALERTS_FILTER = "status=actual";
 
 type NwsErrorReason =
   | { readonly kind: "network"; readonly cause: unknown }
@@ -280,9 +282,10 @@ function makeNwsClient({
         Effect.flatMap((grid) => latestObservation(getJson, baseUrl, grid)),
       ),
     activeAlertAreas: (point) =>
-      getJson(activeAlertsUrl(point), AlertAreasResponse).pipe(
-        Effect.map(({ features }) => features.map(toNwsAlertArea)),
-      ),
+      getJson(
+        `${activeAlertsUrl(point)}&${ACTUAL_ALERTS_FILTER}`,
+        AlertAreasResponse,
+      ).pipe(Effect.map(({ features }) => features.map(toNwsAlertArea))),
     zoneGeometry: (zoneUrl) =>
       getJson(zoneUrl, ZoneResponse).pipe(
         Effect.map(({ geometry }) => geometry),
