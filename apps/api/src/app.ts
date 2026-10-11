@@ -2,6 +2,7 @@ import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { createDecisionsModule } from "./features/closure/decisions";
 import { createFacilitiesModule } from "./features/closure/facilities";
+import { createNotificationsModule } from "./features/closure/notification-routes";
 import { createRecommendationsModule } from "./features/closure/recommendations";
 import { createFloodLiveModule } from "./features/flood-live";
 import { createNwsLiveModule } from "./features/nws-live";
@@ -21,6 +22,7 @@ export function createApp({ runRequest, webOrigin }: AppDependencies) {
     .use(createFacilitiesModule(runRequest))
     .use(createRecommendationsModule(runRequest))
     .use(createDecisionsModule(runRequest))
+    .use(createNotificationsModule(runRequest))
     .use(createNwsLiveModule(runRequest))
     .use(createFloodLiveModule(runRequest));
 }

@@ -173,4 +173,9 @@ function findChainBreaks(chain: DecisionChain): ChainBreak[] {
 }
 
 export type { DecisionChain, RecordContent };
-export { CHAIN_RECORDS, DECISION_CHAIN_BREAK_REASONS, findChainBreaks };
+export {
+  CHAIN_RECORDS,
+  DECISION_CHAIN_BREAK_REASONS,
+  findChainBreaks,
+  storedHash,
+};
