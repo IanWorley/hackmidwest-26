@@ -1,7 +1,7 @@
 import { facilities, HAZARDS } from "@hackmidwest/db";
 import { createSchemaFactory } from "drizzle-typebox";
 import { type Static, t } from "elysia";
-import { FLOOD_CATEGORIES } from "../../clients/nwps";
+import type { FloodCategory } from "../../clients/nwps";
 import { ForecastPeriodSchema, NwsAlertSchema } from "../../clients/nws-model";
 import { ReadingSchema } from "./readings";
 
@@ -9,6 +9,16 @@ const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 const facilityColumns = createSelectSchema(facilities).properties;
 
 const StageAtSchema = t.Object({ stageFt: t.Number(), validTime: t.String() });
+
+// A Record keyed by t.UnionEnum loses its keys under t.Partial and accepts any object, so the keys are spelled out.
+const FloodStagesFtSchema = t.Partial(
+  t.Object({
+    action: t.Number(),
+    minor: t.Number(),
+    moderate: t.Number(),
+    major: t.Number(),
+  } satisfies Record<FloodCategory, unknown>),
+);
 
 /** Plain JSON with ISO-8601 instants, so a stored input replays through `Value.Parse`. */
 const EngineInputSchema = t.Object({
@@ -41,9 +51,7 @@ const EngineInputSchema = t.Object({
       rawRef: t.String(),
       asOf: t.String(),
       /** Only the categories this gauge defines a stage for. */
-      floodStagesFt: t.Partial(
-        t.Record(t.UnionEnum(FLOOD_CATEGORIES), t.Number()),
-      ),
+      floodStagesFt: FloodStagesFtSchema,
       observed: t.Union([StageAtSchema, t.Null()]),
       forecast: t.Array(StageAtSchema),
     }),
