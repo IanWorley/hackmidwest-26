@@ -65,6 +65,15 @@ const ROW_CASES = {
     timingCase: { kind: "clearsBeforeArrival" },
     status: { posture: "normal" },
   },
+  alreadyCleared: {
+    scenario: "re-evaluation at 10:30 local after the 10:00 clearance",
+    input: timing({
+      now: "2026-01-14T16:30:00Z",
+      evidence: alert("2026-01-14T06:00:00Z", "2026-01-14T11:00:00Z"),
+    }),
+    timingCase: { kind: "alreadyCleared" },
+    status: { posture: "normal" },
+  },
   delayWithinCap: {
     scenario: "snow ends 05:00 local with arrival at 07:00 (#49)",
     input: timing({
@@ -125,7 +134,7 @@ const ROW_CASES = {
 } satisfies Record<TimingCase["kind"], RowCase>;
 
 it.each(Object.entries(ROW_CASES).map(([kind, row]) => ({ kind, ...row })))(
-  "§5.1 row $kind: $scenario",
+  "timing case $kind: $scenario",
   ({ input, timingCase, status }) => {
     const result = evaluateTiming(input);
     expect([result.timingCase, result.status]).toEqual([timingCase, status]);
@@ -270,14 +279,4 @@ it("returns the scheduled departure time even after it has passed", () => {
     departAt: "2026-01-14T19:15:00.000Z",
     departAtLocal: "13:15",
   });
-});
-
-it("returns normal once the hazard has cleared, even after arrival opened", () => {
-  const result = evaluateTiming(
-    timing({
-      now: "2026-01-14T16:30:00Z",
-      evidence: alert("2026-01-14T06:00:00Z", "2026-01-14T11:00:00Z"),
-    }),
-  );
-  expect(result.status).toEqual({ posture: "normal" });
 });

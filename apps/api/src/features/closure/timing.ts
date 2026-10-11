@@ -46,9 +46,10 @@ interface TimingInput {
   readonly evidence: HazardEvidence;
 }
 
-/** One variant per §5.1 row. */
+/** One variant per §5.1 row, plus a hazard that cleared before a later re-evaluation. */
 type TimingCase =
   | { readonly kind: "clearsBeforeArrival" }
+  | { readonly kind: "alreadyCleared" }
   | { readonly kind: "delayWithinCap"; readonly delayHours: number }
   | { readonly kind: "outlastsDelayCap"; readonly delayHours: number }
   | { readonly kind: "startsDuringHours"; readonly releaseAt: IsoInstant }
@@ -117,9 +118,11 @@ function classify(
   hazardKind: Hazard,
   now: Instant,
 ): TimingCase {
-  // A hazard that has already cleared asks nothing of anyone, even after arrival has opened.
-  if (hazard.clearsAt <= Math.max(day.arrivalStart, now)) {
+  if (hazard.clearsAt <= day.arrivalStart) {
     return { kind: "clearsBeforeArrival" };
+  }
+  if (hazard.clearsAt <= now) {
+    return { kind: "alreadyCleared" };
   }
   if (hazard.start >= day.closesAt) {
     return {
@@ -164,6 +167,7 @@ function toStatus(
 ): OpmStatus {
   switch (timingCase.kind) {
     case "clearsBeforeArrival":
+    case "alreadyCleared":
     case "startsAfterHours":
       return { posture: "normal" };
     case "delayWithinCap":
