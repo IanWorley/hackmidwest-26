@@ -25,6 +25,7 @@ import {
   directiveRecordOf,
 } from "./directive-history";
 import { parseDecimalId } from "./facilities";
+import { findFirstDispatch } from "./notification-facts";
 import {
   DecisionWriteError,
   decisionChainWrites,
@@ -47,6 +48,12 @@ const directiveConflictResponse = t.Union([
     // The current decision is a defer or a missed deadline, so there is no posture to qualify.
     conflict: t.Literal("no_chosen_posture"),
     currentDecisionId: t.Integer(),
+  }),
+  t.Object({
+    // Dispatch is once-only, so a directive after it would change a package nobody is sent again.
+    conflict: t.Literal("already_dispatched"),
+    currentDecisionId: t.Integer(),
+    recordedAt: t.String(),
   }),
 ]);
 type DirectiveConflict = typeof directiveConflictResponse.static;
@@ -178,6 +185,18 @@ async function issueInTransaction(
   const conflict = directiveConflict(decision.id, current?.decision ?? null);
   if (conflict !== null) {
     return { kind: "conflict", conflict };
+  }
+  // Dispatch shares the decision-chain permit, so this read cannot miss one landing mid-write.
+  const dispatched = await findFirstDispatch(tx, decision.id);
+  if (dispatched !== undefined) {
+    return {
+      kind: "conflict",
+      conflict: {
+        conflict: "already_dispatched",
+        currentDecisionId: decision.id,
+        recordedAt: dispatched.recordedAt,
+      },
+    };
   }
   const directive = await insertDirective(tx, {
     decisionId: decision.id,

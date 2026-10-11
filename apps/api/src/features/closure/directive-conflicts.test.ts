@@ -14,6 +14,7 @@ import {
   appRunner,
   BEFORE_DECIDED_AT,
   type Db,
+  DECIDED_AT,
   DECIDER_ID,
   DEFER,
   decide,
@@ -24,6 +25,7 @@ import {
   RECOMMENDATION,
   SECOND_DECISION_ID,
 } from "./decision-test-fixtures";
+import { dispatch, recommend, STORM } from "./notification-route-test-fixtures";
 import { contentHash } from "./records";
 
 const withApp = appRunner(createTestDatabaseWithDemoFacilities);
@@ -168,6 +170,30 @@ it("refuses a directive on a defer, which chose no posture", async () => {
     ]).toEqual([
       HTTP_CONFLICT,
       { conflict: "no_chosen_posture", currentDecisionId: FIRST_DECISION_ID },
+      [],
+    ]);
+  });
+});
+
+it("refuses a directive once the decision's notices were dispatched", async () => {
+  await withApp(async ({ db, request }) => {
+    await recommend(db, STORM);
+    await request(decide(NEWER_RECOMMENDATION_ID), ACCEPT);
+    await request(dispatch(), {});
+
+    const response = await request(DIRECTIVES_PATH, ESSENTIAL_REPORT);
+
+    expect([
+      response.status,
+      await response.json(),
+      await db.select().from(decisionDirectives),
+    ]).toEqual([
+      HTTP_CONFLICT,
+      {
+        conflict: "already_dispatched",
+        currentDecisionId: FIRST_DECISION_ID,
+        recordedAt: DECIDED_AT,
+      },
       [],
     ]);
   });
