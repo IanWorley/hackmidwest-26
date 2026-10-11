@@ -1,6 +1,7 @@
 import {
   type AnyRouteMatch,
   createFileRoute,
+  Link,
   useRouter,
 } from "@tanstack/react-router";
 import { type JSX, useCallback } from "react";
@@ -9,6 +10,7 @@ import { loadDecisionScreen } from "@/features/closure/decision-api";
 import { DecisionScreenView } from "@/features/closure/decision-screen";
 import { pageTitle } from "@/lib/page-title";
 
+const PERSONNEL_LINK_TEXT = "People and status";
 const NOT_FOUND_TITLE = "Facility not found";
 const NOT_FOUND_TEXT = `${NOT_FOUND_TITLE}.`;
 const LOADING_TITLE = "Loading facility";
@@ -42,7 +44,21 @@ function FacilityPage(): JSX.Element {
     (): Promise<void> => router.invalidate({ sync: true }),
     [router],
   );
-  return <DecisionScreenView onReload={reload} screen={screen} />;
+  return (
+    <DecisionScreenView
+      links={
+        <Link
+          className="underline underline-offset-4"
+          params={{ facilityId: String(screen.facility.id) }}
+          to="/facilities/$facilityId/personnel"
+        >
+          {PERSONNEL_LINK_TEXT}
+        </Link>
+      }
+      onReload={reload}
+      screen={screen}
+    />
+  );
 }
 
 // Router's generator owns this route identifier; it must remain a file-matching literal.

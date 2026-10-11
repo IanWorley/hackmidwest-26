@@ -1,5 +1,6 @@
 import {
   type JSX,
+  type ReactNode,
   type RefObject,
   useCallback,
   useEffect,
@@ -28,6 +29,7 @@ import { FacilityHours, HazardBadges } from "./facility-fields";
 import { formatFacilityDate } from "./format-time";
 import { RecommendationView } from "./recommendation-view";
 import { useNow } from "./use-now";
+import { useReloadAt } from "./use-reload-at";
 
 const TIME_ZONE_LABEL = "Time zone";
 const HOURS_LABEL = "Hours";
@@ -49,6 +51,11 @@ type EvaluateState = "idle" | "evaluating" | "evaluated" | "failed";
 interface ScreenProps {
   readonly screen: DecisionScreen;
   readonly onReload: () => Promise<void>;
+}
+
+interface ScreenViewProps extends ScreenProps {
+  /** Links to the facility's other pages. The route supplies them, so the view needs no router. */
+  readonly links?: ReactNode;
 }
 
 function FacilityDetails({
@@ -250,24 +257,20 @@ function CurrentDirectives({
 export function DecisionScreenView({
   screen,
   onReload,
-}: ScreenProps): JSX.Element {
+  links,
+}: ScreenViewProps): JSX.Element {
   const now = useNow(screen.loadedAt);
   const { facility, latestRecommendation, currentDecision, history } = screen;
 
   // Past closing time the facility day, and with it what is decidable, changes, so the loader runs again.
-  useEffect(() => {
-    const timer = setTimeout(
-      onReload,
-      Date.parse(screen.rollsOverAt) - Date.now(),
-    );
-    return (): void => clearTimeout(timer);
-  }, [screen.rollsOverAt, onReload]);
+  useReloadAt(screen.rollsOverAt, onReload);
 
   return (
     <article className="space-y-8">
       <div className="space-y-4">
         <h1 className="font-heading font-semibold text-2xl">{facility.name}</h1>
         <FacilityDetails facility={facility} />
+        {links}
       </div>
       <BackupNotice history={history} />
       <RecommendationSection now={now} onReload={onReload} screen={screen} />
