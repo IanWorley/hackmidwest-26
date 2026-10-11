@@ -89,6 +89,18 @@ Open <http://localhost:3000/tasks>. The API serves `GET/POST /api/tasks` on <htt
 
 CI runs format, lint, typecheck, build, and tests on every PR. [autofix.ci](https://autofix.ci) runs `bun run fix` on PRs and pushes any changes back to the branch.
 
+## Deploy
+
+Releases are Docker images on GitHub Container Registry, one per app: `ghcr.io/ianworley/hackmidwest-26-{api,agent-api,web}`.
+
+1. Set the repository variables `PUBLIC_WEB_ORIGIN` (the web app's public origin) and `PUBLIC_API_BASE_URL` (the API's public origin) under Settings → Secrets and variables → Actions → Variables.
+2. Tag a release: `git tag v1.0.0 && git push origin v1.0.0`. Only `vX.Y.Z` tags publish.
+3. The release workflow pushes each image as `1.0.0`, `1.0`, `1`, and `latest`.
+
+The web image compiles `PUBLIC_API_BASE_URL` into its bundle, so moving the API to a different origin needs a new release.
+
+On the host, put `compose.yaml` beside a `.env` (start from `.env.example`; the web image reads `WEB_PORT`, default 3000), then run `docker compose up -d`. Set `TAG=1.0.0` to pin a release instead of `latest`. The API applies migrations on start and keeps SQLite in the `api-data` volume, so a relative `DB_PATH` must stay under `.data/`. Containers never seed.
+
 ## Where things live
 
 - `packages/db/src/schema/` — tables and their shared limits, one file per domain, listed in `schema/index.ts`.
