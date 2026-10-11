@@ -2,6 +2,49 @@
 
 # HackMidwest-26
 
+## Closure Call
+
+When severe weather heads for a federal facility, a manager has to choose the operating posture before employees leave home. The choices are normal operations, delayed arrival, early dismissal, unscheduled telework, or full closure. The decision has to be defensible later, so the reasons behind it matter as much as the call.
+
+Closure Call is a decision-support tool for that moment. It reads live National Weather Service data and air quality and checks them against cited thresholds. It then recommends a graded posture with its reasoning and a decide-by time, drafts the notification, and writes a tamper-evident record of what the manager decided.
+
+The system recommends and a person decides. Accept, override, and defer are the only ways a posture takes effect, and override and defer require a reason. The human-in-the-loop design is intentional, not a limitation.
+
+The build is in progress. See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for the steps the table below refers to.
+
+### Challenge-scoring map
+
+| Deliverable / Criterion | Where it's satisfied |
+|---|---|
+| Live NWS data | Step 3 (`NwsClient`) + live demo |
+| Graded recommendation w/ reasoning | Step 5 (`engine.ts`) |
+| Timing ("before they've left the house") | Steps 5.1, 6, 7 |
+| Threshold defensibility (cited cutoffs) | `thresholds.ts` + README threshold table (after [#21](https://github.com/IanWorley/hackmidwest-26/issues/21)) |
+| Notification package (who/why/channel) | Step 6 |
+| Decision record (reconstructable) | Step 7 (hash chain, replay route) |
+| Human decision (accept/override/defer, with reasons) | Step 7.1 + decision screen |
+| Map (situational awareness across facilities) | `/conditions` view ([#40](https://github.com/IanWorley/hackmidwest-26/issues/40)) |
+| Akamai: beyond a chatbot, real problem, execution, creativity | Steps 7, 8, 10 + web app + `/conditions` map |
+| AWS: Strands Agents SDK (optional) | Step 8 sidecar, if time |
+
+### Map tiles
+
+The `/conditions` map uses two tile sources. Neither needs an API key or an account, so there is nothing to add to `.env`. The browser loads the tiles directly, and the URL templates and attribution strings live in typed constants under `apps/web/src/features/map/`.
+
+| Layer | Source | URL template | License |
+|---|---|---|---|
+| Base map | USGS The National Map (USGSTopo) | `https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}` | Public domain |
+| Radar | Iowa Environmental Mesonet NEXRAD base reflectivity (n0q) | `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png` | Public domain |
+
+The USGS path is `{z}/{y}/{x}`, with row before column, and the IEM path is `{z}/{x}/{y}`. Swapping them renders the wrong tiles without an error. The radar mosaic refreshes every 5 minutes, and the `/cache/` endpoint caches it for the same 5 minutes.
+
+Both providers request credit but do not require it. Show both in the Leaflet attribution control whenever the layer is on:
+
+- USGS: "Map services and data available from U.S. Geological Survey, National Geospatial Program." ([USGS copyrights and credits](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits))
+- IEM: "Radar: Iowa Environmental Mesonet, Iowa State University." IEM provides its data without any warranty of accuracy. ([IEM disclaimer](https://mesonet.agron.iastate.edu/disclaimer.php))
+
+## The monorepo
+
 A Bun monorepo with three apps and a shared database package:
 
 | App | Stack | Port |

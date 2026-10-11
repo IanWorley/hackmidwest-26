@@ -426,19 +426,9 @@ Unit tests are Vitest, one behavior per test, next to the file. Runtime proof go
 
 ---
 
-## 12. Challenge-Scoring Map (put this in README)
+## 12. Challenge-Scoring Map
 
-| Deliverable / Criterion | Where it's satisfied |
-|---|---|
-| Live NWS data | Step 3 (`NwsClient`) + live demo |
-| Graded recommendation w/ reasoning | Step 5 (`engine.ts`) |
-| Timing ("before they've left the house") | Steps 5.1, 6, 7 |
-| Threshold defensibility (cited cutoffs) | `thresholds.ts` + README table |
-| Notification package (who/why/channel) | Step 6 |
-| Decision record (reconstructable) | Step 7 (hash chain, replay route) |
-| Human decision (accept/override/defer, with reasons) | Step 7.1 + decision screen |
-| Akamai: beyond a chatbot, real problem, execution, creativity | Steps 7, 8, 10 + web app |
-| AWS: Strands Agents SDK (optional) | Step 8 sidecar, if time |
+The table lives in the [README](../README.md#challenge-scoring-map) so it has one source of truth.
 
 ---
 
