@@ -5,6 +5,7 @@ export {
   CONFIDENCE_LEVELS,
   type ConfidenceLevel,
   DECISION_ACTIONS,
+  DECISION_CHAIN_MOVED_MESSAGES,
   type DecisionAction,
   decisions,
   humanInputs,

@@ -52,6 +52,12 @@ export const ACTIONS_REQUIRING_REASON = [
   "defer",
 ] as const satisfies readonly DecisionAction[];
 
+/** Trigger messages from 0003 that mean another decision landed on the chain first. */
+export const DECISION_CHAIN_MOVED_MESSAGES = [
+  "decisions must extend the chain that already holds this recommendation",
+  "decisions is add-only: this decision is already superseded; supersede the newest decision instead",
+] as const;
+
 export const REASON_CATEGORIES = [
   "local_conditions",
   "road_reports",

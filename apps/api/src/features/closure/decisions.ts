@@ -159,7 +159,7 @@ const recordMissedDecision = Effect.fn("recordMissedDecision")(function* (
   ) {
     return Option.none<DecisionRow>();
   }
-  const { decision } = yield* insertDecision(
+  const recorded = yield* insertDecision(
     {
       ...decisionBasis(target.recommendation, target.backup, now),
       action: "no_decision",
@@ -171,7 +171,7 @@ const recordMissedDecision = Effect.fn("recordMissedDecision")(function* (
     },
     [],
   );
-  return Option.some(decision);
+  return Option.map(recorded, ({ decision }) => decision);
 });
 
 function createDecisionsModule(runRequest: RunRequest) {
