@@ -25,6 +25,7 @@ STORAGE_BROKEN="broken"
 BROKEN_DB_CONTENT="verify-hackmidwest: not a SQLite database"
 HTTP_STATUS_OK="200"
 HTTP_STATUS_INTERNAL_ERROR="500"
+LLM_MODE="template"
 
 die() { echo "verify: $*" >&2; exit 1; }
 
@@ -104,6 +105,9 @@ cmd_up() {
   export DB_PATH="$dir/db.sqlite"
   export VITE_API_BASE_URL="http://$HOST:$api_port"
   export NWS_USER_AGENT="$NWS_USER_AGENT_VALUE"
+  # The agent API reads empty as unset, so a developer's .env key never makes a run call a billable model.
+  export OPENROUTER_API_KEY=""
+  export OPENROUTER_MODEL=""
 
   if [[ "$storage" == "$STORAGE_BROKEN" ]]; then
     # The API opens a file the harness wrote, so every query fails without editing a real database.
@@ -130,6 +134,7 @@ AGENT_API_URL=http://$HOST:$agent_port
 DB_PATH=$dir/db.sqlite
 STORAGE=$storage
 EXPECTED_STATUS=$expected_status
+LLM=$LLM_MODE
 ARTIFACTS=$art
 GIT_REV=$(git -C "$REPO_ROOT" rev-parse --short HEAD)
 EOF

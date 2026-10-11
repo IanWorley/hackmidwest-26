@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 import { expect, it } from "vitest";
+import { templateLlm } from "./llm";
 import {
   createAgentApiRuntime,
   HTTP_INTERNAL_SERVER_ERROR,
@@ -12,6 +13,7 @@ const UNUSED_TASKS_API_ORIGIN = "http://tasks-api.test";
 it("turns a failed program into a generic 500 without its details", async () => {
   const runtime = createAgentApiRuntime(
     createTasksApiClient(UNUSED_TASKS_API_ORIGIN),
+    templateLlm,
   );
   try {
     const result = await runtime.runRequest(
