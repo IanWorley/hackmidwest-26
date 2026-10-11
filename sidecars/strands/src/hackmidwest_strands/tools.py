@@ -1,5 +1,5 @@
 import os
-from typing import Any, TypedDict
+from typing import Any
 
 import httpx
 from strands import tool
@@ -11,34 +11,24 @@ REQUEST_TIMEOUT_SECONDS = 60.0
 type Json = dict[str, Any] | list[Any] | str | int | float | bool | None
 
 
-class AgentApiError(TypedDict):
-    error: str
-    status_code: int
-    body: Json
+class AgentApiError(Exception):
+    pass
 
 
-def _post(path: str) -> Json | AgentApiError:
+def _post(path: str) -> Json:
     base_url = os.environ.get(AGENT_API_URL_ENV)
     if not base_url:
         raise RuntimeError(f"{AGENT_API_URL_ENV} is not set")
 
     response = httpx.post(f"{base_url.rstrip('/')}{path}", timeout=REQUEST_TIMEOUT_SECONDS)
-    try:
-        body: Json = response.json()
-    except ValueError:
-        body = response.text
-
-    if response.is_success:
-        return body
-    return AgentApiError(
-        error=f"POST {path} failed with HTTP {response.status_code}",
-        status_code=response.status_code,
-        body=body,
-    )
+    # Raising makes Strands record an error tool result, so the model and the CLI both see a failure.
+    if not response.is_success:
+        raise AgentApiError(f"POST {path} failed with HTTP {response.status_code}: {response.text}")
+    return response.json()
 
 
 @tool
-def run_facility(facility_id: int) -> Json | AgentApiError:
+def run_facility(facility_id: int) -> Json:
     """Run the agent API's orchestration for one facility and return its step-by-step run log.
 
     The run evaluates the facility's posture with the deterministic engine, previews the
@@ -51,7 +41,7 @@ def run_facility(facility_id: int) -> Json | AgentApiError:
 
 
 @tool
-def narrate_recommendation(recommendation_id: int) -> Json | AgentApiError:
+def narrate_recommendation(recommendation_id: int) -> Json:
     """Phrase a stored recommendation's rationale for a manager's email.
 
     Returns the template rationale and the narrated text. The posture is fixed input.

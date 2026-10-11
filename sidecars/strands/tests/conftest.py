@@ -9,6 +9,7 @@ import pytest
 from hackmidwest_strands.tools import AGENT_API_URL_ENV
 
 HTTP_OK = 200
+HTTP_NOT_FOUND = 404
 
 
 @dataclass

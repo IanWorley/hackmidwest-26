@@ -13,8 +13,8 @@ The agent has exactly two tools, and both only read or narrate:
 | `run_facility(facility_id)`                 | `POST {AGENT_API_URL}/facilities/{id}/run`      |
 | `narrate_recommendation(recommendation_id)` | `POST {AGENT_API_URL}/recommendations/{id}/narrate` |
 
-A tool returns the response's parsed JSON. On a non-2xx response it returns
-`{"error", "status_code", "body"}` instead.
+A tool returns the response's parsed JSON. On a non-2xx response it raises, so Strands records an error
+tool result with the status and body, and `run` exits `1`.
 
 The deterministic engine decides a facility's posture, and a manager records every decision in the
 web app. The agent has no tool that records a decision or dispatches a crew, and its system prompt tells

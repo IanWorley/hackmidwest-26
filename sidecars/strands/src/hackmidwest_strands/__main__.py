@@ -3,6 +3,7 @@ import sys
 
 from hackmidwest_strands.agent import MissingConfigError, build_agent, openrouter_model
 
+EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 
 
@@ -14,7 +15,7 @@ def _ask(question: str) -> int:
         return EXIT_FAILURE
 
     print(build_agent(model)(question))
-    return 0
+    return EXIT_SUCCESS
 
 
 def _run(facility_id: int) -> int:
@@ -27,7 +28,7 @@ def _run(facility_id: int) -> int:
         return EXIT_FAILURE
 
     print(text)
-    return 0
+    return EXIT_SUCCESS
 
 
 def main(argv: list[str] | None = None) -> int:
