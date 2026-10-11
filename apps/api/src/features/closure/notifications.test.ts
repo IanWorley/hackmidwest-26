@@ -203,7 +203,7 @@ it.each<[string, PackageFields, string]>([
 ])("describes the hazard window with %s", (_case, fields, window) => {
   const pkg = decidedPackage(fields);
   expect(pkg.recipients.map(({ message }) => message.whatsHappening)).toEqual([
-    `Winter weather expected ${window}. ${FACILITY_NAME} is closed.`,
+    `Winter weather expected ${window}. ${FACILITY_NAME} is closed on 2026-10-12.`,
   ]);
 });
 
@@ -222,7 +222,7 @@ it("describes a delayed arrival without moving the facility's opening", () => {
     posture: { posture: "delayed_arrival", delayMinutes: 120 },
   });
   expect(pkg.recipients.map(({ message }) => message.subject)).toEqual([
-    `${FACILITY_NAME} has a 120-minute delayed arrival`,
+    `${FACILITY_NAME} has a 120-minute delayed arrival on 2026-10-12`,
   ]);
 });
 
@@ -263,3 +263,33 @@ it.each<[string, string, string]>([
     ]);
   },
 );
+
+const SHIFT_UNTIL_15 = { shiftStart: "06:30", shiftEnd: "15:00" };
+const AFTER_SHIFT = "2026-10-12T21:00:00.000Z";
+
+it.each<[string, PackageFields]>([
+  [
+    "a delayed arrival",
+    { posture: { posture: "delayed_arrival", delayMinutes: 120 } },
+  ],
+  ["a release during the shift", RELEASED_BY_DIRECTIVE],
+])(
+  "says no action is needed once their shift has ended, for %s",
+  (_case, fields) => {
+    const pkg = decidedPackage({
+      ...fields,
+      employees: [employee({ id: 1, ...SHIFT_UNTIL_15 })],
+      now: AFTER_SHIFT,
+    });
+    expect(pkg.recipients.map(({ message }) => message.whatToDo)).toEqual([
+      "Your shift today has ended, so no action is needed.",
+    ]);
+  },
+);
+
+it("tells an onsite worker moved to telework mid-shift to leave and work from home", () => {
+  const pkg = decidedPackage({ now: AT_WORK });
+  expect(pkg.recipients.map(({ message }) => message.whatToDo)).toEqual([
+    `Leave ${FACILITY_NAME} and work from home for the rest of the day.`,
+  ]);
+});

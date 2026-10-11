@@ -2,6 +2,7 @@ import { expect, expectTypeOf, it } from "vitest";
 import {
   AFTER_DEFAULT_SEND_BY,
   ARRIVAL_WINDOW_START,
+  AT_WORK,
   DECIDED,
   decidedPackage,
   directive,
@@ -56,6 +57,22 @@ it("gives first-time wording to someone only the superseding decision notifies",
   });
   expect(update.notices.map(({ message }) => message.appliesToYou)).toEqual([
     "You are teleworking today.",
+  ]);
+});
+
+it("tells someone reopened mid-shift to report now", () => {
+  const employees = [employee({ id: 1, teleworkEligible: false })];
+  const update = buildPostureChangeUpdate({
+    original: decidedPackage({ employees }),
+    superseding: decidedPackage({
+      employees,
+      posture: NORMAL,
+      source: SUPERSEDING,
+      now: AT_WORK,
+    }),
+  });
+  expect(update.notices.map(({ message }) => message.whatToDo)).toEqual([
+    `Report to ${FACILITY_NAME} now if you are not already there.`,
   ]);
 });
 
@@ -137,6 +154,17 @@ it("tells all-clear recipients which day to resume their schedule", () => {
   });
   expect(allClear.notices.map(({ message }) => message.whatToDo)).toEqual([
     "Return to your usual schedule on 2026-10-13.",
+  ]);
+});
+
+it("tells an overdue all-clear's recipients to resume now", () => {
+  const allClear = buildAllClear({
+    original: decidedPackage({}),
+    resumesOn: "2026-10-13",
+    now: "2026-10-14T15:00:00.000Z",
+  });
+  expect(allClear.notices.map(({ message }) => message.whatToDo)).toEqual([
+    "Resume your usual schedule now.",
   ]);
 });
 

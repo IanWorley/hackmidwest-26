@@ -56,6 +56,7 @@
       "includes": [
         "src/features/closure/effective-status.ts",
         "src/features/closure/notification-messages.ts",
+        "src/features/closure/notification-person.ts",
         "src/features/closure/notification-situation.ts",
         "src/features/closure/roster.ts"
       ],
