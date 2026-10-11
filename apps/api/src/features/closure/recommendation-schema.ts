@@ -1,11 +1,12 @@
 import { CONFIDENCE_LEVELS, facilities, HAZARDS } from "@hackmidwest/db";
-import type { Static, TSchema } from "@sinclair/typebox";
+import type { Static, TObject, TProperties, TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { createSchemaFactory } from "drizzle-typebox";
 import { Data, Effect } from "effect";
 import { t } from "elysia";
 import { ForecastSchema, NwsAlertSchema } from "../../clients/nws-model";
 import type { CutoffName } from "./cutoff-names";
+import type { EngineInput, Recommendation } from "./engine";
 import type { InputKind } from "./freshness";
 import type { EndBasis } from "./hazard-window";
 import { type Posture, postureSchema } from "./postures";
@@ -29,6 +30,13 @@ const CUTOFF_NAMES = [
   "veryUnhealthy",
 ] as const satisfies readonly CutoffName[];
 
+/** Rejects unknown keys, so a field the schema lacks fails the insert instead of being hashed and then stripped from responses. */
+function closedObject<Properties extends TProperties>(
+  properties: Properties,
+): TObject<Properties> {
+  return t.Object(properties, { additionalProperties: false });
+}
+
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 const facilityColumns = createSelectSchema(facilities).properties;
 
@@ -42,7 +50,7 @@ const disruptivePostureSchema = t.UnionEnum([
 const inputKindSchema = t.UnionEnum(INPUT_KINDS);
 const cutoffNameSchema = t.UnionEnum(CUTOFF_NAMES);
 
-const EngineFacilitySchema = t.Object({
+const EngineFacilitySchema = closedObject({
   timezone: facilityColumns.timezone,
   opensAt: facilityColumns.opensAt,
   closesAt: facilityColumns.closesAt,
@@ -54,7 +62,7 @@ const EngineFacilitySchema = t.Object({
   hazardProfile: t.Array(hazardSchema),
 });
 
-const EngineInputSchema = t.Object({
+const EngineInputSchema = closedObject({
   now: t.String(),
   facility: EngineFacilitySchema,
   readings: t.Array(ReadingSchema),
@@ -63,18 +71,21 @@ const EngineInputSchema = t.Object({
 });
 
 const OpmStatusSchema = t.Union([
-  t.Object({ posture: t.Literal("normal") }),
-  t.Object({ posture: t.Literal("delayed_arrival"), delayHours: t.Number() }),
-  t.Object({
+  closedObject({ posture: t.Literal("normal") }),
+  closedObject({
+    posture: t.Literal("delayed_arrival"),
+    delayHours: t.Number(),
+  }),
+  closedObject({
     posture: t.Literal("early_dismissal"),
     departAt: t.String(),
     departAtLocal: t.String(),
   }),
-  t.Object({ posture: t.Literal("unscheduled_telework") }),
-  t.Object({ posture: t.Literal("full_closure") }),
+  closedObject({ posture: t.Literal("unscheduled_telework") }),
+  closedObject({ posture: t.Literal("full_closure") }),
 ]);
 
-const InputRefSchema = t.Object({
+const InputRefSchema = closedObject({
   kind: t.Union([inputKindSchema, t.Literal("alert")]),
   source: ReadingSchema.properties.source,
   ref: t.String(),
@@ -82,18 +93,18 @@ const InputRefSchema = t.Object({
 });
 
 const CaveatSchema = t.Union([
-  t.Object({
+  closedObject({
     kind: t.Literal("staleInput"),
     input: inputKindSchema,
     ageMinutes: t.Number(),
     limitMinutes: t.Number(),
   }),
-  t.Object({
+  closedObject({
     kind: t.Literal("missingReading"),
     hazard: hazardSchema,
     cutoff: cutoffNameSchema,
   }),
-  t.Object({
+  closedObject({
     kind: t.Literal("estimatedEnd"),
     endBasis: t.UnionEnum([
       "expires",
@@ -102,33 +113,36 @@ const CaveatSchema = t.Union([
   }),
 ]);
 
-const PeriodSchema = t.Object({ startTime: t.String(), endTime: t.String() });
+const PeriodSchema = closedObject({
+  startTime: t.String(),
+  endTime: t.String(),
+});
 
 const HazardEvidenceSchema = t.Union([
-  t.Object({
+  closedObject({
     source: t.Literal("alert"),
     window: NwsAlertSchema.properties.hazardWindow,
     exceedingPeriods: t.Array(PeriodSchema),
   }),
-  t.Object({
+  closedObject({
     source: t.Literal("forecast"),
     exceedingPeriods: t.Array(PeriodSchema, { minItems: 1 }),
   }),
 ]);
 
 const TimingCaseSchema = t.Union([
-  t.Object({ kind: t.Literal("clearsBeforeArrival") }),
-  t.Object({ kind: t.Literal("alreadyCleared") }),
-  t.Object({ kind: t.Literal("delayWithinCap"), delayHours: t.Number() }),
-  t.Object({ kind: t.Literal("outlastsDelayCap"), delayHours: t.Number() }),
-  t.Object({ kind: t.Literal("startsDuringHours"), releaseAt: t.String() }),
-  t.Object({ kind: t.Literal("spansOperatingDay") }),
-  t.Object({ kind: t.Literal("startsAfterHours"), nextDay: t.String() }),
+  closedObject({ kind: t.Literal("clearsBeforeArrival") }),
+  closedObject({ kind: t.Literal("alreadyCleared") }),
+  closedObject({ kind: t.Literal("delayWithinCap"), delayHours: t.Number() }),
+  closedObject({ kind: t.Literal("outlastsDelayCap"), delayHours: t.Number() }),
+  closedObject({ kind: t.Literal("startsDuringHours"), releaseAt: t.String() }),
+  closedObject({ kind: t.Literal("spansOperatingDay") }),
+  closedObject({ kind: t.Literal("startsAfterHours"), nextDay: t.String() }),
 ]);
 
-const TimingResultSchema = t.Object({
+const TimingResultSchema = closedObject({
   facilityDate: t.String(),
-  hazardWindow: t.Object({
+  hazardWindow: closedObject({
     start: t.String(),
     end: t.String(),
     endBasis: t.UnionEnum([
@@ -145,14 +159,14 @@ const TimingResultSchema = t.Object({
 const citation = { source: t.String(), citation: t.String() };
 
 const CutoffSchema = t.Union([
-  t.Object({
+  closedObject({
     value: t.UnionEnum(NWS_SEVERITIES),
     unit: t.Literal("nws_severity"),
     events: t.Array(t.String(), { minItems: 1 }),
     posture: disruptivePostureSchema,
     ...citation,
   }),
-  t.Object({
+  closedObject({
     value: t.Number(),
     unit: t.Literal("mph"),
     metric: t.UnionEnum(WIND_METRICS),
@@ -160,7 +174,7 @@ const CutoffSchema = t.Union([
     posture: disruptivePostureSchema,
     ...citation,
   }),
-  t.Object({
+  closedObject({
     value: t.Number(),
     unit: t.Literal("aqi"),
     posture: disruptivePostureSchema,
@@ -175,9 +189,9 @@ const measurement = {
 };
 
 const CheckOutcomeSchema = t.Union([
-  t.Object({ kind: t.Literal("absent") }),
-  t.Object({ kind: t.Literal("below"), ...measurement }),
-  t.Object({
+  closedObject({ kind: t.Literal("absent") }),
+  closedObject({ kind: t.Literal("below"), ...measurement }),
+  closedObject({
     kind: t.Literal("crossed"),
     evidence: HazardEvidenceSchema,
     timing: TimingResultSchema,
@@ -185,11 +199,11 @@ const CheckOutcomeSchema = t.Union([
   }),
 ]);
 
-const HazardAssessmentSchema = t.Object({
+const HazardAssessmentSchema = closedObject({
   hazard: hazardSchema,
   posture: postureSchema,
   checks: t.Array(
-    t.Object({
+    closedObject({
       cutoff: cutoffNameSchema,
       threshold: CutoffSchema,
       outcome: CheckOutcomeSchema,
@@ -198,7 +212,7 @@ const HazardAssessmentSchema = t.Object({
   ),
 });
 
-const RecommendationSchema = t.Object({
+const RecommendationSchema = closedObject({
   status: OpmStatusSchema,
   confidence: t.UnionEnum(CONFIDENCE_LEVELS),
   caveats: t.Array(CaveatSchema),
@@ -206,7 +220,7 @@ const RecommendationSchema = t.Object({
   decideBy: t.String(),
   hazards: t.Array(HazardAssessmentSchema),
   driver: t.Union([
-    t.Object({
+    closedObject({
       hazard: hazardSchema,
       cutoff: cutoffNameSchema,
       timing: TimingResultSchema,
@@ -216,7 +230,7 @@ const RecommendationSchema = t.Object({
   nextDay: t.Union([t.String(), t.Null()]),
   inputs: t.Array(InputRefSchema),
   sensitivity: t.Array(
-    t.Object({
+    closedObject({
       shiftMinutes: t.Number(),
       status: OpmStatusSchema,
       statement: t.String(),
@@ -225,12 +239,39 @@ const RecommendationSchema = t.Object({
   rationale: t.String(),
 });
 
-const SnapshotSchema = t.Object({
+const SnapshotSchema = closedObject({
   input: EngineInputSchema,
   output: RecommendationSchema,
 });
 
 type Snapshot = Static<typeof SnapshotSchema>;
+
+type DeepMutable<T> = T extends readonly (infer Item)[]
+  ? DeepMutable<Item>[]
+  : T extends object
+    ? { -readonly [Key in keyof T]: DeepMutable<T[Key]> }
+    : T;
+
+type Equal<Left, Right> =
+  (<T>() => T extends Left ? true : false) extends <T>() => T extends Right
+    ? true
+    : false
+    ? true
+    : false;
+
+type Mirrors<Engine, Schema> = Equal<DeepMutable<Engine>, DeepMutable<Schema>>;
+
+type AssertTrue<Condition extends true> = Condition;
+
+/**
+ * Fails to compile when the engine types and these hand-written schemas drift in either direction.
+ * Mutual assignability would miss an added optional field, so this demands identical types.
+ * DeepMutable reads the engine's non-empty tuples as arrays; `minItems` checks those at runtime.
+ */
+type _SnapshotMirrorsEngine = [
+  AssertTrue<Mirrors<EngineInput, Snapshot["input"]>>,
+  AssertTrue<Mirrors<Recommendation, Snapshot["output"]>>,
+];
 
 class SnapshotShapeError extends Data.TaggedError("SnapshotShapeError")<{
   readonly errors: readonly string[];
