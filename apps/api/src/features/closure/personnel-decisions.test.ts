@@ -1,4 +1,6 @@
+import { decisions } from "@hackmidwest/db";
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
+import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { HTTP_CREATED } from "../../runtime";
 import { appRunner, DECIDER_ID } from "./decision-test-fixtures";
@@ -17,8 +19,12 @@ import {
   stageRecommendation,
   WIND_RELEASE_AT,
 } from "./personnel-test-fixtures";
+import { contentHash } from "./records";
 
 const withApp = appRunner(createTestDatabaseWithDemoFacilities);
+
+/** Later on the fixture day than the read at ON_FIXTURE_DAY. */
+const AFTER_FIXTURE_DAY_READ = "2026-01-14T09:30:00.000Z";
 
 it("resolves an accepted early dismissal per person", async () => {
   await withApp(async ({ db, request }) => {
@@ -166,4 +172,45 @@ it("leaves today undecided when the newest decision is about another facility da
       effective: { kind: "working_onsite", cause: { source: "baseline" } },
     });
   }, AFTER_FIXTURE_DAY_CLOSE);
+});
+
+it("leaves a decision recorded after asOf for the next read", async () => {
+  await withApp(async ({ db, request }) => {
+    const recommendationId = await stageRecommendation(
+      db,
+      SUSTAINED_WIND_DISMISSAL,
+    );
+    const decided = await request(
+      `/api/recommendations/${recommendationId}/decisions`,
+      { action: "accept", decidedById: DECIDER_ID },
+    );
+    const { id: decisionId } = await decided.json();
+    const [accepted] = await db
+      .select()
+      .from(decisions)
+      .where(eq(decisions.id, decisionId));
+    if (accepted === undefined) {
+      throw new Error("The accepted decision was not stored");
+    }
+    const { id: _id, contentHash: _hash, ...basis } = accepted;
+    const later = {
+      ...basis,
+      action: "override" as const,
+      chosenPosture: "full_closure" as const,
+      reasonCategory: REASON.category,
+      reasonText: REASON.text,
+      supersedesDecisionId: decisionId,
+      decidedAt: AFTER_FIXTURE_DAY_READ,
+    };
+    await db
+      .insert(decisions)
+      .values({ ...later, contentHash: contentHash(later) });
+
+    const body = await personnel(request);
+
+    expect(body).toMatchObject({
+      decision: { id: decisionId, action: "accept" },
+      posture: { kind: "decided", posture: { posture: "early_dismissal" } },
+    });
+  }, ON_FIXTURE_DAY);
 });
