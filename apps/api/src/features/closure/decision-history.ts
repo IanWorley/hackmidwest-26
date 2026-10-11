@@ -9,10 +9,13 @@ import { asc, desc, eq, getTableColumns } from "drizzle-orm";
 import { Data, Effect, Option } from "effect";
 import { t } from "elysia";
 import { Database } from "../../runtime";
-import { CHAIN_RECORDS, findChainBreaks } from "./decision-chain";
+import {
+  CHAIN_RECORDS,
+  DECISION_CHAIN_BREAK_REASONS,
+  findChainBreaks,
+} from "./decision-chain";
 import { type HumanInputRow, toDecisionResponse } from "./decision-view";
 import { parseDecimalId } from "./facilities";
-import { CHAIN_BREAK_REASONS } from "./records";
 
 const verifyResponse = t.Object({
   decisionId: t.Integer(),
@@ -21,7 +24,7 @@ const verifyResponse = t.Object({
     t.Object({
       record: t.UnionEnum(CHAIN_RECORDS),
       id: t.Integer(),
-      reason: t.UnionEnum(CHAIN_BREAK_REASONS),
+      reason: t.UnionEnum(DECISION_CHAIN_BREAK_REASONS),
     }),
   ),
 });
