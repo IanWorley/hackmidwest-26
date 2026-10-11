@@ -19,6 +19,7 @@
               "agentApiLayer",
               "createApp",
               "createHealthModule",
+              "createNarrateModule",
               "createTaskSummaryModule",
               "createTasksApiClient"
             ]
