@@ -12,7 +12,6 @@ The `/tasks` page shows every task in creation order as a row of the `Tasks` tab
 ## How to get to it (user POV)
 
 - Open `$WEB_URL/tasks` directly (bookmark, reload, or typed URL).
-- Choose `Open the project tasks` on the home page (see [home-navigation](./home-navigation.md)).
 
 ## Driving it with verify.sh
 
