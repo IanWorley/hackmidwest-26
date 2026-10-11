@@ -1,9 +1,3 @@
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRouter,
-  RouterProvider,
-} from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import {
@@ -65,23 +59,6 @@ function reloadNothing(): Promise<void> {
   return Promise.resolve();
 }
 
-/** The view links to sibling routes, so it renders inside a router, which mounts asynchronously. */
-async function renderScreen(
-  onReload: () => Promise<void>,
-  screenData: DecisionScreen = SCREEN,
-): Promise<void> {
-  const router = createRouter({
-    routeTree: createRootRoute({
-      component: () => (
-        <DecisionScreenView onReload={onReload} screen={screenData} />
-      ),
-    }),
-    history: createMemoryHistory(),
-  });
-  render(<RouterProvider router={router} />);
-  await screen.findByRole("button", { name: "Re-evaluate" });
-}
-
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
@@ -90,7 +67,7 @@ afterEach(() => {
 it("moves focus to the recommendation heading once a re-evaluation loads", async () => {
   evaluationRespondsWith(HTTP_CREATED);
   const onReload = vi.fn<() => Promise<void>>(() => Promise.resolve());
-  await renderScreen(onReload);
+  render(<DecisionScreenView onReload={onReload} screen={SCREEN} />);
   fireEvent.click(screen.getByRole("button", { name: "Re-evaluate" }));
 
   const heading = screen.getByRole("heading", { name: "Recommendation" });
@@ -105,7 +82,7 @@ it("moves focus to the recommendation heading once a re-evaluation loads", async
 
 it("returns focus to Re-evaluate and says nothing changed when it fails", async () => {
   evaluationRespondsWith(HTTP_BAD_GATEWAY);
-  await renderScreen(reloadNothing);
+  render(<DecisionScreenView onReload={reloadNothing} screen={SCREEN} />);
   const button = screen.getByRole("button", { name: "Re-evaluate" });
   fireEvent.click(button);
 
@@ -117,12 +94,17 @@ it("returns focus to Re-evaluate and says nothing changed when it fails", async 
   );
 });
 
-it("sends an earlier day's recommendation back to Re-evaluate with nothing to decide on", async () => {
-  await renderScreen(reloadNothing, {
-    ...SCREEN,
-    facilityDate: "2026-10-12",
-    latestRecommendation: KANSAS_CITY_RECOMMENDATION,
-  });
+it("sends an earlier day's recommendation back to Re-evaluate with nothing to decide on", () => {
+  render(
+    <DecisionScreenView
+      onReload={reloadNothing}
+      screen={{
+        ...SCREEN,
+        facilityDate: "2026-10-12",
+        latestRecommendation: KANSAS_CITY_RECOMMENDATION,
+      }}
+    />,
+  );
 
   expect(screen.getByRole("alert").textContent).toBe(
     "This recommendation is for Sun, Oct 11. Re-evaluate for today.",

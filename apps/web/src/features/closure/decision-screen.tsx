@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
 import {
   type JSX,
+  type ReactNode,
   type RefObject,
   useCallback,
   useEffect,
@@ -31,7 +31,6 @@ import { RecommendationView } from "./recommendation-view";
 import { useNow } from "./use-now";
 
 const TIME_ZONE_LABEL = "Time zone";
-const PERSONNEL_LINK_TEXT = "People and status";
 const HOURS_LABEL = "Hours";
 const NWS_ZONE_LABEL = "NWS zone";
 const HAZARDS_LABEL = "Hazards";
@@ -51,6 +50,11 @@ type EvaluateState = "idle" | "evaluating" | "evaluated" | "failed";
 interface ScreenProps {
   readonly screen: DecisionScreen;
   readonly onReload: () => Promise<void>;
+}
+
+interface ScreenViewProps extends ScreenProps {
+  /** Links to the facility's other pages. The route supplies them, so the view needs no router. */
+  readonly links?: ReactNode;
 }
 
 function FacilityDetails({
@@ -252,7 +256,8 @@ function CurrentDirectives({
 export function DecisionScreenView({
   screen,
   onReload,
-}: ScreenProps): JSX.Element {
+  links,
+}: ScreenViewProps): JSX.Element {
   const now = useNow(screen.loadedAt);
   const { facility, latestRecommendation, currentDecision, history } = screen;
 
@@ -270,13 +275,7 @@ export function DecisionScreenView({
       <div className="space-y-4">
         <h1 className="font-heading font-semibold text-2xl">{facility.name}</h1>
         <FacilityDetails facility={facility} />
-        <Link
-          className="underline underline-offset-4"
-          params={{ facilityId: String(facility.id) }}
-          to="/facilities/$facilityId/personnel"
-        >
-          {PERSONNEL_LINK_TEXT}
-        </Link>
+        {links}
       </div>
       <BackupNotice history={history} />
       <RecommendationSection now={now} onReload={onReload} screen={screen} />
