@@ -1,8 +1,10 @@
 import { makeNwsClient, type NwsClientShape } from "./nws";
+import type { GeoPoint } from "./nws-model";
 
 const BASE_URL = "http://nws.test";
 const USER_AGENT = "hackmidwest-26 test (ops@example.com)";
 const KANSAS_CITY = { lat: 39.099_712, lon: -94.578_561 };
+const RING_SIZE_DEGREES = 0.1;
 
 interface SentRequest {
   readonly url: string;
@@ -58,10 +60,24 @@ function emptyForecastResponse(): Response {
   });
 }
 
+/** A closed GeoJSON ring, [lon, lat] pairs, around a square whose south-west corner is the point. */
+function squareRing({ lat, lon }: GeoPoint): number[][] {
+  const north = lat + RING_SIZE_DEGREES;
+  const east = lon + RING_SIZE_DEGREES;
+  return [
+    [lon, lat],
+    [east, lat],
+    [east, north],
+    [lon, north],
+    [lon, lat],
+  ];
+}
+
 export {
   alertsResponse,
   clientFor,
   emptyForecastResponse,
   KANSAS_CITY,
   pointsResponse,
+  squareRing,
 };
