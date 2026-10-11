@@ -1,17 +1,21 @@
 import type { Posture } from "./postures";
 
 const HIGH_WIND_SUSTAINED_MPH = 40;
+const HIGH_WIND_SUSTAINED_DURATION_MINUTES = 60;
 const HIGH_WIND_GUST_MPH = 58;
+const HIGH_WIND_GUST_DURATION_MINUTES = 0;
 const AQI_UNHEALTHY = 151;
 const AQI_VERY_UNHEALTHY = 201;
-const SUPER_COMMUTER_BARE_LANE_REGAIN_MINUTES = 180;
-const HIGH_WIND_CRITERION_DURATION_MINUTES = 60;
+const URBAN_COMMUTER_BARE_LANE_REGAIN_MINUTES = 300;
+const WIND_POST_HAZARD_BUFFER_MINUTES = 60;
 const AIRNOW_UPDATE_INTERVAL_MINUTES = 60;
 const OPM_LONGEST_ILLUSTRATED_DELAY_HOURS = 4;
 const OPM_STANDARD_DELAY_HOURS = 2;
 
-const NWS_ALERTS_SOURCE =
-  "National Weather Service, api.weather.gov alerts (OASIS CAP v1.2 severity field)";
+const NWSI_10_513_SOURCE =
+  "National Weather Service, NWSI 10-513 WFO Winter Weather Products Specification (November 6, 2024), with OASIS CAP v1.2 severity as served by api.weather.gov";
+const NWSI_10_513_URL =
+  "https://www.weather.gov/media/directives/010_pdfs/pd01005013curr.pdf";
 const NWSI_10_515_SOURCE =
   "National Weather Service, NWSI 10-515 WFO Non-Precipitation Weather Products Specification (May 16, 2025)";
 const NWSI_10_515_URL =
@@ -48,11 +52,20 @@ export interface CitedValue<Unit extends string, Value = number> {
   readonly citation: string;
 }
 
-export type Cutoff = (
-  | CitedValue<"nws_severity", NwsSeverity>
-  | CitedValue<"mph">
-  | CitedValue<"aqi">
-) & { readonly posture: Posture };
+// A severity cutoff only applies to the listed NWS events, because other
+// products (Wind Advisory, Winter Storm Watch) share the same CAP severities.
+export interface AlertCutoff extends CitedValue<"nws_severity", NwsSeverity> {
+  readonly events: readonly [string, ...string[]];
+}
+
+export interface WindCutoff extends CitedValue<"mph"> {
+  readonly minDurationMinutes: number;
+}
+
+/** `value` is an inclusive minimum: a reading at or above it crosses the cutoff. */
+export type Cutoff = (AlertCutoff | WindCutoff | CitedValue<"aqi">) & {
+  readonly posture: Exclude<Posture, "normal">;
+};
 
 export interface HazardThresholds {
   readonly cutoffs: Readonly<Record<string, Cutoff>>;
@@ -66,25 +79,32 @@ export const THRESHOLDS = {
       stormWarning: {
         value: "Severe",
         unit: "nws_severity",
+        events: [
+          "Winter Storm Warning",
+          "Blizzard Warning",
+          "Ice Storm Warning",
+          "Lake Effect Snow Warning",
+        ],
         posture: "full_closure",
-        source: NWS_ALERTS_SOURCE,
-        citation: `Winter Storm Warning alerts carry CAP severity "Severe", defined in CAP v1.2 §3.2.2 as "Significant threat to life or property". https://api.weather.gov/alerts?event=Winter%20Storm%20Warning ${CAP_V1_2_URL}`,
+        source: NWSI_10_513_SOURCE,
+        citation: `Table 1: Winter Weather Products lists these four warnings. Winter Storm Warnings on api.weather.gov carry CAP severity "Severe", which CAP v1.2 §3.2.2 defines as "Significant threat to life or property". ${NWSI_10_513_URL} ${CAP_V1_2_URL}`,
       },
       advisory: {
         value: "Moderate",
         unit: "nws_severity",
+        events: ["Winter Weather Advisory"],
         posture: "delayed_arrival",
-        source: NWS_ALERTS_SOURCE,
-        citation: `Winter Weather Advisory alerts carry CAP severity "Moderate", defined in CAP v1.2 §3.2.2 as "Possible threat to life or property". https://api.weather.gov/alerts?event=Winter%20Weather%20Advisory ${CAP_V1_2_URL}`,
+        source: NWSI_10_513_SOURCE,
+        citation: `Table 1: Winter Weather Products lists the Winter Weather Advisory for events meeting advisory but not warning criteria. Winter Weather Advisories on api.weather.gov carry CAP severity "Moderate", which CAP v1.2 §3.2.2 defines as "Possible threat to life or property". ${NWSI_10_513_URL} ${CAP_V1_2_URL}`,
       },
     },
     postHazardBufferMinutes: {
-      value: SUPER_COMMUTER_BARE_LANE_REGAIN_MINUTES,
+      value: URBAN_COMMUTER_BARE_LANE_REGAIN_MINUTES,
       unit: "minutes",
       source:
         "Minnesota Department of Transportation, Maintenance Manual Chapter 2: Clear Roads (November 15, 2023)",
       citation:
-        "§2-5.02 and Table 2: the target Bare Lane Regain Time, measured from the end of the event, is 0-3 hrs for Super Commuter routes (AADT over 30,000). The buffer takes the 3-hour upper bound for the busiest commuter routes. https://www.dot.state.mn.us/maintenance/pdf/manual/CHAPTER%202%2011-15-23.pdf",
+        "§2-5.02 and Table 2: the target Bare Lane Regain Time, measured from the end of the event, is 0-3 hrs for Super Commuter routes (AADT over 30,000), 2-5 hrs for Urban Commuter (10,000-30,000), and 4-9 hrs for Rural Commuter (2,000-10,000). The buffer takes the 5-hour Urban Commuter upper bound as a metro default; a facility served by rural roads needs longer. https://www.dot.state.mn.us/maintenance/pdf/manual/CHAPTER%202%2011-15-23.pdf",
     },
     maxDelayHours: {
       value: OPM_LONGEST_ILLUSTRATED_DELAY_HOURS,
@@ -98,29 +118,33 @@ export const THRESHOLDS = {
       sustained: {
         value: HIGH_WIND_SUSTAINED_MPH,
         unit: "mph",
+        minDurationMinutes: HIGH_WIND_SUSTAINED_DURATION_MINUTES,
         posture: "early_dismissal",
         source: NWSI_10_515_SOURCE,
-        citation: `§6.2.2.2 High Wind Warning: typical values are sustained wind speeds of 40 mph or greater lasting for 1 hour or longer. ${NWSI_10_515_URL}`,
+        citation: `§6.2.3 Table 1, High Wind Warning: typical values are sustained wind speeds of 40 mph or greater lasting for 1 hour or longer. WFOs may define local criteria. ${NWSI_10_515_URL}`,
       },
       gust: {
         value: HIGH_WIND_GUST_MPH,
         unit: "mph",
+        minDurationMinutes: HIGH_WIND_GUST_DURATION_MINUTES,
         posture: "full_closure",
         source: NWSI_10_515_SOURCE,
-        citation: `§6.2.2.2 High Wind Warning: typical values include winds of 58 mph or greater for any duration. ${NWSI_10_515_URL}`,
+        citation: `§6.2.3 Table 1, High Wind Warning: typical values include winds of 58 mph or greater for any duration. WFOs may define local criteria. ${NWSI_10_515_URL}`,
       },
     },
     postHazardBufferMinutes: {
-      value: HIGH_WIND_CRITERION_DURATION_MINUTES,
+      value: WIND_POST_HAZARD_BUFFER_MINUTES,
       unit: "minutes",
-      source: NWSI_10_515_SOURCE,
-      citation: `§6.2.2.2 defines High Wind Warning sustained winds as lasting 1 hour or longer, and §2.3 ends an event when criteria are forecast to no longer be met. The buffer waits one criterion duration so a lull is not read as the end. ${NWSI_10_515_URL}`,
+      source:
+        "Closure Call policy; no NWS or OPM standard sets a buffer after wind ends",
+      citation:
+        "Policy choice: one hour after winds drop below warning criteria gives crews time to report downed trees and power lines on commute routes before employees leave.",
     },
     maxDelayHours: {
       value: OPM_STANDARD_DELAY_HOURS,
       unit: "hours",
       source: OPM_SOURCE,
-      citation: `§IV.B.3 Option 3a, Example 1: a 2-hour delayed arrival moves an 8:00 arrival to 10:00. Roads need no treatment after wind ends, so the standard 2-hour delay applies, and a longer event calls for telework or closure. ${OPM_URL}`,
+      citation: `Policy choice: OPM sets no cap. §IV.B.3 Option 3a, Example 1 illustrates a 2-hour delayed arrival (8:00 to 10:00). Wind damage that takes longer than that to clear calls for telework or closure instead. ${OPM_URL}`,
     },
   },
   airQuality: {
@@ -151,7 +175,7 @@ export const THRESHOLDS = {
       value: OPM_STANDARD_DELAY_HOURS,
       unit: "hours",
       source: OPM_SOURCE,
-      citation: `§I lists poor air quality among the disruptions the procedures cover, and §IV.B.3 Option 3a, Example 1 illustrates a 2-hour delayed arrival. A longer event calls for telework or closure. ${OPM_URL}`,
+      citation: `Policy choice: §I lists poor air quality among the disruptions the procedures cover, and §IV.B.3 Option 3a, Example 1 illustrates a 2-hour delayed arrival. Smoke rarely clears within a morning, so an event longer than 2 hours calls for telework or closure. ${OPM_URL}`,
     },
   },
 } as const satisfies Record<Hazard, HazardThresholds>;
