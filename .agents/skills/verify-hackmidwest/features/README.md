@@ -17,7 +17,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 - Prefer ARIA roles and exact accessible names. Use `expect-text` only for elements that have no accessible name.
 - Treat every command as literal. Keep quoted names, paths, and JSON unchanged.
 - Run browser actions through `$V browser`, HTTP through `$V api`, stored-state checks through `$V db`, and schema rejections through `$V db-reject`.
-- Mutate data only through `POST /api/tasks` and `POST /api/facilities/<id>/recommendations`. Never write to SQLite directly. `db-reject` is the one exception: it writes only to a throwaway snapshot.
+- Mutate data only through `POST /api/tasks`, `POST /api/facilities/<id>/recommendations`, and `POST /api/recommendations/<id>/decisions`. Never write to SQLite directly. `db-reject` is the one exception: it writes only to a throwaway snapshot.
 
 ## Proof and skip reporting
 
@@ -49,6 +49,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [Create a task](./create-task.md) covers `POST /api/tasks`, its validation, and seeing the new task on `/tasks`.
 - [Agent API](./agent-api.md) covers the separate agent API: its `GET /health` liveness and its `GET /tasks/summary` read of the tasks API over HTTP.
 - [Recommendations](./recommendations.md) covers `POST /api/facilities/:id/recommendations` (live and as-of), the latest and by-id reads, replay, and the stored add-only row.
+- [Decisions](./decisions.md) covers `POST /api/recommendations/:id/decisions` (accept, override, defer, supersede), its `422` and `409` bodies, `GET /api/facilities/:id/decisions` history, `GET /api/decisions/:id/verify`, and the `no_decision` row an evaluation records after a missed `decideBy`.
 - [NWS live pull](./nws-live.md) covers the temporary `GET /api/nws/live` route: a live National Weather Service pull for one point, its range validation, and its 500 outside NWS coverage.
-- [Storage invariants](./storage-invariants.md) covers the add-only triggers and `CHECK` constraints, proven with `db-reject` because no route serves those tables yet.
+- [Storage invariants](./storage-invariants.md) covers the add-only triggers and `CHECK` constraints, proven with `db-reject`, including rules the routes never let a request reach.
 - [Task list load failure](./tasks-load-error.md) covers the error alert shown when the API is unreachable or its storage fails, and the API's generic 500.
