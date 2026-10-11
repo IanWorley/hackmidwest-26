@@ -18,7 +18,7 @@ import { createTestDatabase } from "./testing";
 
 const IMPOSSIBLE_INSTANT = "2026-02-30T13:00:00.000Z";
 const EFFECTIVE_AT = "2026-10-02T17:30:00.000Z";
-const BLANK_REASON = " \t\r\n";
+const BLANK_TEXT = " \t\r\n";
 const { id: _id, ...NEW_DIRECTIVE } = DIRECTIVE;
 
 it("links a recorded directive to its decision", async () => {
@@ -63,7 +63,7 @@ it.each([
 
     await expect(
       store.db.run(
-        sql`insert into decision_directives (decision_id, decision_hash, scope, directive, reason_category, reason_text, issued_by_id, issued_at, content_hash) values (${DIRECTIVE.decisionId}, ${DIRECTIVE.decisionHash}, ${scope}, ${DIRECTIVE.directive}, ${DIRECTIVE.reasonCategory}, ${DIRECTIVE.reasonText}, ${DIRECTIVE.issuedById}, ${DIRECTIVE.issuedAt}, ${DIRECTIVE.contentHash})`,
+        sql`insert into decision_directives (decision_id, decision_hash, scope, directive, reason_category, reason_text, issued_by_id, issued_by_name, issued_by_role, issued_at, content_hash) values (${DIRECTIVE.decisionId}, ${DIRECTIVE.decisionHash}, ${scope}, ${DIRECTIVE.directive}, ${DIRECTIVE.reasonCategory}, ${DIRECTIVE.reasonText}, ${DIRECTIVE.issuedById}, ${DIRECTIVE.issuedByName}, ${DIRECTIVE.issuedByRole}, ${DIRECTIVE.issuedAt}, ${DIRECTIVE.contentHash})`,
       ),
     ).rejects.toMatchObject({
       cause: {
@@ -77,27 +77,34 @@ it.each([
   }
 });
 
-it("rejects a directive whose reason is blank", async () => {
-  const store = await createTestDatabase();
-  try {
-    await insertDecisionRecordChain(store.db);
+it.each([
+  { column: "reasonText", constraint: "reason_text" },
+  { column: "issuedByName", constraint: "issued_by_name" },
+  { column: "issuedByRole", constraint: "issued_by_role" },
+] as const)(
+  "rejects a directive whose $column is blank",
+  async ({ column, constraint }) => {
+    const store = await createTestDatabase();
+    try {
+      await insertDecisionRecordChain(store.db);
 
-    await expect(
-      store.db
-        .insert(decisionDirectives)
-        .values({ ...NEW_DIRECTIVE, reasonText: BLANK_REASON })
-        .execute(),
-    ).rejects.toMatchObject({
-      cause: {
-        message: expect.stringContaining(
-          "CHECK constraint failed: decision_directives_reason_text_not_blank",
-        ),
-      },
-    });
-  } finally {
-    store.close();
-  }
-});
+      await expect(
+        store.db
+          .insert(decisionDirectives)
+          .values({ ...NEW_DIRECTIVE, [column]: BLANK_TEXT })
+          .execute(),
+      ).rejects.toMatchObject({
+        cause: {
+          message: expect.stringContaining(
+            `CHECK constraint failed: decision_directives_${constraint}_not_blank`,
+          ),
+        },
+      });
+    } finally {
+      store.close();
+    }
+  },
+);
 
 it("rejects a directive effective on a date that does not exist", async () => {
   const store = await createTestDatabase();
@@ -191,7 +198,7 @@ it("keeps the recorded directive when an INSERT OR REPLACE reuses its id", async
     await insertDecisionRecordChain(store.db);
 
     await store.db.run(
-      sql`insert or replace into decision_directives (id, decision_id, decision_hash, scope, directive, reason_category, reason_text, issued_by_id, issued_at, content_hash) values (${DIRECTIVE_ID}, ${DIRECTIVE.decisionId}, ${DIRECTIVE.decisionHash}, 'facility', 'dismissed', ${DIRECTIVE.reasonCategory}, ${DIRECTIVE.reasonText}, ${DIRECTIVE.issuedById}, ${DIRECTIVE.issuedAt}, ${DIRECTIVE.contentHash})`,
+      sql`insert or replace into decision_directives (id, decision_id, decision_hash, scope, directive, reason_category, reason_text, issued_by_id, issued_by_name, issued_by_role, issued_at, content_hash) values (${DIRECTIVE_ID}, ${DIRECTIVE.decisionId}, ${DIRECTIVE.decisionHash}, 'facility', 'dismissed', ${DIRECTIVE.reasonCategory}, ${DIRECTIVE.reasonText}, ${DIRECTIVE.issuedById}, ${DIRECTIVE.issuedByName}, ${DIRECTIVE.issuedByRole}, ${DIRECTIVE.issuedAt}, ${DIRECTIVE.contentHash})`,
     );
 
     expect(

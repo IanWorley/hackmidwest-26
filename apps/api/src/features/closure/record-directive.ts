@@ -187,6 +187,8 @@ async function issueInTransaction(
     reasonCategory: body.reason.category,
     reasonText: body.reason.text,
     issuedById: issuer.id,
+    issuedByName: issuer.name,
+    issuedByRole: issuer.role,
     issuedAt: DateTime.formatIso(issuedAt),
   });
   return { kind: "recorded", directive };

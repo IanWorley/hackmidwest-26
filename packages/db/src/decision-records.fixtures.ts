@@ -111,6 +111,8 @@ export const DIRECTIVE = {
   reasonCategory: "essential_operations",
   reasonText: "Plant operators keep the boilers running.",
   issuedById: SEEDED_DECISION_MAKER_ID,
+  issuedByName: DECIDER_NAME,
+  issuedByRole: DECIDER_ROLE,
   issuedAt: ISSUED_AT,
   contentHash: DIRECTIVE_HASH,
 } as const;

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "670663d2-4bd2-4191-a1b0-a8e4ae26cab7",
+  "id": "ceb65033-8938-45b2-a4f5-89a44e27857e",
   "prevId": "b654c81e-9dcb-4feb-a2ce-73ccde9da46c",
   "tables": {
     "building_roster_entries": {
@@ -178,6 +178,20 @@
           "notNull": true,
           "autoincrement": false
         },
+        "issued_by_name": {
+          "name": "issued_by_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "issued_by_role": {
+          "name": "issued_by_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "issued_at": {
           "name": "issued_at",
           "type": "text",
@@ -220,6 +234,14 @@
         "decision_directives_reason_text_not_blank": {
           "name": "decision_directives_reason_text_not_blank",
           "value": "trim(\"decision_directives\".\"reason_text\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "decision_directives_issued_by_name_not_blank": {
+          "name": "decision_directives_issued_by_name_not_blank",
+          "value": "trim(\"decision_directives\".\"issued_by_name\", char(32, 9, 10, 11, 12, 13)) <> ''"
+        },
+        "decision_directives_issued_by_role_not_blank": {
+          "name": "decision_directives_issued_by_role_not_blank",
+          "value": "trim(\"decision_directives\".\"issued_by_role\", char(32, 9, 10, 11, 12, 13)) <> ''"
         },
         "decision_directives_decision_hash_sha256": {
           "name": "decision_directives_decision_hash_sha256",

@@ -86,6 +86,8 @@ it.each([
           reasonCategory: "essential_operations",
           reasonText: "Plant operators keep the boilers running.",
           issuedById: DECIDER_ID,
+          issuedByName: "Dana Whitfield",
+          issuedByRole: "County Executive Director",
           issuedAt: DECIDED_AT,
           contentHash: expect.stringMatching(SHA256_HEX),
         },

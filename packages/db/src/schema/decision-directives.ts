@@ -23,7 +23,7 @@ export const DIRECTIVES_WITH_EFFECTIVE_AT = [
 export const SUPERSEDED_DECISION_MESSAGE =
   "decision_directives must name the newest decision: this decision is already superseded";
 
-/** Add-only: migration triggers reject UPDATE and DELETE and drop an insert that reuses an id, so a changed directive is a newer row. Scope is text because it may name a building, an employee, or neither; parseDirectiveScope reads it. */
+/** Add-only: migration triggers reject UPDATE and DELETE and drop an insert that reuses an id, so a changed directive is a newer row. Scope is text because it may name a building, an employee, or neither; parseDirectiveScope reads it. The issuer's name and role are copied in because decision_makers rows can change later. */
 export const decisionDirectives = sqliteTable(
   "decision_directives",
   {
@@ -42,11 +42,18 @@ export const decisionDirectives = sqliteTable(
     issuedById: integer("issued_by_id")
       .notNull()
       .references(() => decisionMakers.id),
+    issuedByName: text("issued_by_name").notNull(),
+    issuedByRole: text("issued_by_role").notNull(),
     issuedAt: text("issued_at").notNull(),
     contentHash: text("content_hash").notNull(),
   },
   (table) => [
-    ...nonBlankChecks("decision_directives", table.reasonText),
+    ...nonBlankChecks(
+      "decision_directives",
+      table.reasonText,
+      table.issuedByName,
+      table.issuedByRole,
+    ),
     check(
       "decision_directives_decision_hash_sha256",
       isSha256Hex(table.decisionHash),

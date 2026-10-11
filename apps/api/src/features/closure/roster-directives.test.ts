@@ -23,6 +23,8 @@ function storedDirective(
     reasonCategory: "essential_operations",
     reasonText: "Plant operators keep the boilers running.",
     issuedById: 1,
+    issuedByName: "Dana Whitfield",
+    issuedByRole: "County Executive Director",
     issuedAt: "2026-10-12T10:00:00.000Z",
     contentHash: UNCHECKED_HASH,
     ...fields,
