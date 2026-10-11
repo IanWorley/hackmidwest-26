@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app";
 import { type NwsClientShape, NwsError } from "../clients/nws";
+import { makeOpenMeteoClient } from "../clients/open-meteo";
 import {
   createApiRuntime,
   HTTP_INTERNAL_SERVER_ERROR,
@@ -61,7 +62,10 @@ const outsideCoverage: NwsClientShape = {
 
 async function getLive(nws: NwsClientShape, query: string): Promise<Response> {
   const store = await createTestDatabase();
-  const runtime = createApiRuntime(store.db, { nws });
+  const runtime = createApiRuntime(store.db, {
+    nws,
+    openMeteo: makeOpenMeteoClient(),
+  });
   try {
     const app = createApp({
       runRequest: runtime.runRequest,

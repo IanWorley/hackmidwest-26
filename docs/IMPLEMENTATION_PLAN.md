@@ -48,7 +48,7 @@ Rules that shape every step below:
 - `apps/api` writes SQLite. `apps/agent-api` never touches `@hackmidwest/db`; it yields the `TasksApi`-style Eden service.
 - Posture selection is deterministic TypeScript inside `apps/api`. No LLM call sits on the path that picks a posture.
 - Config is read once in each backend's `src/index.ts` → `config.ts`. Nothing else reads `process.env`.
-- Every external call (NWS, AirNow, LLM) is an Effect service with a `Layer.succeed` in production and a stub layer in tests.
+- Every external call (NWS, Open-Meteo, LLM) is an Effect service with a `Layer.succeed` in production and a stub layer in tests.
 - The existing `tasks` feature is scaffolding. Nothing in this plan depends on it, and Step 13 removes it once
   Closure Call has its own table, routes, page, and verify recipes.
 
@@ -65,15 +65,15 @@ packages/db/
     └── seed.test.ts                   # seed idempotency for the new fixture keys
 
 apps/api/src/
-├── config.ts                          # + NWS_USER_AGENT, AIRNOW_API_KEY (optional)
-├── runtime.ts                         # + NwsClient, AirNowClient services on the layer
+├── config.ts                          # + NWS_USER_AGENT
+├── runtime.ts                         # + NwsClient, OpenMeteoClient services on the layer
 ├── clients/
 │   ├── nws.ts                         # NwsClient implementation (fetch + Effect.retry/timeout + points cache)
-│   └── airnow.ts                      # AirNowClient implementation
+│   └── open-meteo.ts                  # OpenMeteoClient implementation (keyless AQI)
 └── features/closure/
     ├── postures.ts                    # POSTURES const tuple + TypeBox literal union
     ├── thresholds.ts                  # cutoffs with { value, unit, source, citation } per hazard
-    ├── readings.ts                    # Reading shape + normalizers from NWS/AirNow payloads
+    ├── readings.ts                    # Reading shape + normalizers from NWS/Open-Meteo payloads
     ├── timing.ts                      # hazard window vs facility day (pure, takes `now`)
     ├── engine.ts                      # evaluatePosture(): pure, deterministic, no I/O
     ├── roster.ts                      # building roster vs employee roster reconciliation
@@ -103,7 +103,7 @@ apps/web/src/
 ## 2. Config & Scaffolding (Task 2)
 
 - [ ] Add to `.env.example`: `NWS_USER_AGENT` (NWS asks for a descriptive contact string),
-      `AIRNOW_API_KEY` (optional), `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` (optional, agent API only).
+      `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` (optional, agent API only).
 - [ ] Extend `apps/api/src/config.ts` and `apps/agent-api/src/config.ts` with the new variables, validated
       with the same TypeBox + `Value.Check` pattern already used for ports and origins. Optional keys are
       typed as `string | undefined`, never read elsewhere.
@@ -141,7 +141,7 @@ apps/web/src/
       typed error rather than deep inside the engine.
 - [ ] Normalize into one `Reading` type (`features/closure/readings.ts`):
       `{ source, observedAt, metric, value, unit, rawRef }`.
-- [ ] Supplementary signal: `AirNowClient` with the same service/stub pattern, producing AQI `Reading`s.
+- [x] Supplementary signal: `OpenMeteoClient` with the same service/stub pattern, producing AQI `Reading`s.
       State DOT road conditions stay optional.
 
 **Why these fields matter:** NWS `severity` (Extreme/Severe/Moderate/Minor), `certainty`
@@ -200,7 +200,7 @@ PR. Validators in `apps/api` are derived with `drizzle-typebox`, not hand-writte
   - [ ] A **one-paragraph plain-language rationale** generated from a template in `apps/api`. The LLM
         version (Step 8) is optional polish; the template is the one that gets stored.
 - [ ] The Elysia module `features/closure/recommendations.ts` is the only place I/O meets the engine:
-      `POST /api/facilities/:id/recommendations` yields `NwsClient`, `AirNowClient`, `Database`, calls
+      `POST /api/facilities/:id/recommendations` yields `NwsClient`, `OpenMeteoClient`, `Database`, calls
       `evaluatePosture`, persists the snapshot (Step 7), and returns it. Accept an optional `asOf` ISO
       timestamp in the body to drive the "as-of" demo view (Step 9); default is the server clock, read once
       in the route and passed in.
@@ -479,4 +479,9 @@ a web page (Step 7.1), an agent API feature (Step 8), and verify recipes (Step 1
 
 - `docs/steering/*.md` still describe a Python layout. They should be rewritten to match this plan in a
   follow-up so Kiro and other agents stop reading the old structure.
-- Supplementary signal: AirNow (needs a free key) or a keyless source? AirNow is assumed above.
+- Supplementary signal: **decided, Open-Meteo** (#20). AirNow was the first choice, but its data use
+  guidelines say agency-reported data "should not be used ... to support any other government or public
+  decision-making", which is this product's purpose. Open-Meteo's air-quality API is keyless and CC BY 4.0,
+  with no decision-use restriction. Its US AQI is modeled (CAMS), not monitor-observed, so the rationale
+  should say "modeled AQI". The free tier is non-commercial and needs CAMS/Open-Meteo attribution; a
+  commercial deployment needs a paid plan.

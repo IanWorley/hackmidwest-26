@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { observationReadings } from "./readings";
+import { airQualityReadings, observationReadings } from "./readings";
 
 const OBSERVATION_URL =
   "https://api.weather.gov/stations/KMKC/observations/2026-10-11T00:30:00+00:00";
@@ -31,6 +31,28 @@ it("normalizes known units and skips null values and unknown unit codes", () => 
       value: 16.668,
       unit: "km/h",
       rawRef: OBSERVATION_URL,
+    },
+  ]);
+});
+
+const AIR_QUALITY_URL =
+  "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=39.1&longitude=-94.58&current=us_aqi&timeformat=unixtime";
+
+it("turns an Open-Meteo AQI observation into an AQI reading", () => {
+  const readings = airQualityReadings({
+    aqi: 158,
+    observedAt: "2026-10-11T01:00:00.000Z",
+    rawRef: AIR_QUALITY_URL,
+  });
+
+  expect(readings).toEqual([
+    {
+      source: "open-meteo",
+      observedAt: "2026-10-11T01:00:00.000Z",
+      metric: "aqi",
+      value: 158,
+      unit: "AQI",
+      rawRef: AIR_QUALITY_URL,
     },
   ]);
 });

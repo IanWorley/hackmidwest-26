@@ -21,15 +21,6 @@ interface ApiConfig {
   readonly webOrigin: string;
   readonly database: DatabaseLocation;
   readonly nwsUserAgent: string;
-  readonly airNowApiKey: string | undefined;
-}
-
-/** Bun loads `KEY=` from .env as "", which means the key is not set. */
-function readOptional(value: string | undefined): string | undefined {
-  if (value === "") {
-    return undefined;
-  }
-  return value;
 }
 
 /** Fail startup before opening a connection or listener when configuration is invalid. */
@@ -70,6 +61,5 @@ export function readApiConfig(environment: NodeJS.ProcessEnv): ApiConfig {
     webOrigin: origin.origin,
     database,
     nwsUserAgent,
-    airNowApiKey: readOptional(environment.AIRNOW_API_KEY),
   };
 }

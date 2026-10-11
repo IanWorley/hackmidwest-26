@@ -2,6 +2,7 @@ import process from "node:process";
 import { openDatabase } from "@hackmidwest/db/connection";
 import { createApp } from "./app";
 import { makeNwsClient } from "./clients/nws";
+import { makeOpenMeteoClient } from "./clients/open-meteo";
 import { readApiConfig } from "./config";
 import { createApiRuntime } from "./runtime";
 
@@ -9,6 +10,7 @@ const config = readApiConfig(process.env);
 const store = openDatabase(config.database);
 const runtime = createApiRuntime(store.db, {
   nws: makeNwsClient({ userAgent: config.nwsUserAgent }),
+  openMeteo: makeOpenMeteoClient(),
 });
 const app = createApp({
   runRequest: runtime.runRequest,
