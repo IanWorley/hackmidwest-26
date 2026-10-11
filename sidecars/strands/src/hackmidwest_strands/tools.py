@@ -5,8 +5,12 @@ import httpx
 from strands import tool
 
 AGENT_API_URL_ENV = "AGENT_API_URL"
-# The run route waits on the API and an LLM narration, so httpx's 5 s default is too short.
-REQUEST_TIMEOUT_SECONDS = 60.0
+# Outlasts the API's worst case so a slow run is never reported failed while it still stores its
+# recommendation. apps/api/src/clients/nws.ts gives each NWS request 4 attempts of 10 s plus 1 + 2 + 4 s of
+# backoff (47 s), and an evaluation's observation pull makes 3 of them in series (points, stations, latest
+# observation), so the API can take 141 s. The rest is margin for the preview and narration, though the narration's
+# OpenRouter call sets no timeout of its own.
+REQUEST_TIMEOUT_SECONDS = 180.0
 
 type Json = dict[str, Any] | list[Any] | str | int | float | bool | None
 
