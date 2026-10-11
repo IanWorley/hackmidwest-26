@@ -1,5 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import {
+  ANNEX_DISMISSAL,
+  KANSAS_CITY_ACCEPT,
+} from "../../../test/decision-fixture";
 import { KANSAS_CITY_RECOMMENDATION } from "../../../test/recommendation-fixture";
 import type { DecisionScreen } from "./decision-api";
 import { DecisionScreenView } from "./decision-screen";
@@ -7,6 +11,8 @@ import type { NoticeScreen } from "./notice-screen";
 
 const HTTP_CREATED = 201;
 const HTTP_BAD_GATEWAY = 502;
+const LOADED_AT = Date.parse("2026-10-11T08:30:00Z");
+const MINUTE_MS = 60_000;
 
 const NO_NOTICES: NoticeScreen = {
   preview: null,
@@ -39,13 +45,15 @@ const SCREEN: DecisionScreen = {
     hazards: ["winter", "wind", "airQuality"],
   },
   facilityDate: "2026-10-11",
+  rollsOverAt: "2026-10-11T21:30:00.000Z",
   latestRecommendation: null,
+  latestDecisionId: undefined,
   history: [],
   currentDecision: null,
   recorders: [],
   buildings: [],
   directives: [],
-  loadedAt: Date.parse("2026-10-11T08:30:00Z"),
+  loadedAt: LOADED_AT,
 };
 
 function evaluationRespondsWith(status: number): void {
@@ -61,6 +69,7 @@ function reloadNothing(): Promise<void> {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 it("moves focus to the recommendation heading once a re-evaluation loads", async () => {
@@ -126,4 +135,50 @@ it("sends an earlier day's recommendation back to Re-evaluate with nothing to de
   expect(
     screen.getByRole("heading", { name: "Decision history" }),
   ).toBeTruthy();
+});
+
+it("reloads once the facility day rolls over at closing time", () => {
+  vi.useFakeTimers({ now: LOADED_AT });
+  const onReload = vi.fn<() => Promise<void>>(() => Promise.resolve());
+  render(
+    <DecisionScreenView
+      notices={NO_NOTICES}
+      onReload={onReload}
+      screen={{
+        ...SCREEN,
+        rollsOverAt: new Date(LOADED_AT + MINUTE_MS).toISOString(),
+      }}
+    />,
+  );
+
+  vi.advanceTimersByTime(MINUTE_MS - 1);
+  expect(onReload).not.toHaveBeenCalled();
+  vi.advanceTimersByTime(1);
+  expect(onReload).toHaveBeenCalledTimes(1);
+});
+
+it("keeps the standing decision and its directives after a same-day re-evaluation", () => {
+  render(
+    <DecisionScreenView
+      notices={NO_NOTICES}
+      onReload={reloadNothing}
+      screen={{
+        ...SCREEN,
+        latestRecommendation: { ...KANSAS_CITY_RECOMMENDATION, id: 2 },
+        history: [KANSAS_CITY_ACCEPT],
+        currentDecision: KANSAS_CITY_ACCEPT,
+        directives: [ANNEX_DISMISSAL],
+      }}
+    />,
+  );
+
+  expect(screen.getByRole("heading", { name: "Directives" })).toBeTruthy();
+  expect(
+    screen.getByText(
+      "The recommendation above is newer and nobody has decided on it, so this decision still stands.",
+    ),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("list", { name: "Issued directives" }).children,
+  ).toHaveLength(1);
 });

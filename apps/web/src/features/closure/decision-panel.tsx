@@ -1,19 +1,17 @@
 import {
   type ActionDispatch,
   type JSX,
-  type RefObject,
   type SubmitEvent,
   useCallback,
   useEffect,
   useId,
   useReducer,
   useRef,
+  useState,
 } from "react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { PostureField, RecheckField } from "./decision-action-fields";
 import type {
-  Conflict,
   DecideOutcome,
   DecisionRequest,
   HumanAction,
@@ -26,6 +24,7 @@ import {
   readDecisionForm,
   reasonRequired,
 } from "./decision-form";
+import { StatusNotice } from "./decision-panel-notice";
 import {
   INITIAL_PANEL_STATE,
   openAction,
@@ -35,14 +34,12 @@ import {
 } from "./decision-panel-state";
 import { FieldError, ReasonFields, RecordedByField } from "./form-fields";
 import { ACTION_BUTTON_LABELS, labeledOptions } from "./labels";
+import { fittingRecheckMinutes, NO_RECHECK_TEXT } from "./recheck-times";
 
 const PANEL_HEADING = "Decide";
 const ACTIONS_LABEL = "Decision actions";
 const CANCEL_LABEL = "Cancel";
 const SUBMITTING_LABEL = "Recording…";
-const RECORDED_TEXT = "Decision recorded.";
-const FAILED_TITLE = "The decision could not be recorded.";
-const FAILED_TEXT = "Nothing was saved. Try again.";
 const DIRECTIVES_NOTE =
   "Directives belong to the decision they were issued on. A new decision starts with none.";
 
@@ -52,24 +49,6 @@ const NOTICE_STATUSES: readonly PanelState["status"][] = [
   "stale",
   "failed",
 ];
-
-const CONFLICT_NOTICES: Record<
-  Conflict,
-  { readonly title: string; readonly text: string }
-> = {
-  previewRecommendation: {
-    title: "That recommendation was a preview, not the live one.",
-    text: "Nothing was saved. The page is reloaded with the live recommendation, if there is one; review it before you decide.",
-  },
-  newerRecommendation: {
-    title: "A newer recommendation exists.",
-    text: "Nothing was saved. The newer recommendation is now shown above; review it before you decide.",
-  },
-  decisionChanged: {
-    title: "Someone else decided first.",
-    text: "Nothing was saved. The decision history below is reloaded; review it before you decide again.",
-  },
-};
 
 const FORM_HEADINGS: Record<HumanAction, string> = {
   accept: "Accept the recommendation",
@@ -86,8 +65,12 @@ const SUBMIT_LABELS: Record<HumanAction, string> = {
 interface DecisionPanelProps {
   readonly recommendedPosture: Posture;
   readonly decideBy: string;
+  /** The recommendation the panel decides on; a new one closes any open draft. */
+  readonly recommendationId: number;
   /** The newest decision on this recommendation, which a new one must supersede. */
-  readonly currentDecisionId: number | undefined;
+  readonly supersedesDecisionId: number | undefined;
+  /** A decision stands for the facility day, so a new one replaces it and its directives. */
+  readonly hasCurrentDecision: boolean;
   readonly recorders: readonly Recorder[];
   readonly now: number;
   /** Records the decision on the shown recommendation; a caller may wrap it, for example with a confirmation step. */
@@ -100,57 +83,16 @@ interface FormStateProps {
   readonly dispatch: ActionDispatch<[PanelEvent]>;
 }
 
-function OutcomeAlert({ state }: { state: PanelState }): JSX.Element | null {
-  switch (state.status) {
-    case "stale":
-      return (
-        <Alert role="alert">
-          <AlertTitle>{CONFLICT_NOTICES[state.conflict].title}</AlertTitle>
-          <AlertDescription>
-            {CONFLICT_NOTICES[state.conflict].text}
-          </AlertDescription>
-        </Alert>
-      );
-    case "failed":
-      return (
-        <Alert role="alert" variant="destructive">
-          <AlertTitle>{FAILED_TITLE}</AlertTitle>
-          <AlertDescription>{FAILED_TEXT}</AlertDescription>
-        </Alert>
-      );
-    default:
-      return null;
-  }
-}
-
-/** The status line stays mounted and only its text changes, so screen readers announce it reliably. */
-function StatusNotice({
-  state,
-  ref,
-}: {
-  readonly state: PanelState;
-  readonly ref: RefObject<HTMLDivElement | null>;
-}): JSX.Element {
-  let statusText = "";
-  if (state.status === "recorded") {
-    statusText = RECORDED_TEXT;
-  }
-  return (
-    <div className="space-y-4" ref={ref} tabIndex={-1}>
-      <p role="status">{statusText}</p>
-      <OutcomeAlert state={state} />
-    </div>
-  );
-}
-
 function ActionButton({
   action,
   label,
   state,
   dispatch,
+  unavailable,
 }: FormStateProps & {
   readonly action: HumanAction;
   readonly label: string;
+  readonly unavailable: boolean;
 }): JSX.Element {
   const pressed = openAction(state) === action;
   let variant: "default" | "outline" = "outline";
@@ -163,7 +105,7 @@ function ActionButton({
   return (
     <Button
       aria-pressed={pressed}
-      disabled={state.status === "submitting"}
+      disabled={unavailable || state.status === "submitting"}
       onClick={choose}
       type="button"
       variant={variant}
@@ -177,7 +119,11 @@ function SubmitButtons({
   action,
   state,
   dispatch,
-}: FormStateProps & { readonly action: HumanAction }): JSX.Element {
+  unavailable,
+}: FormStateProps & {
+  readonly action: HumanAction;
+  readonly unavailable: boolean;
+}): JSX.Element {
   const submitting = state.status === "submitting";
   let submitLabel = SUBMIT_LABELS[action];
   if (submitting) {
@@ -188,7 +134,7 @@ function SubmitButtons({
   }, [dispatch]);
   return (
     <div className="flex gap-2">
-      <Button disabled={submitting} type="submit">
+      <Button disabled={unavailable || submitting} type="submit">
         {submitLabel}
       </Button>
       <Button
@@ -200,6 +146,70 @@ function SubmitButtons({
         {CANCEL_LABEL}
       </Button>
     </div>
+  );
+}
+
+/** Every action is open until the deadline leaves no re-check time, which closes Defer. */
+function canTake(action: HumanAction, panel: DecisionPanelProps): boolean {
+  return (
+    action !== "defer" ||
+    fittingRecheckMinutes(panel.decideBy, panel.now).length > 0
+  );
+}
+
+function ActionButtons({
+  state,
+  dispatch,
+  panel,
+}: FormStateProps & { readonly panel: DecisionPanelProps }): JSX.Element {
+  return (
+    <>
+      <fieldset className="flex gap-2">
+        <legend className="sr-only">{ACTIONS_LABEL}</legend>
+        {labeledOptions(ACTION_BUTTON_LABELS).map(({ value, label }) => (
+          <ActionButton
+            action={value}
+            dispatch={dispatch}
+            key={value}
+            label={label}
+            state={state}
+            unavailable={!canTake(value, panel)}
+          />
+        ))}
+      </fieldset>
+      {!canTake("defer", panel) && (
+        <p className="text-muted-foreground">{NO_RECHECK_TEXT}</p>
+      )}
+    </>
+  );
+}
+
+/** Reads the form, records the decision, and settles only after any reload it needs. */
+function useDecisionSubmit(
+  action: HumanAction,
+  dispatch: ActionDispatch<[PanelEvent]>,
+  panel: DecisionPanelProps,
+): (event: SubmitEvent<HTMLFormElement>) => Promise<void> {
+  return useCallback(
+    async (event: SubmitEvent<HTMLFormElement>): Promise<void> => {
+      event.preventDefault();
+      const read = readDecisionForm(action, new FormData(event.currentTarget), {
+        supersedesDecisionId: panel.supersedesDecisionId,
+        submittedAt: Date.now(),
+      });
+      if (read.kind === "invalid") {
+        dispatch({ type: "reject", field: read.field });
+        return;
+      }
+      dispatch({ type: "submit" });
+      const outcome = await panel.submitDecision(read.request);
+      // Settle after the reload, so a notice that says the page now shows something is already true.
+      if (outcome.kind === "recorded" || outcome.kind === "conflict") {
+        await panel.onReload();
+      }
+      dispatch({ type: "settle", outcome });
+    },
+    [action, dispatch, panel],
   );
 }
 
@@ -225,27 +235,7 @@ function DecisionForm({
     }
   }, [formId, state]);
 
-  const submit = useCallback(
-    async (event: SubmitEvent<HTMLFormElement>): Promise<void> => {
-      event.preventDefault();
-      const read = readDecisionForm(action, new FormData(event.currentTarget), {
-        supersedesDecisionId: panel.currentDecisionId,
-        submittedAt: Date.now(),
-      });
-      if (read.kind === "invalid") {
-        dispatch({ type: "reject", field: read.field });
-        return;
-      }
-      dispatch({ type: "submit" });
-      const outcome = await panel.submitDecision(read.request);
-      // Settle after the reload, so a notice that says the page now shows something is already true.
-      if (outcome.kind === "recorded" || outcome.kind === "conflict") {
-        await panel.onReload();
-      }
-      dispatch({ type: "settle", outcome });
-    },
-    [action, dispatch, panel],
-  );
+  const submit = useDecisionSubmit(action, dispatch, panel);
 
   return (
     <form
@@ -271,18 +261,31 @@ function DecisionForm({
         />
       )}
       <ReasonFields
-        required={reasonRequired(action, panel.currentDecisionId)}
+        required={reasonRequired(action, panel.supersedesDecisionId)}
         {...fieldProps}
       />
       <RecordedByField recorders={panel.recorders} {...fieldProps} />
       <FieldError field="form" {...fieldProps} />
-      <SubmitButtons action={action} dispatch={dispatch} state={state} />
+      <SubmitButtons
+        action={action}
+        dispatch={dispatch}
+        state={state}
+        unavailable={!canTake(action, panel)}
+      />
     </form>
   );
 }
 
 export function DecisionPanel(props: DecisionPanelProps): JSX.Element {
   const [state, dispatch] = useReducer(panelReducer, INITIAL_PANEL_STATE);
+  // Adjusting state during render, as React documents, so the old draft never paints against the new recommendation.
+  const [shownRecommendationId, setShownRecommendationId] = useState(
+    props.recommendationId,
+  );
+  if (shownRecommendationId !== props.recommendationId) {
+    setShownRecommendationId(props.recommendationId);
+    dispatch({ type: "recommendationChanged" });
+  }
   const headingId = useId();
   const noticeRef = useRef<HTMLDivElement>(null);
   const action = openAction(state);
@@ -298,22 +301,11 @@ export function DecisionPanel(props: DecisionPanelProps): JSX.Element {
       <h2 className="font-heading font-semibold text-xl" id={headingId}>
         {PANEL_HEADING}
       </h2>
-      {props.currentDecisionId !== undefined && (
+      {props.hasCurrentDecision === true && (
         <p className="text-muted-foreground">{DIRECTIVES_NOTE}</p>
       )}
       <StatusNotice ref={noticeRef} state={state} />
-      <fieldset className="flex gap-2">
-        <legend className="sr-only">{ACTIONS_LABEL}</legend>
-        {labeledOptions(ACTION_BUTTON_LABELS).map(({ value, label }) => (
-          <ActionButton
-            action={value}
-            dispatch={dispatch}
-            key={value}
-            label={label}
-            state={state}
-          />
-        ))}
-      </fieldset>
+      <ActionButtons dispatch={dispatch} panel={props} state={state} />
       {action !== undefined && (
         <DecisionForm
           action={action}

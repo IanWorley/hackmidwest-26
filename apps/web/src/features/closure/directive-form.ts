@@ -16,6 +16,7 @@ import { DIRECTIVE_KIND_LABELS, parseOption } from "./labels";
 const FACILITY_SCOPE_LABEL = "Whole facility";
 const ESSENTIAL_SCOPE_LABEL = "Essential personnel";
 const UNKNOWN_SCOPE_LABEL = "Someone no longer listed";
+const ID_LABEL = "ID";
 
 interface ScopeOption {
   readonly key: string;
@@ -28,6 +29,7 @@ interface ScopeOptions {
   readonly buildings: readonly ScopeOption[];
   readonly employeesByBuilding: readonly {
     readonly building: Building;
+    readonly label: string;
     readonly options: readonly ScopeOption[];
   }[];
 }
@@ -65,8 +67,31 @@ function sectionReducer(
   }
 }
 
+interface Named {
+  readonly id: number;
+  readonly name: string;
+}
+
+/** Names need not be unique, so a shared one carries its id and every visible label names one target. */
+function distinctLabels(items: readonly Named[]): (item: Named) => string {
+  const counts = new Map<string, number>();
+  for (const { name } of items) {
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return ({ id, name }) => {
+    if (counts.get(name) === 1) {
+      return name;
+    }
+    return `${name} (${ID_LABEL} ${id})`;
+  };
+}
+
 /** Select values are strings, so each scope gets a key and the submit looks the typed scope back up. */
 function scopeOptions(buildings: readonly Building[]): ScopeOptions {
+  const buildingLabel = distinctLabels(buildings);
+  const employeeLabel = distinctLabels(
+    buildings.flatMap(({ employees }) => employees),
+  );
   return {
     groups: [
       {
@@ -82,14 +107,15 @@ function scopeOptions(buildings: readonly Building[]): ScopeOptions {
     ],
     buildings: buildings.map((building) => ({
       key: `building:${building.id}`,
-      label: building.name,
+      label: buildingLabel(building),
       scope: { kind: "building", buildingId: building.id },
     })),
     employeesByBuilding: buildings.map((building) => ({
       building,
+      label: buildingLabel(building),
       options: building.employees.map((employee) => ({
         key: `employee:${employee.id}`,
-        label: employee.name,
+        label: employeeLabel(employee),
         scope: { kind: "employee", employeeId: employee.id },
       })),
     })),

@@ -14,6 +14,7 @@ const STEP_ARGS = {
   "expect-focus": ["role", "name"],
   "expect-focus-text": ["text"],
   "block-api": [],
+  "unblock-api": [],
   fill: ["label", "text"],
   select: ["label", "option"],
   tab: ["name"],
@@ -98,9 +99,8 @@ async function runStep(verb, args) {
       scope = page;
       return;
     case "block-api":
-      await page.route(`${API_URL}/**`, (route) =>
-        route.abort("connectionrefused"),
-      );
+    case "unblock-api":
+      await setApiBlocked(verb === "block-api");
       return;
     case "snap":
       await snap(args[0]);
@@ -108,6 +108,19 @@ async function runStep(verb, args) {
     default:
       throw new Error(`unhandled step '${verb}'`);
   }
+}
+
+/**
+ * Drops the current tab's API requests as a refused connection, or lets them through again.
+ * @param {boolean} blocked
+ */
+async function setApiBlocked(blocked) {
+  const apiRequests = `${API_URL}/**`;
+  if (blocked) {
+    await page.route(apiRequests, (route) => route.abort("connectionrefused"));
+    return;
+  }
+  await page.unroute(apiRequests);
 }
 
 /**

@@ -1,6 +1,6 @@
 import { api } from "../../lib/api";
+import { controlFor } from "./api-field-controls";
 import type { FormField } from "./decision-form";
-import { currentDecisionOf } from "./facility-day";
 import { loadFacility } from "./load-facilities";
 
 const HTTP_NOT_FOUND = 404;
@@ -8,6 +8,10 @@ const HTTP_UNPROCESSABLE = 422;
 
 type DecideCall = ReturnType<typeof api.api.recommendations>["decisions"];
 type DirectivesCall = ReturnType<typeof api.api.decisions>["directives"];
+type FacilityDayCall = ReturnType<typeof api.api.facilities>["facility-date"];
+type FacilityDay = NonNullable<
+  Awaited<ReturnType<FacilityDayCall["get"]>>["data"]
+>;
 
 type DecisionRequest = Parameters<DecideCall["post"]>[0];
 type DirectiveRequest = Parameters<DirectivesCall["post"]>[0];
@@ -16,6 +20,13 @@ type DecideRefusal = NonNullable<
   Awaited<ReturnType<DecideCall["post"]>>["error"]
 >["value"];
 type WireConflict = Extract<DecideRefusal, { conflict: string }>["conflict"];
+type DirectiveRefusal = NonNullable<
+  Awaited<ReturnType<DirectivesCall["post"]>>["error"]
+>["value"];
+type WireDirectiveConflict = Extract<
+  DirectiveRefusal,
+  { conflict: string }
+>["conflict"];
 
 /** Why a decision was refused as stale, in the screen's terms rather than the wire's. */
 type Conflict =
@@ -37,37 +48,6 @@ type DirectiveOutcome =
   | { readonly kind: "superseded" }
   | { readonly kind: "failed" };
 
-/** The API reports a refused field as a JSON Pointer into the body; the forms name their controls. */
-const API_FIELD_CONTROLS: ReadonlyMap<string, FormField> = new Map([
-  ["/decidedById", "recordedBy"],
-  ["/issuedById", "recordedBy"],
-  ["/chosenPosture", "posture"],
-  ["/recheckAt", "recheckIn"],
-  ["/reason", "reasonText"],
-  ["/reason/category", "reasonCategory"],
-  ["/reason/text", "reasonText"],
-  ["/scope", "scope"],
-  ["/directive", "directive"],
-]);
-const POINTER_SEPARATOR = "/";
-const TOP_LEVEL_SEGMENTS = 2;
-
-/** A pointer deeper than any control, such as `/scope/buildingId`, falls back to its top-level field. */
-function controlFor(property: unknown): FormField {
-  if (typeof property !== "string") {
-    return "form";
-  }
-  const topLevel = property
-    .split(POINTER_SEPARATOR)
-    .slice(0, TOP_LEVEL_SEGMENTS)
-    .join(POINTER_SEPARATOR);
-  return (
-    API_FIELD_CONTROLS.get(property) ??
-    API_FIELD_CONTROLS.get(topLevel) ??
-    "form"
-  );
-}
-
 function conflictFor(wire: WireConflict): Conflict {
   switch (wire) {
     case "preview_recommendation":
@@ -76,6 +56,17 @@ function conflictFor(wire: WireConflict): Conflict {
       return "newerRecommendation";
     case "newer_decision":
       return "decisionChanged";
+    default:
+      return wire satisfies never;
+  }
+}
+
+/** Both refusals mean the decision on screen no longer takes directives, so the page reloads with the one that does. */
+function directiveConflictFor(wire: WireDirectiveConflict): DirectiveOutcome {
+  switch (wire) {
+    case "not_current_decision":
+    case "no_chosen_posture":
+      return { kind: "superseded" };
     default:
       return wire satisfies never;
   }
@@ -135,7 +126,10 @@ async function loadBuildings(facilityId: number, signal: AbortSignal) {
   return result.data;
 }
 
-async function loadFacilityDate(facilityId: number, signal: AbortSignal) {
+async function loadFacilityDay(
+  facilityId: number,
+  signal: AbortSignal,
+): Promise<FacilityDay> {
   const result = await api.api
     .facilities({ id: facilityId })
     ["facility-date"].get({ fetch: { signal } });
@@ -144,7 +138,7 @@ async function loadFacilityDate(facilityId: number, signal: AbortSignal) {
       cause: result.error.value,
     });
   }
-  return result.data.facilityDate;
+  return result.data;
 }
 
 async function loadDirectives(decisionId: number, signal: AbortSignal) {
@@ -168,27 +162,31 @@ async function loadDecisionScreen({
   signal: AbortSignal;
 }) {
   const facility = await loadFacility({ facilityId, signal });
-  const [latestRecommendation, history, recorders, buildings, facilityDate] =
+  const [latestRecommendation, history, recorders, buildings, facilityDay] =
     await Promise.all([
       loadLatestRecommendation(facility.id, signal),
       loadHistory(facility.id, signal),
       loadRecorders(facility.id, signal),
       loadBuildings(facility.id, signal),
-      loadFacilityDate(facility.id, signal),
+      loadFacilityDay(facility.id, signal),
     ]);
-  const currentDecision = currentDecisionOf(
-    history,
-    latestRecommendation,
-    facilityDate,
-  );
+  // The server owns the current-decision rule; the history row only supplies what to show.
+  const currentDecision =
+    history.find(({ id }) => id === facilityDay.currentDecisionId) ?? null;
+  // History is newest first, so this is the chain head a new decision on the recommendation must supersede.
+  const latestDecisionId = history.find(
+    ({ recommendationId }) => recommendationId === latestRecommendation?.id,
+  )?.id;
   let directives: Awaited<ReturnType<typeof loadDirectives>> = [];
   if (currentDecision !== null) {
     directives = await loadDirectives(currentDecision.id, signal);
   }
   return {
     facility,
-    facilityDate,
+    facilityDate: facilityDay.facilityDate,
+    rollsOverAt: facilityDay.rollsOverAt,
     latestRecommendation,
+    latestDecisionId,
     history,
     currentDecision,
     recorders,
@@ -197,6 +195,14 @@ async function loadDecisionScreen({
     /** The countdown starts here, so the server render and hydration agree. */
     loadedAt: Date.now(),
   };
+}
+
+/**
+ * Eden answers a dropped connection with a 503 whose value is the fetch error, and a gateway may
+ * answer with text; `in` throws on a string, so only an object body is read for its variant.
+ */
+function isObject(value: unknown): value is object {
+  return typeof value === "object" && value !== null;
 }
 
 async function evaluateFacility(facilityId: number): Promise<boolean> {
@@ -217,6 +223,9 @@ async function decide(
     return { kind: "recorded" };
   }
   const { value } = result.error;
+  if (!isObject(value)) {
+    return { kind: "failed" };
+  }
   // Eden does not narrow `value` on `status`, so read the variant from its fields.
   if ("conflict" in value) {
     return { kind: "conflict", conflict: conflictFor(value.conflict) };
@@ -238,8 +247,11 @@ async function issueDirective(
     return { kind: "issued" };
   }
   const { value } = result.error;
+  if (!isObject(value)) {
+    return { kind: "failed" };
+  }
   if ("conflict" in value) {
-    return { kind: "superseded" };
+    return directiveConflictFor(value.conflict);
   }
   if (result.error.status === HTTP_UNPROCESSABLE && "property" in value) {
     return { kind: "invalid", field: controlFor(value.property) };
