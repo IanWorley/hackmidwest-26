@@ -9,7 +9,9 @@ import {
 } from "@/features/map/layers";
 import { loadMap } from "@/features/map/load-map";
 import { PostureLegend } from "@/features/map/posture-legend";
+import { UnmappedAlerts } from "@/features/map/unmapped-alerts";
 import { pageTitle } from "@/lib/page-title";
+import { useRefreshEvery } from "@/lib/use-refresh-every";
 
 const PAGE_HEADING = "Conditions";
 const PAGE_TITLE = pageTitle(PAGE_HEADING);
@@ -18,6 +20,8 @@ const MAP_LOADING_TEXT = "Loading map...";
 const LOAD_ERROR_TEXT = "Conditions could not be loaded.";
 const LIVE_UNAVAILABLE_TEXT =
   "Live alerts and air quality are unavailable. Facility standings are current.";
+/** Matches the API's one-minute live-conditions cache, so an open page picks up new alerts, AQI, and decisions. */
+const REFRESH_INTERVAL_MS = 60_000;
 
 const ConditionsMap = lazy(() =>
   import("@/features/map/conditions-map").then((module) => ({
@@ -28,6 +32,7 @@ const ConditionsMap = lazy(() =>
 function ConditionsPage(): JSX.Element {
   const { facilities, alerts } = Route.useLoaderData();
   const layers = useMapLayers();
+  useRefreshEvery(REFRESH_INTERVAL_MS);
   // A failed radar tile hides radar until the page is left, rather than showing a broken overlay.
   const [radarFailed, setRadarFailed] = useState<boolean>(false);
   const available = MAP_LAYERS.filter(
@@ -58,6 +63,9 @@ function ConditionsPage(): JSX.Element {
           />
         </Suspense>
       </ClientOnly>
+      {alerts !== null && active.includes("alerts") && (
+        <UnmappedAlerts alerts={alerts.features} />
+      )}
     </section>
   );
 }
