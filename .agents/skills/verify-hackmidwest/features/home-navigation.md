@@ -1,6 +1,6 @@
 # Home page
 
-The home page shows two links, one to the project task list and one to the facility list. Each opens its page without a full page reload; the browser itself then fetches the data from the API. Every page has a header whose `Hack Midwest` link returns home and whose `Tasks` and `Facilities` links open those lists.
+The home page shows two links, one to the project task list and one to the facility list. Each opens its page without a full page reload; the browser itself then fetches the data from the API. Every page has a header whose `Hack Midwest` link returns home and whose `Conditions` and `Facilities` links open those pages. The task list is reached from the home page only.
 
 ## Sub-features
 
@@ -22,7 +22,7 @@ Preconditions:
 
 - Baseline state from the index (seed task only).
 
-- **Open home.** Load the root page. Run `RUN_ID=<id> $V browser goto / expect link "Open the project tasks" snap home-before`. `home-before.aria.yml` shows navigation `Main` with links `Hack Midwest`, `Tasks`, and `Facilities`, and a main region whose only content is links `Open the project tasks` (`/url: /tasks`) and `Open the facilities` (`/url: /facilities`).
+- **Open home.** Load the root page. Run `RUN_ID=<id> $V browser goto / expect link "Open the project tasks" snap home-before`. `home-before.aria.yml` shows navigation `Main` with links `Hack Midwest`, `Conditions`, and `Facilities` (no `Tasks`), and a main region whose only content is links `Open the project tasks` (`/url: /tasks`) and `Open the facilities` (`/url: /facilities`).
 - **Follow the link.** In the same browser session, choose the link and wait for the list. Run `RUN_ID=<id> $V browser goto / click link "Open the project tasks" expect table "Tasks" snap home-after`. Exit code `0`; `home-after.aria.yml` has header `# url: …/tasks` and checkbox `Build the Hack Midwest demo`.
 - **Proof of client-side fetch.** Inspect the log. Run `grep -E 'step click|net GET' /tmp/verify-hackmidwest/artifacts/<id>/browser.log`. A `net GET <API_URL>/api/tasks -> 200` line follows the `step click` line, which proves the browser (not SSR) loaded the data and CORS allowed it.
 - **Follow the facilities link.** Run `RUN_ID=<id> $V browser goto / click link "Open the facilities" expect table "Facilities" snap home-to-facilities`. Exit code `0`; `home-to-facilities.aria.yml` has header `# url: …/facilities`, and `browser.log` has `net GET <API_URL>/api/facilities -> 200` after the `step click` line.

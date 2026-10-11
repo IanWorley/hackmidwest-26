@@ -11,6 +11,7 @@ const STEP_ARGS = {
   click: ["role", "name"],
   expect: ["role", "name"],
   "expect-text": ["text"],
+  press: ["key"],
   "block-api": [],
   snap: ["name"],
 };
@@ -78,6 +79,9 @@ async function runStep(verb, args) {
       return;
     case "expect-text":
       await page.getByText(args[0], { exact: true }).waitFor();
+      return;
+    case "press":
+      await page.keyboard.press(args[0]);
       return;
     case "block-api":
       await page.route(`${API_URL}/**`, (route) =>

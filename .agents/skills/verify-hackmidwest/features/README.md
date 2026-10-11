@@ -22,7 +22,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 ## Proof and skip reporting
 
 - Capture the user action and the resulting state, not only the final screen.
-- UI proof includes an ARIA snapshot and a screenshot (`snap`) with the page title in the snapshot header (`Hack Midwest` on `/`, `Tasks · Hack Midwest` on `/tasks`, `Facilities · Hack Midwest` on `/facilities`).
+- UI proof includes an ARIA snapshot and a screenshot (`snap`) with the page title in the snapshot header (`Hack Midwest` on `/`, `Tasks · Hack Midwest` on `/tasks`, `Facilities · Hack Midwest` on `/facilities`, `Conditions · Hack Midwest` on `/conditions`).
 - API proof includes the saved request, status line, headers, and body (`*.http.txt`).
 - Mutation proof includes a read-only second view: a `db` row and the item rendered on `/tasks`.
 - Storage proof is a `db-reject` transcript with `verdict> rejected` (`*.db.txt`).
@@ -46,6 +46,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [Home page](./home-navigation.md) covers the landing links, the header navigation, and client-side navigation to the task list.
 - [Task list](./tasks-list.md) covers the server-rendered `/tasks` page, its ordering, and completion state.
 - [Facility list and detail](./facilities-list.md) covers the server-rendered `/facilities` page, the link from each row to `/facilities/<id>`, the not-found page, and `GET /api/facilities` and `GET /api/facilities/:id`.
+- [Conditions](./conditions.md) covers the `/conditions` map: posture pins with text labels and decide-by countdowns, the legend, the `Alerts`, `Air quality`, and `Radar` layer toggles kept in `?layers=`, the popup link to `/facilities/<id>`, and its load-failure alert.
 - [Create a task](./create-task.md) covers `POST /api/tasks`, its validation, and seeing the new task on `/tasks`.
 - [Agent API](./agent-api.md) covers the separate agent API: its `GET /health` liveness and its `GET /tasks/summary` read of the tasks API over HTTP.
 - [Map API](./map-api.md) covers `GET /api/map`: each facility's standing and live AQI, the deduplicated alert GeoJSON with zone outlines attached, and the 60-second live-conditions cache.
