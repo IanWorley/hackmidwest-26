@@ -34,6 +34,7 @@ it("names the facility day and the decision standing on it", async () => {
         action: "accept",
         chosenPosture: "delayed_arrival",
         decidedAt: DECIDED_AT,
+        recheckAt: null,
       },
     });
   });

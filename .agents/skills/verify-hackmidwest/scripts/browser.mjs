@@ -5,7 +5,11 @@ import process from "node:process";
 
 const { WEB_URL, API_URL, ARTIFACTS, TOOLS_DIR } = process.env;
 const STEP_TIMEOUT_MS = 15_000;
+const MS_PER_SECOND = 1000;
 const EXIT_USAGE = 2;
+/** Radar tiles are logged too, so a recipe can show an open page reloading them. */
+const RADAR_TILE_PREFIX = "https://mesonet.agron.iastate.edu/cache/tile.py/";
+const LOGGED_URL_PREFIXES = [API_URL, RADAR_TILE_PREFIX];
 const STEP_ARGS = {
   goto: ["path"],
   click: ["role", "name"],
@@ -13,6 +17,8 @@ const STEP_ARGS = {
   "expect-text": ["text"],
   "expect-focus": ["role", "name"],
   "expect-focus-text": ["text"],
+  press: ["key"],
+  wait: ["seconds"],
   "block-api": [],
   "unblock-api": [],
   fill: ["label", "text"],
@@ -60,10 +66,7 @@ try {
 async function runStep(verb, args) {
   switch (verb) {
     case "goto":
-      await page.goto(new URL(args[0], WEB_URL).href, {
-        waitUntil: "networkidle",
-      });
-      scope = page;
+      await goto(args[0]);
       return;
     case "click":
       await scope.getByRole(args[0], { name: args[1], exact: true }).click();
@@ -73,6 +76,12 @@ async function runStep(verb, args) {
       return;
     case "expect-text":
       await page.getByText(args[0], { exact: true }).waitFor();
+      return;
+    case "press":
+      await pressKey(args[0]);
+      return;
+    case "wait":
+      await holdOpen(Number(args[0]));
       return;
     case "expect-focus":
     case "expect-focus-text":
@@ -87,10 +96,7 @@ async function runStep(verb, args) {
         .selectOption({ label: args[1] });
       return;
     case "tab":
-      [tabName] = args;
-      page = pages.get(tabName) ?? (await openTab(tabName));
-      scope = page;
-      await page.bringToFront();
+      await switchTab(args[0]);
       return;
     case "within":
       scope = page.getByRole(args[0], { name: args[1], exact: true });
@@ -108,6 +114,41 @@ async function runStep(verb, args) {
     default:
       throw new Error(`unhandled step '${verb}'`);
   }
+}
+
+/**
+ * Loads a web path and widens `within` back to the whole page.
+ * @param {string} path
+ */
+async function goto(path) {
+  await page.goto(new URL(path, WEB_URL).href, { waitUntil: "networkidle" });
+  scope = page;
+}
+
+/** @param {string} key */
+async function pressKey(key) {
+  await page.keyboard.press(key);
+  // Widgets such as Radix roving focus move focus in a timer queued by the key; let it run before the next key, as a person's typing would.
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve)));
+}
+
+/**
+ * A real-time hold with the page open, so the app's own timers run as they would for a person.
+ * @param {number} seconds
+ */
+async function holdOpen(seconds) {
+  await new Promise((resolve) => setTimeout(resolve, seconds * MS_PER_SECOND));
+}
+
+/**
+ * Makes the named tab current, opening it on first use; a second tab acts as a second person.
+ * @param {string} name
+ */
+async function switchTab(name) {
+  tabName = name;
+  page = pages.get(tabName) ?? (await openTab(tabName));
+  scope = page;
+  await page.bringToFront();
 }
 
 /**
@@ -198,7 +239,9 @@ async function openTab(name) {
     }
   });
   tab.on("requestfinished", async (request) => {
-    if (!request.url().startsWith(API_URL)) {
+    if (
+      !LOGGED_URL_PREFIXES.some((prefix) => request.url().startsWith(prefix))
+    ) {
       return;
     }
     const response = await request.response();

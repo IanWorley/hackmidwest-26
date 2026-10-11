@@ -161,6 +161,8 @@ describe("pullFloodSignals", () => {
       forecast: () => Effect.die("unused"),
       hourlyForecast: () => Effect.die("unused"),
       latestObservation: () => Effect.die("unused"),
+      activeAlertAreas: () => Effect.die("unused"),
+      zoneGeometry: () => Effect.die("unused"),
     };
     const nwps: NwpsClientShape = {
       gauge: () => Effect.die("a facility without a gauge called NWPS"),
