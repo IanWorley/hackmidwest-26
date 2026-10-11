@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { NotificationRecipients } from "./notification-recipients";
 import { PREVIEW, TIMEZONE } from "./notification-test-fixtures";
 
@@ -30,4 +30,34 @@ it("lists each recipient's channel, local send-by time, and lateness, then who i
     "Edsger Dijkstra: PTO",
     "Barbara Liskov: Not in HR records",
   ]);
+});
+
+it("keys two unmatched roster entries apart when they share a name and have no employee", () => {
+  const consoleError = vi
+    .spyOn(console, "error")
+    .mockImplementation(() => undefined);
+  const [unmatched] = PREVIEW.exclusions.filter(
+    (exclusion) => exclusion.kind === "unmatched",
+  );
+  if (unmatched?.kind !== "unmatched") {
+    throw new Error("The fixture lists an unmatched roster entry");
+  }
+  try {
+    render(
+      <NotificationRecipients
+        pkg={{
+          ...PREVIEW,
+          exclusions: [
+            unmatched,
+            { ...unmatched, rosterEntryId: unmatched.rosterEntryId + 1 },
+          ],
+        }}
+        timezone={TIMEZONE}
+      />,
+    );
+
+    expect(consoleError).not.toHaveBeenCalled();
+  } finally {
+    consoleError.mockRestore();
+  }
 });

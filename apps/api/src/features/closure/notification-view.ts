@@ -75,6 +75,8 @@ const exclusionView = t.Union([
   }),
   t.Object({
     kind: t.Literal("unmatched"),
+    /** Names need not be unique and the employee may be unknown, so the entry id tells two apart. */
+    rosterEntryId: t.Integer(),
     employeeId: t.Nullable(t.Integer()),
     name: t.String(),
     reason: t.UnionEnum(UNMATCHED_REASONS),
@@ -198,6 +200,7 @@ function exclusionOf(
       const { entry, reason } = exclusion.line;
       return {
         kind: "unmatched",
+        rosterEntryId: entry.id,
         employeeId: entry.employeeId,
         name: entry.listedName,
         reason,

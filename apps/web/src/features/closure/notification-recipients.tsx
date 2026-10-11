@@ -74,6 +74,14 @@ function RecipientsTable({
   );
 }
 
+/** An unmatched roster entry may share a name and lack an employee, so its entry id identifies it. */
+function exclusionKey(exclusion: NotificationExclusion): string {
+  if (exclusion.kind === "unmatched") {
+    return `${exclusion.kind}:${exclusion.rosterEntryId}`;
+  }
+  return `${exclusion.kind}:${exclusion.employeeId}`;
+}
+
 function Exclusions({
   exclusions,
 }: {
@@ -85,8 +93,7 @@ function Exclusions({
   return (
     <ul aria-label={EXCLUSIONS_LABEL} className="text-muted-foreground">
       {exclusions.map((exclusion) => (
-        // Unmatched roster lines may have no employee id, so the name disambiguates.
-        <li key={`${exclusion.kind}:${exclusion.employeeId}:${exclusion.name}`}>
+        <li key={exclusionKey(exclusion)}>
           {`${exclusion.name}: ${exclusionReason(exclusion)}`}
         </li>
       ))}

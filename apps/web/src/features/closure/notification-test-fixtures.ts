@@ -50,6 +50,7 @@ const PREVIEW: NotificationPreview = {
     { kind: "excused", employeeId: 14, name: "Edsger Dijkstra", reason: "PTO" },
     {
       kind: "unmatched",
+      rosterEntryId: 31,
       employeeId: null,
       name: "Barbara Liskov",
       reason: "not_in_hr",
