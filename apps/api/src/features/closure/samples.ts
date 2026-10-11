@@ -152,8 +152,7 @@ function contiguousRuns<Item extends { readonly period: Period }>(
   const sorted = [...items].sort(
     (left, right) =>
       parseInstant(left.period.startTime) -
-        parseInstant(right.period.startTime) ||
-      parseInstant(left.period.endTime) - parseInstant(right.period.endTime),
+      parseInstant(right.period.startTime),
   );
   const runs: [Item, ...Item[]][] = [];
   for (const item of sorted) {

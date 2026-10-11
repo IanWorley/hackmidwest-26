@@ -18,5 +18,4 @@ function byText(left: string, right: string): number {
   return Number(left > right) - Number(left < right);
 }
 
-export type { Order };
 export { byText, firstBy };
