@@ -23,6 +23,8 @@ import {
 } from "./recommendation-test-app";
 
 const DEMO_FACILITY_COUNT = 4;
+/** Between the test app's clock and the recommendation's 11:00 decideBy, as a deferral requires. */
+const RECHECK_AT = "2026-01-14T10:30:00.000Z";
 /** Earlier than the test app's clock, for an evaluation that read the clock first but stored second. */
 const EARLIER_CLOCK = "2026-01-14T09:00:00.000Z";
 const KANSAS_CITY_ID = 1;
@@ -185,6 +187,7 @@ it(`GET ${MAP_PATH} reports the newest decision on a facility's recommendation`,
         action: "override",
         chosenPosture: "normal",
         decidedAt: CLOCK,
+        recheckAt: null,
       });
     },
   );
@@ -250,6 +253,36 @@ it(`GET ${MAP_PATH} follows the newest evaluation time, not the newest row, when
         kansasCity.standing.recommendationId,
         kansasCity.standing.asOf,
       ]).toEqual([1, CLOCK]);
+    },
+  );
+});
+
+it(`GET ${MAP_PATH} reports a deferral's recheck time`, async () => {
+  await withStormAppOn(
+    createTestDatabaseWithDemoFacilities,
+    async ({ get, post }) => {
+      await post(EVALUATE_PATH);
+      await post(DECISIONS_PATH, {
+        action: "defer",
+        recheckAt: RECHECK_AT,
+        decidedById: KANSAS_CITY_DECIDER,
+        reason: {
+          category: "local_conditions",
+          text: "Waiting on the 10:00 road report.",
+        },
+      });
+
+      const { facilities } = await (await get(MAP_PATH)).json();
+
+      expect(
+        facilities.find(({ id }: { id: number }) => id === KANSAS_CITY_ID)
+          .standing.decision,
+      ).toEqual({
+        action: "defer",
+        chosenPosture: null,
+        decidedAt: CLOCK,
+        recheckAt: RECHECK_AT,
+      });
     },
   );
 });

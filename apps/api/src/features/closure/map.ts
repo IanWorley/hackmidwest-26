@@ -29,6 +29,8 @@ const DecisionSchema = t.Object({
   action: decisionColumns.action,
   chosenPosture: decisionColumns.chosenPosture,
   decidedAt: decisionColumns.decidedAt,
+  /** When a deferral promised to decide by; set exactly for `defer`, and always before `decideBy`. */
+  recheckAt: decisionColumns.recheckAt,
 });
 
 const StandingSchema = t.Union([
@@ -147,6 +149,7 @@ async function queryStandings(db: Db): Promise<FacilityStanding[]> {
         action: decisions.action,
         chosenPosture: decisions.chosenPosture,
         decidedAt: decisions.decidedAt,
+        recheckAt: decisions.recheckAt,
       })
       .from(decisions)
       .where(inArray(decisions.id, tipIds)),
