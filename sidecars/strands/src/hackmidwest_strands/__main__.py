@@ -1,10 +1,14 @@
 import argparse
 import sys
 
-from hackmidwest_strands.agent import MissingConfigError, build_agent, openrouter_model
+from strands.types.agent import Limits
+
+from hackmidwest_strands.agent import MissingConfigError, NoGenerationModel, build_agent, openrouter_model
 
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
+# Every run_facility call stores a recommendation, so a runaway loop would flood history and spend.
+ASK_LIMITS: Limits = {"turns": 6}
 
 
 def _ask(question: str) -> int:
@@ -14,13 +18,18 @@ def _ask(question: str) -> int:
         print(error, file=sys.stderr)
         return EXIT_FAILURE
 
-    print(build_agent(model)(question))
+    result = build_agent(model)(question, limits=ASK_LIMITS)
+    if result.stop_reason == "limit_turns":
+        print(f"The agent stopped after {ASK_LIMITS['turns']} turns without an answer.", file=sys.stderr)
+        return EXIT_FAILURE
+
+    print(result)
     return EXIT_SUCCESS
 
 
 def _run(facility_id: int) -> int:
     # agent.tool holds only a weak reference, so the agent must outlive the call.
-    agent = build_agent()
+    agent = build_agent(NoGenerationModel())
     result = agent.tool.run_facility(facility_id=facility_id, record_direct_tool_call=False)
     text = "\n".join(block["text"] for block in result["content"] if "text" in block)
     if result["status"] == "error":

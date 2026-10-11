@@ -34,8 +34,8 @@ python3 -m venv .venv
 
 Start the agent API first (`bun run dev` from the repository root), then point the sidecar at it.
 
-To call `run_facility` directly and print the run log, run the following. This mode needs no model or
-API key.
+To call `run_facility` directly and print the run log, run the following. This mode needs no model, API
+key, or AWS credentials.
 
 ```sh
 AGENT_API_URL=http://localhost:3002 .venv/bin/python -m hackmidwest_strands run 1
@@ -49,6 +49,10 @@ OPENROUTER_API_KEY=sk-or-... \
 OPENROUTER_MODEL=openai/gpt-4o-mini \
 .venv/bin/python -m hackmidwest_strands ask "Why is facility 1 closing?"
 ```
+
+`ask` caps the agent at six turns (`ASK_LIMITS`), because every `run_facility` call stores a
+recommendation. If the model is still calling tools at the cap, `ask` prints that it stopped without an
+answer and exits `1`.
 
 ## Environment variables
 

@@ -23,10 +23,12 @@ class StubAgentApi:
 
     def __init__(self) -> None:
         self.response = StubResponse()
+        self.paths: list[str] = []
         stub = self
 
         class Handler(BaseHTTPRequestHandler):
             def do_POST(self) -> None:
+                stub.paths.append(self.path)
                 body = stub.response.body
                 if body is None:
                     body = {"method": "POST", "path": self.path}
