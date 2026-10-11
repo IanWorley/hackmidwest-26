@@ -2,9 +2,9 @@ import type { Static, TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { Cache, Data, Duration, Effect, Exit, Schedule } from "effect";
 import type {
-  ForecastPeriod,
   GeoPoint,
   NwsAlert,
+  NwsForecast,
   NwsObservation,
 } from "./nws-model";
 import {
@@ -61,12 +61,10 @@ class NwsError extends Data.TaggedError("NwsError")<{
 }
 
 interface NwsClientShape {
-  readonly forecast: (
-    point: GeoPoint,
-  ) => Effect.Effect<ForecastPeriod[], NwsError>;
+  readonly forecast: (point: GeoPoint) => Effect.Effect<NwsForecast, NwsError>;
   readonly hourlyForecast: (
     point: GeoPoint,
-  ) => Effect.Effect<ForecastPeriod[], NwsError>;
+  ) => Effect.Effect<NwsForecast, NwsError>;
   readonly activeAlerts: (
     point: GeoPoint,
   ) => Effect.Effect<NwsAlert[], NwsError>;
@@ -168,12 +166,16 @@ function makeGetJson(fetch: Fetch, userAgent: string): GetJson {
   };
 }
 
-function forecastPeriods(
+function forecastAt(
   getJson: GetJson,
   url: string,
-): Effect.Effect<ForecastPeriod[], NwsError> {
+): Effect.Effect<NwsForecast, NwsError> {
   return getJson(url, ForecastResponse).pipe(
-    Effect.map(({ properties }) => properties.periods.map(toForecastPeriod)),
+    Effect.map(({ properties }) => ({
+      rawRef: url,
+      updateTime: properties.updateTime,
+      periods: properties.periods.map(toForecastPeriod),
+    })),
   );
 }
 
@@ -245,11 +247,11 @@ function makeNwsClient({
   return {
     forecast: (point) =>
       gridPoint(point).pipe(
-        Effect.flatMap((grid) => forecastPeriods(getJson, grid.forecast)),
+        Effect.flatMap((grid) => forecastAt(getJson, grid.forecast)),
       ),
     hourlyForecast: (point) =>
       gridPoint(point).pipe(
-        Effect.flatMap((grid) => forecastPeriods(getJson, grid.forecastHourly)),
+        Effect.flatMap((grid) => forecastAt(getJson, grid.forecastHourly)),
       ),
     activeAlerts: (point) =>
       getJson(
