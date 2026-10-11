@@ -53,7 +53,7 @@ function DecideByCell({ standing }: { standing: Standing }): JSX.Element {
   return <DecideByCountdown decideBy={decisionDeadline(standing)} />;
 }
 
-function PostureCell({ standing }: { standing: Standing }): JSX.Element {
+function PostureDetails({ standing }: { standing: Standing }): JSX.Element {
   if (standing.posture === "not_evaluated") {
     return <PostureBadge posture={standing.posture} />;
   }
@@ -63,6 +63,15 @@ function PostureCell({ standing }: { standing: Standing }): JSX.Element {
       <RecommendedPosture standing={standing} />
       <AsOfMarker asOf={standing.asOf} />
     </>
+  );
+}
+
+/** One line per part, so the posture in effect and the recommendation never run together. */
+function PostureCell({ standing }: { standing: Standing }): JSX.Element {
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <PostureDetails standing={standing} />
+    </div>
   );
 }
 
