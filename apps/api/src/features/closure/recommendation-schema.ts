@@ -1,5 +1,5 @@
 import { CONFIDENCE_LEVELS, facilities, HAZARDS } from "@hackmidwest/db";
-import type { Static, TObject, TProperties, TSchema } from "@sinclair/typebox";
+import type { Static, TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { createSchemaFactory } from "drizzle-typebox";
 import { Data, Effect } from "effect";
@@ -11,6 +11,7 @@ import type { InputKind } from "./freshness";
 import type { EndBasis } from "./hazard-window";
 import { type Posture, postureSchema } from "./postures";
 import { ReadingSchema } from "./readings";
+import { type AssertTrue, closedObject, type Mirrors } from "./schema-mirror";
 import { NWS_SEVERITIES, WIND_METRICS } from "./thresholds";
 
 const MAX_SHAPE_ERRORS = 5;
@@ -32,13 +33,6 @@ const CUTOFF_NAMES = [
   "moderateFlood",
   "majorFlood",
 ] as const satisfies readonly CutoffName[];
-
-/** Rejects unknown keys, so a field the schema lacks fails the insert instead of being hashed and then stripped from responses. */
-function closedObject<Properties extends TProperties>(
-  properties: Properties,
-): TObject<Properties> {
-  return t.Object(properties, { additionalProperties: false });
-}
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 const facilityColumns = createSelectSchema(facilities).properties;
@@ -248,23 +242,6 @@ const SnapshotSchema = closedObject({
 });
 
 type Snapshot = Static<typeof SnapshotSchema>;
-
-type DeepMutable<T> = T extends readonly (infer Item)[]
-  ? DeepMutable<Item>[]
-  : T extends object
-    ? { -readonly [Key in keyof T]: DeepMutable<T[Key]> }
-    : T;
-
-type Equal<Left, Right> =
-  (<T>() => T extends Left ? true : false) extends <T>() => T extends Right
-    ? true
-    : false
-    ? true
-    : false;
-
-type Mirrors<Engine, Schema> = Equal<DeepMutable<Engine>, DeepMutable<Schema>>;
-
-type AssertTrue<Condition extends true> = Condition;
 
 /**
  * Fails to compile when the engine types and these hand-written schemas drift in either direction.
