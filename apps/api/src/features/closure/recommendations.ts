@@ -245,4 +245,9 @@ export function createRecommendationsModule(runRequest: RunRequest) {
     );
 }
 
-export { RECOMMENDATIONS_PATH };
+export {
+  RECOMMENDATION_PATH,
+  RECOMMENDATIONS_PATH,
+  recommendationNotFound,
+  recommendationNotFoundResponse,
+};

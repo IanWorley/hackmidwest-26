@@ -146,10 +146,12 @@ it("every recommendation route rejects a non-decimal id with 422 instead of alia
       get(`/api/facilities/${HEX_ID}/recommendations/latest`),
       get(`${RECOMMENDATIONS_PATH}/${HEX_ID}`),
       get(`${RECOMMENDATIONS_PATH}/${HEX_ID}/replay`),
+      get(`${RECOMMENDATIONS_PATH}/${HEX_ID}/notifications/preview`),
     ]);
 
     expect([created.status, ...responses.map(({ status }) => status)]).toEqual([
       HTTP_CREATED,
+      HTTP_UNPROCESSABLE,
       HTTP_UNPROCESSABLE,
       HTTP_UNPROCESSABLE,
       HTTP_UNPROCESSABLE,

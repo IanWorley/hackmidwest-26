@@ -105,6 +105,7 @@ interface TestApp {
   readonly get: (path: string) => Promise<Response>;
   readonly post: (path: string, body?: object) => Promise<Response>;
   readonly insertRow: (snapshot: object) => Promise<number>;
+  readonly db: DatabaseStore["db"];
 }
 
 function jsonBody(body: object | undefined): string | null {
@@ -130,6 +131,7 @@ async function withStormAppOn(
   });
   try {
     await run({
+      db: store.db,
       get: (path) => app.handle(new Request(new URL(path, REQUEST_ORIGIN))),
       post: (path, body) =>
         app.handle(

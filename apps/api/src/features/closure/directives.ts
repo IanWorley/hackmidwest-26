@@ -98,4 +98,4 @@ function winningDirective(
 }
 
 export type { Directive, DirectiveKind, DirectiveScope, DirectiveScopeKind };
-export { winningDirective };
+export { DIRECTIVE_KINDS, winningDirective };
