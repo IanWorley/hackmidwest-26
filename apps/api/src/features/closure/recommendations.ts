@@ -8,9 +8,10 @@ import {
   internalServerErrorResponse,
   type RunRequest,
 } from "../../runtime";
+import { rejectUnknownFields } from "./decision-body";
 import { recordMissedDecision } from "./decisions";
 import { evaluatePosture } from "./engine";
-import type { EngineInput } from "./engine-input";
+import { CLOSED, type EngineInput } from "./engine-input";
 import {
   decimalIdParams,
   FACILITIES_PATH,
@@ -41,12 +42,26 @@ const RECOMMENDATION_PATH = `${RECOMMENDATIONS_PATH}/:id`;
 const REPLAY_PATH = `${RECOMMENDATION_PATH}/replay`;
 const RECOMMENDATION_NOT_FOUND_MESSAGE = "Recommendation not found";
 
-const evaluateBody = t.Optional(
-  t.Object({
+const evaluateFields = t.Object(
+  {
     /** Evaluate the data pulled now as of this instant instead of the clock reading. A future instant previews a later call, such as tomorrow morning's. */
     asOf: t.Optional(t.String({ format: "date-time" })),
-  }),
+  },
+  CLOSED,
 );
+
+const rejectUnknownBodyFields = rejectUnknownFields(evaluateFields);
+
+/** The body is optional, so a POST without one has nothing to reject. */
+function rejectUnknownEvaluateFields({
+  body,
+}: {
+  readonly body: unknown;
+}): void {
+  if (body !== undefined) {
+    rejectUnknownBodyFields({ body });
+  }
+}
 
 const recommendationNotFoundResponse = t.Object({
   message: t.Literal(RECOMMENDATION_NOT_FOUND_MESSAGE),
@@ -54,7 +69,8 @@ const recommendationNotFoundResponse = t.Object({
 
 const evaluateRoute = {
   params: decimalIdParams,
-  body: evaluateBody,
+  body: t.Optional(evaluateFields),
+  transform: rejectUnknownEvaluateFields,
   response: {
     [HTTP_CREATED]: RecommendationRecordSchema,
     [HTTP_NOT_FOUND]: facilityNotFoundResponse,

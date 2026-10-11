@@ -11,6 +11,7 @@
 - `recommendations-hash-recomputes` lets any client recompute `contentHash` from a response or a stored row. It is the SHA-256 of the canonical JSON (keys sorted at every depth, no whitespace) of `facilityId`, `evaluatedAt`, `asOf`, `posture`, `confidence`, `decideBy`, and `snapshot`.
 - `recommendations-timeline` lists `evaluated`, `decideBy`, an `input` entry per input timestamp (`alerts`, `observations`, `forecast`, `airQuality`, `gauge`), and `hazardStart`, `hazardEnd`, and `roadsClear` when a hazard drove the posture, sorted by time.
 - `recommendations-invalid-as-of` returns `422` for an `asOf` that is not a timestamp.
+- `recommendations-unknown-field` returns `422` naming the unknown key, such as `/posture`, and stores nothing. A `POST` with no body is still a live evaluation.
 - `recommendations-unknown-facility` returns `404 {"message":"Facility not found"}` and stores nothing.
 - `recommendations-latest` returns the facility's newest record, and `404 {"message":"Recommendation not found"}` for a facility never evaluated.
 - `recommendations-by-id` returns the same body the `POST` returned, and `404 {"message":"Recommendation not found"}` for an unknown id.
@@ -42,6 +43,7 @@ Preconditions:
 - **Future asOf.** Pick an instant an hour after now, for example `date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%SZ`. Run `RUN_ID=<id> $V api recommendations-evaluate-future-as-of POST /api/facilities/1/recommendations '{"asOf":"<instant>"}'`. `201` with `"id":3` and `"mode":"as_of"`. `asOf` is the instant with `.000Z`, later than `evaluatedAt`, and `snapshot.input.now` equals `asOf`.
 - **Hash recomputes from responses.** For each of the three `POST` transcripts, compare `jq -r .contentHash` with `jq -cS '{facilityId,evaluatedAt,asOf,posture,confidence,decideBy,snapshot}' | tr -d '\n' | sha256sum` over the response body. They are equal, so nothing the hash covers is missing from the response.
 - **Invalid asOf.** Run `RUN_ID=<id> $V api recommendations-invalid-as-of POST /api/facilities/1/recommendations '{"asOf":"tomorrow morning"}'`. `422`.
+- **Unknown field.** Run `RUN_ID=<id> $V api recommendations-unknown-field POST /api/facilities/1/recommendations '{"asOf":"2026-10-11T06:00:00Z","posture":"normal"}'`. `422` with `"property":"/posture"` and `"message":"Unexpected property"`. The **Stored rows** step later shows no row was added.
 - **Unknown facility.** Run `RUN_ID=<id> $V api recommendations-unknown-facility POST /api/facilities/999/recommendations`. `404` with body `{"message":"Facility not found"}`.
 - **Latest.** Run `RUN_ID=<id> $V api recommendations-latest GET /api/facilities/1/recommendations/latest`. `200` with `"id":3` and `"mode":"as_of"`.
 - **Latest for another facility.** Run `RUN_ID=<id> $V api recommendations-latest-other GET /api/facilities/4/recommendations/latest`. `404` with body `{"message":"Recommendation not found"}`.
