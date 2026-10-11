@@ -1,4 +1,5 @@
 import {
+  decisionDirectives,
   decisions,
   facilities,
   humanInputs,
@@ -96,39 +97,49 @@ const listFacilityDecisions = Effect.fn("listFacilityDecisions")(function* (
   );
 });
 
-/** The recommendation, its whole decision chain, and every dispatch of those decisions. */
+/** The recommendation, its whole decision chain, and every dispatch of and directive on those decisions. */
 const loadChain = Effect.fn("loadChain")(function* (recommendationId: number) {
   const db = yield* Database;
-  const [[recommendation], chain, dispatches] = yield* Effect.tryPromise({
-    try: () =>
-      db.batch([
-        db
-          .select()
-          .from(recommendations)
-          .where(eq(recommendations.id, recommendationId)),
-        db
-          .select()
-          .from(decisions)
-          .where(eq(decisions.recommendationId, recommendationId))
-          .orderBy(asc(decisions.id)),
-        db
-          .select(getTableColumns(notificationDispatches))
-          .from(notificationDispatches)
-          .innerJoin(
-            decisions,
-            eq(decisions.id, notificationDispatches.decisionId),
-          )
-          .where(eq(decisions.recommendationId, recommendationId))
-          .orderBy(asc(notificationDispatches.id)),
-      ]),
-    catch: (cause) => new DecisionReadError({ operation: "verify", cause }),
-  });
+  const [[recommendation], chain, dispatches, directives] =
+    yield* Effect.tryPromise({
+      try: () =>
+        db.batch([
+          db
+            .select()
+            .from(recommendations)
+            .where(eq(recommendations.id, recommendationId)),
+          db
+            .select()
+            .from(decisions)
+            .where(eq(decisions.recommendationId, recommendationId))
+            .orderBy(asc(decisions.id)),
+          db
+            .select(getTableColumns(notificationDispatches))
+            .from(notificationDispatches)
+            .innerJoin(
+              decisions,
+              eq(decisions.id, notificationDispatches.decisionId),
+            )
+            .where(eq(decisions.recommendationId, recommendationId))
+            .orderBy(asc(notificationDispatches.id)),
+          db
+            .select(getTableColumns(decisionDirectives))
+            .from(decisionDirectives)
+            .innerJoin(
+              decisions,
+              eq(decisions.id, decisionDirectives.decisionId),
+            )
+            .where(eq(decisions.recommendationId, recommendationId))
+            .orderBy(asc(decisionDirectives.id)),
+        ]),
+      catch: (cause) => new DecisionReadError({ operation: "verify", cause }),
+    });
   if (recommendation === undefined) {
     return yield* Effect.die(
       new Error(`Recommendation ${recommendationId} is missing`),
     );
   }
-  return { recommendation, decisions: chain, dispatches };
+  return { recommendation, decisions: chain, dispatches, directives };
 });
 
 const verifyDecision = Effect.fn("verifyDecision")(function* (

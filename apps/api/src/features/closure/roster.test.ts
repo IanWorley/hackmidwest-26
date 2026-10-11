@@ -1,62 +1,31 @@
 import {
-  buildingRosterEntries,
-  buildings,
-  employeeStatusEvents,
-  employees,
-} from "@hackmidwest/db";
-import {
   createTestDatabaseWithDemoFacilities,
   DEMO_ROSTER_CASES,
 } from "@hackmidwest/db/testing";
-import { eq, inArray } from "drizzle-orm";
 import { expect, it } from "vitest";
 import type { EffectiveStatusKind, FacilityPosture } from "./effective-status";
-import {
-  type NotifyReason,
-  type RosterMatch,
-  type RosterReconciliation,
-  reconcileRoster,
-  type SkipReason,
+import type {
+  NotifyReason,
+  RosterMatch,
+  RosterReconciliation,
+  SkipReason,
 } from "./roster";
+import { reconcileKansasCityOn } from "./roster-test-fixtures";
 
-const NOW = "2026-10-12T11:00:00.000Z";
-const KANSAS_CITY_FACILITY_ID = 1;
 const ANNEX_ID = 2;
 const FULL_CLOSURE: FacilityPosture = { posture: "full_closure" };
+
+function reconcileKansasCity(
+  posture: FacilityPosture,
+): Promise<RosterReconciliation> {
+  return reconcileKansasCityOn(createTestDatabaseWithDemoFacilities, posture);
+}
 
 interface Placement {
   readonly bucket: "notify" | "skip";
   readonly reason: NotifyReason | SkipReason;
   readonly effective: EffectiveStatusKind;
   readonly roster: RosterMatch["kind"];
-}
-
-async function reconcileKansasCity(
-  posture: FacilityPosture,
-): Promise<RosterReconciliation> {
-  const store = await createTestDatabaseWithDemoFacilities();
-  try {
-    const facilityBuildings = store.db
-      .select({ id: buildings.id })
-      .from(buildings)
-      .where(eq(buildings.facilityId, KANSAS_CITY_FACILITY_ID));
-    return reconcileRoster({
-      employees: await store.db
-        .select()
-        .from(employees)
-        .where(inArray(employees.assignedBuildingId, facilityBuildings)),
-      rosterEntries: await store.db
-        .select()
-        .from(buildingRosterEntries)
-        .where(inArray(buildingRosterEntries.buildingId, facilityBuildings)),
-      statusEvents: await store.db.select().from(employeeStatusEvents),
-      posture,
-      directives: [],
-      now: NOW,
-    });
-  } finally {
-    store.close();
-  }
 }
 
 function placementOf(

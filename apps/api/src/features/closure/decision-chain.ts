@@ -1,4 +1,5 @@
 import type {
+  decisionDirectives,
   decisions,
   notificationDispatches,
   recommendations,
@@ -16,6 +17,7 @@ const CHAIN_RECORDS = [
   "recommendation",
   "decision",
   "notification_dispatch",
+  "directive",
 ] as const;
 type ChainRecord = (typeof CHAIN_RECORDS)[number];
 
@@ -29,15 +31,17 @@ type DecisionChainBreakReason = (typeof DECISION_CHAIN_BREAK_REASONS)[number];
 type RecommendationRow = typeof recommendations.$inferSelect;
 type DecisionRow = typeof decisions.$inferSelect;
 type DispatchRow = typeof notificationDispatches.$inferSelect;
+type DirectiveRow = typeof decisionDirectives.$inferSelect;
 
 /** What a record's content hash covers: every column except its own id and hash. */
 type RecordContent<Row> = Omit<Row, "id" | "contentHash">;
 
-/** One recommendation, every decision on it, and every dispatch of those decisions. */
+/** One recommendation, every decision on it, and every dispatch of and directive on those decisions. */
 interface DecisionChain {
   readonly recommendation: RecommendationRow;
   readonly decisions: readonly DecisionRow[];
   readonly dispatches: readonly DispatchRow[];
+  readonly directives: readonly DirectiveRow[];
 }
 
 interface ChainBreak {
@@ -100,11 +104,12 @@ function firstBreak(
   );
 }
 
-/** Each root-to-leaf path: recommendation, one decision, and that decision's dispatch when it has any. */
+/** Each root-to-leaf path: recommendation, one decision, and one of that decision's dispatches or directives when it has any. */
 function chainPaths({
   recommendation,
   decisions: chain,
   dispatches,
+  directives,
 }: DecisionChain): [StoredRecord, ...StoredRecord[]][] {
   const root: StoredRecord = {
     record: "recommendation",
@@ -117,20 +122,29 @@ function chainPaths({
       row: decision,
       parentHash: decision.recommendationHash,
     };
-    const leaves = dispatches.filter(
-      ({ decisionId }) => decisionId === decision.id,
-    );
+    const leaves: StoredRecord[] = [
+      ...dispatches
+        .filter(({ decisionId }) => decisionId === decision.id)
+        .map((row) => ({
+          record: "notification_dispatch" as const,
+          row,
+          parentHash: row.decisionHash,
+        })),
+      ...directives
+        .filter(({ decisionId }) => decisionId === decision.id)
+        .map((row) => ({
+          record: "directive" as const,
+          row,
+          parentHash: row.decisionHash,
+        })),
+    ];
     if (leaves.length === 0) {
       return [[root, decisionRecord]];
     }
-    return leaves.map((dispatch): [StoredRecord, ...StoredRecord[]] => [
+    return leaves.map((leaf): [StoredRecord, ...StoredRecord[]] => [
       root,
       decisionRecord,
-      {
-        record: "notification_dispatch",
-        row: dispatch,
-        parentHash: dispatch.decisionHash,
-      },
+      leaf,
     ]);
   });
 }
@@ -173,4 +187,9 @@ function findChainBreaks(chain: DecisionChain): ChainBreak[] {
 }
 
 export type { DecisionChain, RecordContent };
-export { CHAIN_RECORDS, DECISION_CHAIN_BREAK_REASONS, findChainBreaks };
+export {
+  CHAIN_RECORDS,
+  DECISION_CHAIN_BREAK_REASONS,
+  findChainBreaks,
+  storedHash,
+};

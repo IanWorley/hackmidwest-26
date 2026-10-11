@@ -214,6 +214,18 @@ function facilityDate(
   return today;
 }
 
+/** The instant `facilityDate` next changes: closing time on the facility day it returns at `now`. */
+function facilityDateRollsOverAt(
+  facility: Pick<FacilitySchedule, "timezone" | "closesAt">,
+  now: Instant,
+): Instant {
+  return localInstant(
+    facilityDate(facility, now),
+    facility.closesAt,
+    facility.timezone,
+  );
+}
+
 function facilityDay(facility: FacilitySchedule, now: Instant): FacilityDay {
   const zone = facility.timezone;
   const date = facilityDate(facility, now);
@@ -242,4 +254,4 @@ export type {
   TimingInput,
   TimingResult,
 };
-export { evaluateTiming, facilityDate };
+export { evaluateTiming, facilityDate, facilityDateRollsOverAt };
