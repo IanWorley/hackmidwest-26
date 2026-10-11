@@ -144,14 +144,14 @@ const LAFAYETTE: DemoFacility = {
 const DEMO_FACILITIES: DemoFacility[] = [KANSAS_CITY, FARGO, YAKIMA, LAFAYETTE];
 
 const DEMO_FACILITY_HAZARDS: (typeof facilityHazards.$inferInsert)[] = [
-  { facilityId: KANSAS_CITY.id, hazard: "winter_storm" },
-  { facilityId: KANSAS_CITY.id, hazard: "severe_wind" },
-  { facilityId: KANSAS_CITY.id, hazard: "air_quality" },
-  { facilityId: FARGO.id, hazard: "winter_storm" },
-  { facilityId: FARGO.id, hazard: "severe_wind" },
-  { facilityId: YAKIMA.id, hazard: "air_quality" },
-  { facilityId: YAKIMA.id, hazard: "winter_storm" },
-  { facilityId: LAFAYETTE.id, hazard: "severe_wind" },
+  { facilityId: KANSAS_CITY.id, hazard: "winter" },
+  { facilityId: KANSAS_CITY.id, hazard: "wind" },
+  { facilityId: KANSAS_CITY.id, hazard: "airQuality" },
+  { facilityId: FARGO.id, hazard: "winter" },
+  { facilityId: FARGO.id, hazard: "wind" },
+  { facilityId: YAKIMA.id, hazard: "airQuality" },
+  { facilityId: YAKIMA.id, hazard: "winter" },
+  { facilityId: LAFAYETTE.id, hazard: "wind" },
 ];
 
 const DEMO_BUILDINGS: (typeof buildings.$inferInsert)[] = [

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "79a07696-2ae2-4a4a-adc5-548938ea300a",
+  "id": "29bf5851-b96a-4083-8eb6-4b889ea5af86",
   "prevId": "24930990-4aa4-4235-a01c-5ce37ece7f71",
   "tables": {
     "building_roster_entries": {
@@ -227,11 +227,11 @@
         },
         "employee_status_events_reported_at_format": {
           "name": "employee_status_events_reported_at_format",
-          "value": "\"employee_status_events\".\"reported_at\" glob '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9][0-9][0-9]Z'"
+          "value": "\"employee_status_events\".\"reported_at\" is strftime('%Y-%m-%dT%H:%M:%fZ', \"employee_status_events\".\"reported_at\")"
         },
         "employee_status_events_effective_from_format": {
           "name": "employee_status_events_effective_from_format",
-          "value": "\"employee_status_events\".\"effective_from\" glob '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9][0-9][0-9]Z'"
+          "value": "\"employee_status_events\".\"effective_from\" is strftime('%Y-%m-%dT%H:%M:%fZ', \"employee_status_events\".\"effective_from\")"
         }
       }
     },
@@ -348,7 +348,7 @@
         },
         "employees_shift": {
           "name": "employees_shift",
-          "value": "(\"employees\".\"shift_start\" is null) = (\"employees\".\"shift_end\" is null) and \"employees\".\"shift_start\" glob '[0-2][0-9]:[0-5][0-9]' and \"employees\".\"shift_end\" glob '[0-2][0-9]:[0-5][0-9]' and \"employees\".\"shift_start\" < \"employees\".\"shift_end\""
+          "value": "(\"employees\".\"shift_start\" is null) = (\"employees\".\"shift_end\" is null) and \"employees\".\"shift_start\" is strftime('%H:%M', \"employees\".\"shift_start\") and \"employees\".\"shift_end\" is strftime('%H:%M', \"employees\".\"shift_end\") and \"employees\".\"shift_start\" < \"employees\".\"shift_end\""
         },
         "employees_commute_minutes_positive": {
           "name": "employees_commute_minutes_positive",
@@ -513,19 +513,19 @@
         },
         "facilities_hours": {
           "name": "facilities_hours",
-          "value": "\"facilities\".\"opens_at\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"closes_at\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"opens_at\" < \"facilities\".\"closes_at\""
+          "value": "\"facilities\".\"opens_at\" is strftime('%H:%M', \"facilities\".\"opens_at\") and \"facilities\".\"closes_at\" is strftime('%H:%M', \"facilities\".\"closes_at\") and \"facilities\".\"opens_at\" < \"facilities\".\"closes_at\""
         },
         "facilities_arrival_window": {
           "name": "facilities_arrival_window",
-          "value": "\"facilities\".\"arrival_window_start\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"arrival_window_end\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"arrival_window_start\" < \"facilities\".\"arrival_window_end\""
+          "value": "\"facilities\".\"arrival_window_start\" is strftime('%H:%M', \"facilities\".\"arrival_window_start\") and \"facilities\".\"arrival_window_end\" is strftime('%H:%M', \"facilities\".\"arrival_window_end\") and \"facilities\".\"arrival_window_start\" < \"facilities\".\"arrival_window_end\""
         },
         "facilities_departure_window": {
           "name": "facilities_departure_window",
-          "value": "\"facilities\".\"departure_window_start\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"departure_window_end\" glob '[0-2][0-9]:[0-5][0-9]' and \"facilities\".\"departure_window_start\" < \"facilities\".\"departure_window_end\""
+          "value": "\"facilities\".\"departure_window_start\" is strftime('%H:%M', \"facilities\".\"departure_window_start\") and \"facilities\".\"departure_window_end\" is strftime('%H:%M', \"facilities\".\"departure_window_end\") and \"facilities\".\"departure_window_start\" < \"facilities\".\"departure_window_end\""
         },
         "facilities_decision_deadline_format": {
           "name": "facilities_decision_deadline_format",
-          "value": "\"facilities\".\"decision_deadline\" glob '[0-2][0-9]:[0-5][0-9]'"
+          "value": "\"facilities\".\"decision_deadline\" is strftime('%H:%M', \"facilities\".\"decision_deadline\")"
         },
         "facilities_typical_commute_minutes_positive": {
           "name": "facilities_typical_commute_minutes_positive",
@@ -581,7 +581,7 @@
       "checkConstraints": {
         "facility_hazards_hazard": {
           "name": "facility_hazards_hazard",
-          "value": "\"facility_hazards\".\"hazard\" in ('winter_storm', 'severe_wind', 'air_quality')"
+          "value": "\"facility_hazards\".\"hazard\" in ('winter', 'wind', 'airQuality')"
         }
       }
     },

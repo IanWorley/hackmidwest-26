@@ -33,8 +33,8 @@ CREATE TABLE `employee_status_events` (
 	FOREIGN KEY (`reported_by_id`) REFERENCES `decision_makers`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "employee_status_events_status" CHECK("employee_status_events"."status" in ('working_onsite', 'teleworking', 'not_working')),
 	CONSTRAINT "employee_status_events_not_working_requires_note" CHECK(not ("employee_status_events"."status" = 'not_working') or "employee_status_events"."note" is not null),
-	CONSTRAINT "employee_status_events_reported_at_format" CHECK("employee_status_events"."reported_at" glob '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9][0-9][0-9]Z'),
-	CONSTRAINT "employee_status_events_effective_from_format" CHECK("employee_status_events"."effective_from" glob '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9][0-9][0-9]Z')
+	CONSTRAINT "employee_status_events_reported_at_format" CHECK("employee_status_events"."reported_at" is strftime('%Y-%m-%dT%H:%M:%fZ', "employee_status_events"."reported_at")),
+	CONSTRAINT "employee_status_events_effective_from_format" CHECK("employee_status_events"."effective_from" is strftime('%Y-%m-%dT%H:%M:%fZ', "employee_status_events"."effective_from"))
 );
 --> statement-breakpoint
 CREATE TABLE `employees` (
@@ -53,7 +53,7 @@ CREATE TABLE `employees` (
 	FOREIGN KEY (`assigned_building_id`) REFERENCES `buildings`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "employees_preferred_channel" CHECK("employees"."preferred_channel" in ('email', 'sms')),
 	CONSTRAINT "employees_sms_requires_mobile_phone" CHECK(not ("employees"."preferred_channel" = 'sms') or "employees"."mobile_phone" is not null),
-	CONSTRAINT "employees_shift" CHECK(("employees"."shift_start" is null) = ("employees"."shift_end" is null) and "employees"."shift_start" glob '[0-2][0-9]:[0-5][0-9]' and "employees"."shift_end" glob '[0-2][0-9]:[0-5][0-9]' and "employees"."shift_start" < "employees"."shift_end"),
+	CONSTRAINT "employees_shift" CHECK(("employees"."shift_start" is null) = ("employees"."shift_end" is null) and "employees"."shift_start" is strftime('%H:%M', "employees"."shift_start") and "employees"."shift_end" is strftime('%H:%M', "employees"."shift_end") and "employees"."shift_start" < "employees"."shift_end"),
 	CONSTRAINT "employees_commute_minutes_positive" CHECK("employees"."commute_minutes" > 0)
 );
 --> statement-breakpoint
@@ -79,10 +79,10 @@ CREATE TABLE `facilities` (
 	FOREIGN KEY (`backup_decision_maker_id`) REFERENCES `decision_makers`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "facilities_latitude_range" CHECK("facilities"."latitude" between -90 and 90),
 	CONSTRAINT "facilities_longitude_range" CHECK("facilities"."longitude" between -180 and 180),
-	CONSTRAINT "facilities_hours" CHECK("facilities"."opens_at" glob '[0-2][0-9]:[0-5][0-9]' and "facilities"."closes_at" glob '[0-2][0-9]:[0-5][0-9]' and "facilities"."opens_at" < "facilities"."closes_at"),
-	CONSTRAINT "facilities_arrival_window" CHECK("facilities"."arrival_window_start" glob '[0-2][0-9]:[0-5][0-9]' and "facilities"."arrival_window_end" glob '[0-2][0-9]:[0-5][0-9]' and "facilities"."arrival_window_start" < "facilities"."arrival_window_end"),
-	CONSTRAINT "facilities_departure_window" CHECK("facilities"."departure_window_start" glob '[0-2][0-9]:[0-5][0-9]' and "facilities"."departure_window_end" glob '[0-2][0-9]:[0-5][0-9]' and "facilities"."departure_window_start" < "facilities"."departure_window_end"),
-	CONSTRAINT "facilities_decision_deadline_format" CHECK("facilities"."decision_deadline" glob '[0-2][0-9]:[0-5][0-9]'),
+	CONSTRAINT "facilities_hours" CHECK("facilities"."opens_at" is strftime('%H:%M', "facilities"."opens_at") and "facilities"."closes_at" is strftime('%H:%M', "facilities"."closes_at") and "facilities"."opens_at" < "facilities"."closes_at"),
+	CONSTRAINT "facilities_arrival_window" CHECK("facilities"."arrival_window_start" is strftime('%H:%M', "facilities"."arrival_window_start") and "facilities"."arrival_window_end" is strftime('%H:%M', "facilities"."arrival_window_end") and "facilities"."arrival_window_start" < "facilities"."arrival_window_end"),
+	CONSTRAINT "facilities_departure_window" CHECK("facilities"."departure_window_start" is strftime('%H:%M', "facilities"."departure_window_start") and "facilities"."departure_window_end" is strftime('%H:%M', "facilities"."departure_window_end") and "facilities"."departure_window_start" < "facilities"."departure_window_end"),
+	CONSTRAINT "facilities_decision_deadline_format" CHECK("facilities"."decision_deadline" is strftime('%H:%M', "facilities"."decision_deadline")),
 	CONSTRAINT "facilities_typical_commute_minutes_positive" CHECK("facilities"."typical_commute_minutes" > 0),
 	CONSTRAINT "facilities_notification_lead_minutes_positive" CHECK("facilities"."notification_lead_minutes" > 0),
 	CONSTRAINT "facilities_backup_differs" CHECK("facilities"."decision_maker_id" <> "facilities"."backup_decision_maker_id")
@@ -93,8 +93,9 @@ CREATE TABLE `facility_hazards` (
 	`hazard` text NOT NULL,
 	PRIMARY KEY(`facility_id`, `hazard`),
 	FOREIGN KEY (`facility_id`) REFERENCES `facilities`(`id`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "facility_hazards_hazard" CHECK("facility_hazards"."hazard" in ('winter_storm', 'severe_wind', 'air_quality'))
+	CONSTRAINT "facility_hazards_hazard" CHECK("facility_hazards"."hazard" in ('winter', 'wind', 'airQuality'))
 );
+
 --> statement-breakpoint
 CREATE TRIGGER `employee_status_events_reject_update` BEFORE UPDATE ON `employee_status_events`
 BEGIN

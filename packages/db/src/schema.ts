@@ -19,18 +19,24 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 // Zero-padded 24-hour `HH:MM`, so string comparison orders local times.
-const LOCAL_TIME_GLOB = "[0-2][0-9]:[0-5][0-9]";
+const LOCAL_TIME_FORMAT = "%H:%M";
 // Exactly `Date.prototype.toISOString()`, so string comparison orders instants.
-const UTC_INSTANT_GLOB =
-  "[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9][0-9][0-9]Z";
+const UTC_INSTANT_FORMAT = "%Y-%m-%dT%H:%M:%fZ";
 
+// strftime returns NULL for an impossible value and normalizes overflow (Feb 30
+// becomes Mar 2), so only a real time in exactly this shape survives the round
+// trip. `is` instead of `=` because a NULL comparison would pass the CHECK.
 // SQLite DDL cannot contain bind parameters, so every CHECK inlines its values.
+function hasFormat(column: AnySQLiteColumn, format: string): SQL {
+  return sql`${column} is strftime(${format}, ${column})`.inlineParams();
+}
+
 function isLocalTime(column: AnySQLiteColumn): SQL {
-  return sql`${column} glob ${LOCAL_TIME_GLOB}`.inlineParams();
+  return hasFormat(column, LOCAL_TIME_FORMAT);
 }
 
 function isUtcInstant(column: AnySQLiteColumn): SQL {
-  return sql`${column} glob ${UTC_INSTANT_GLOB}`.inlineParams();
+  return hasFormat(column, UTC_INSTANT_FORMAT);
 }
 
 function isLocalTimeRange(start: AnySQLiteColumn, end: AnySQLiteColumn): SQL {
@@ -43,7 +49,7 @@ function implies(condition: SQL, requirement: SQL): SQL {
 
 export const TASK_TITLE_LENGTH = { min: 1, max: 120 } as const;
 
-export const HAZARDS = ["winter_storm", "severe_wind", "air_quality"] as const;
+export const HAZARDS = ["winter", "wind", "airQuality"] as const;
 export type Hazard = (typeof HAZARDS)[number];
 
 export const EMPLOYEE_STATUSES = [
