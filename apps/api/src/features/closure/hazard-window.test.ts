@@ -41,3 +41,11 @@ it("drops a cancelled alert and the cancel itself, keeping unrelated alerts", ()
     currentAlerts([ORIGINAL, unrelated, cancel]).map((alert) => alert.id),
   ).toEqual(["a2"]);
 });
+
+it("keeps an alert that only an Ack or Error references", () => {
+  const ack = nwsAlert("k1", "Ack", ["a1"]);
+  const error = nwsAlert("e1", "Error", ["a1"]);
+  expect(
+    currentAlerts([ORIGINAL, ack, error]).map((alert) => alert.id),
+  ).toEqual(["a1"]);
+});

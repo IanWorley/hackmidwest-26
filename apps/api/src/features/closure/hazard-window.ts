@@ -38,15 +38,28 @@ interface HazardInterval extends Span {
   readonly clearsAt: Instant;
 }
 
-/**
- * Alerts still in force. An Update or Cancel names the alerts it replaces in `references`, so
- * any referenced alert is dropped, and so are Cancel, Ack, and Error messages themselves.
- */
+type MessageType = NwsAlert["messageType"];
+
+const IN_FORCE_MESSAGE_TYPES: ReadonlySet<MessageType> = new Set([
+  "Alert",
+  "Update",
+]);
+// Ack and Error also carry `references`, but they acknowledge or flag a message, not replace it.
+const SUPERSEDING_MESSAGE_TYPES: ReadonlySet<MessageType> = new Set([
+  "Update",
+  "Cancel",
+]);
+
+/** Alerts still in force: Alerts and Updates that no Update or Cancel references. */
 function currentAlerts(alerts: readonly NwsAlert[]): NwsAlert[] {
-  const superseded = new Set(alerts.flatMap((alert) => alert.references));
+  const superseded = new Set(
+    alerts
+      .filter((alert) => SUPERSEDING_MESSAGE_TYPES.has(alert.messageType))
+      .flatMap((alert) => alert.references),
+  );
   return alerts.filter(
     (alert) =>
-      (alert.messageType === "Alert" || alert.messageType === "Update") &&
+      IN_FORCE_MESSAGE_TYPES.has(alert.messageType) &&
       !superseded.has(alert.id),
   );
 }
