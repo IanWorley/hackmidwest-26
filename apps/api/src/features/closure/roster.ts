@@ -26,9 +26,13 @@ type RosterMatch =
 
 /**
  * status_changes: the effective status differs from the baseline.
+ * directive_issued: a manager's directive names this person, even if their status kind stays the same.
  * posture_announcement: an onsite person's day is unchanged but the facility's is not ("the office stays open").
  */
-type NotifyReason = "status_changes" | "posture_announcement";
+type NotifyReason =
+  | "status_changes"
+  | "directive_issued"
+  | "posture_announcement";
 
 const SKIP_REASON_BY_BASELINE = {
   working_onsite: "no_change",
@@ -111,6 +115,9 @@ function inclusionOf(
 ): Inclusion {
   if (effective.kind !== baseline.status) {
     return { notified: true, reason: "status_changes" };
+  }
+  if (effective.cause.source === "directive") {
+    return { notified: true, reason: "directive_issued" };
   }
   if (baseline.status === "working_onsite" && posture.posture !== "normal") {
     return { notified: true, reason: "posture_announcement" };
