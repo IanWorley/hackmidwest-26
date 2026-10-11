@@ -7,6 +7,7 @@ import {
   useId,
   useReducer,
   useRef,
+  useState,
 } from "react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,8 @@ const ISSUED_TEXT = "Directive issued.";
 const SUPERSEDED_TITLE =
   "This decision was changed by someone else. Nothing was saved; the page is reloaded with the current decision.";
 const FAILED_TITLE = "The directive could not be issued. Try again.";
+const DISPATCH_REFUSED_TITLE =
+  "This decision's notices were dispatched before your directive arrived, perhaps from another tab. Nothing was saved; the page is reloaded.";
 const DISPATCHED_TEXT =
   "This decision's notices were dispatched, and dispatch happens once, so a new directive would reach nobody. Record a new decision to change what staff are told.";
 const GROUPS_LABEL = "Groups";
@@ -193,7 +196,25 @@ interface DirectivesSectionProps {
   readonly onReload: () => Promise<void>;
 }
 
-function DirectiveForm(props: DirectivesSectionProps): JSX.Element {
+interface DirectiveFormProps extends DirectivesSectionProps {
+  /** The reload swaps this form for the dispatched notice, so the section keeps the refusal on screen. */
+  readonly onDispatchRefused: () => void;
+}
+
+/** Focused when it appears, because the form whose button had focus is gone after the reload. */
+function DispatchRefusedAlert(): JSX.Element {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
+  return (
+    <Alert ref={ref} role="alert" tabIndex={-1}>
+      <AlertTitle>{DISPATCH_REFUSED_TITLE}</AlertTitle>
+    </Alert>
+  );
+}
+
+function DirectiveForm(props: DirectiveFormProps): JSX.Element {
   const [state, dispatch] = useReducer(sectionReducer, { status: "editing" });
   const formId = useId();
   let invalidField: FormField | undefined;
@@ -229,8 +250,11 @@ function DirectiveForm(props: DirectivesSectionProps): JSX.Element {
       if (outcome.kind === "issued") {
         form.reset();
       }
+      if (outcome.kind === "dispatched") {
+        props.onDispatchRefused();
+      }
       // Settle after the reload, so a notice that says the page is reloaded is already true.
-      if (outcome.kind === "issued" || outcome.kind === "superseded") {
+      if (outcome.kind !== "invalid" && outcome.kind !== "failed") {
         await props.onReload();
       }
       dispatch({ type: "settle", outcome });
@@ -261,7 +285,7 @@ function DirectiveForm(props: DirectivesSectionProps): JSX.Element {
   );
 }
 
-function DirectiveFormOrDispatched(props: DirectivesSectionProps): JSX.Element {
+function DirectiveFormOrDispatched(props: DirectiveFormProps): JSX.Element {
   if (props.isDispatched) {
     return <p role="status">{DISPATCHED_TEXT}</p>;
   }
@@ -270,6 +294,15 @@ function DirectiveFormOrDispatched(props: DirectivesSectionProps): JSX.Element {
 
 export function DirectivesSection(props: DirectivesSectionProps): JSX.Element {
   const headingId = useId();
+  // Tied to the decision it was refused for, so a reload onto a newer decision drops it.
+  const [refusedDecisionId, setRefusedDecisionId] = useState<number | null>(
+    null,
+  );
+  const decisionId = props.decision.id;
+  const onDispatchRefused = useCallback(
+    (): void => setRefusedDecisionId(decisionId),
+    [decisionId],
+  );
   return (
     <section aria-labelledby={headingId} className="space-y-4">
       <h2 className="font-heading font-semibold text-xl" id={headingId}>
@@ -287,7 +320,11 @@ export function DirectivesSection(props: DirectivesSectionProps): JSX.Element {
         directives={props.directives}
         timeZone={props.timeZone}
       />
-      <DirectiveFormOrDispatched {...props} />
+      {refusedDecisionId === decisionId && <DispatchRefusedAlert />}
+      <DirectiveFormOrDispatched
+        {...props}
+        onDispatchRefused={onDispatchRefused}
+      />
     </section>
   );
 }

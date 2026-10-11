@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  type RenderResult,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { expect, it, vi } from "vitest";
 import {
@@ -250,5 +256,39 @@ it("closes the directive form once the decision's notices were dispatched", () =
   ]).toEqual([
     null,
     "This decision's notices were dispatched, and dispatch happens once, so a new directive would reach nobody. Record a new decision to change what staff are told.",
+  ]);
+});
+
+it("keeps a dispatch refusal on screen and focused after the reload closes the form", async () => {
+  // The reload brings the dispatched decision, as the page does after another tab dispatched.
+  let rerender: RenderResult["rerender"] | undefined;
+  function reloadDispatched(): Promise<void> {
+    rerender?.(<DirectivesSection {...props} isDispatched={true} />);
+    return Promise.resolve();
+  }
+  const props = sectionProps({
+    onReload: reloadDispatched,
+    submitDirective: () => Promise.resolve({ kind: "dispatched" }),
+  });
+  ({ rerender } = render(<DirectivesSection {...props} />));
+  choose("Applies to", "facility");
+  choose("Directive", "telework");
+  choose("Reason category", "road_reports");
+  fireEvent.change(screen.getByRole("textbox", { name: "Reason" }), {
+    target: { value: "Plows reach the lot after nine." },
+  });
+  choose("Recorded by", "1");
+  fireEvent.click(screen.getByRole("button", { name: "Issue directive" }));
+
+  const alert = await screen.findByRole("alert");
+  await waitFor(() => {
+    expect(document.activeElement).toBe(alert);
+  });
+  expect([
+    alert.textContent,
+    screen.queryByRole("form", { name: "Issue directive" }),
+  ]).toEqual([
+    "This decision's notices were dispatched before your directive arrived, perhaps from another tab. Nothing was saved; the page is reloaded.",
+    null,
   ]);
 });

@@ -40,6 +40,7 @@ type SectionState =
   | { readonly status: "invalid"; readonly field: FormField }
   | { readonly status: "issued" }
   | { readonly status: "superseded" }
+  | { readonly status: "dispatched" }
   | { readonly status: "failed" };
 
 type SectionEvent =
