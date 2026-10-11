@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "cf755165-e5b9-49ac-857f-890a10427428",
+  "id": "4d6bd7b3-020b-4cd8-8f7e-48bca6226164",
   "prevId": "24930990-4aa4-4235-a01c-5ce37ece7f71",
   "tables": {
     "building_roster_entries": {
@@ -59,7 +59,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "building_roster_entries_listed_name_not_blank": {
+          "name": "building_roster_entries_listed_name_not_blank",
+          "value": "trim(\"building_roster_entries\".\"listed_name\") <> ''"
+        }
+      }
     },
     "buildings": {
       "name": "buildings",
@@ -100,7 +105,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "buildings_name_not_blank": {
+          "name": "buildings_name_not_blank",
+          "value": "trim(\"buildings\".\"name\") <> ''"
+        }
+      }
     },
     "decision_makers": {
       "name": "decision_makers",
@@ -138,7 +148,20 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "decision_makers_name_not_blank": {
+          "name": "decision_makers_name_not_blank",
+          "value": "trim(\"decision_makers\".\"name\") <> ''"
+        },
+        "decision_makers_role_not_blank": {
+          "name": "decision_makers_role_not_blank",
+          "value": "trim(\"decision_makers\".\"role\") <> ''"
+        },
+        "decision_makers_email_not_blank": {
+          "name": "decision_makers_email_not_blank",
+          "value": "trim(\"decision_makers\".\"email\") <> ''"
+        }
+      }
     },
     "employee_status_events": {
       "name": "employee_status_events",
@@ -223,15 +246,15 @@
         },
         "employee_status_events_not_working_requires_note": {
           "name": "employee_status_events_not_working_requires_note",
-          "value": "not (\"employee_status_events\".\"status\" = 'not_working') or \"employee_status_events\".\"note\" is not null"
+          "value": "not (\"employee_status_events\".\"status\" = 'not_working') or \"employee_status_events\".\"note\" is not null and trim(\"employee_status_events\".\"note\") <> ''"
         },
         "employee_status_events_reported_at_format": {
           "name": "employee_status_events_reported_at_format",
-          "value": "\"employee_status_events\".\"reported_at\" is strftime('%Y-%m-%dT%H:%M:%fZ', \"employee_status_events\".\"reported_at\")"
+          "value": "\"employee_status_events\".\"reported_at\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"employee_status_events\".\"reported_at\"))"
         },
         "employee_status_events_effective_from_format": {
           "name": "employee_status_events_effective_from_format",
-          "value": "\"employee_status_events\".\"effective_from\" is strftime('%Y-%m-%dT%H:%M:%fZ', \"employee_status_events\".\"effective_from\")"
+          "value": "\"employee_status_events\".\"effective_from\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"employee_status_events\".\"effective_from\"))"
         }
       }
     },
@@ -338,6 +361,14 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
+        "employees_name_not_blank": {
+          "name": "employees_name_not_blank",
+          "value": "trim(\"employees\".\"name\") <> ''"
+        },
+        "employees_email_not_blank": {
+          "name": "employees_email_not_blank",
+          "value": "trim(\"employees\".\"email\") <> ''"
+        },
         "employees_preferred_channel": {
           "name": "employees_preferred_channel",
           "value": "\"employees\".\"preferred_channel\" in ('email', 'sms')"
@@ -356,7 +387,7 @@
         },
         "employees_shift": {
           "name": "employees_shift",
-          "value": "(\"employees\".\"shift_start\" is null) = (\"employees\".\"shift_end\" is null) and \"employees\".\"shift_start\" is strftime('%H:%M', \"employees\".\"shift_start\") and \"employees\".\"shift_start\" < '24:00' and \"employees\".\"shift_end\" is strftime('%H:%M', \"employees\".\"shift_end\") and \"employees\".\"shift_end\" < '24:00' and \"employees\".\"shift_start\" < \"employees\".\"shift_end\""
+          "value": "(\"employees\".\"shift_start\" is null) = (\"employees\".\"shift_end\" is null) and \"employees\".\"shift_start\" is strftime('%H:%M', julianday(\"employees\".\"shift_start\")) and \"employees\".\"shift_end\" is strftime('%H:%M', julianday(\"employees\".\"shift_end\")) and \"employees\".\"shift_start\" < \"employees\".\"shift_end\""
         },
         "employees_commute_minutes_positive": {
           "name": "employees_commute_minutes_positive",
@@ -511,6 +542,18 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
+        "facilities_name_not_blank": {
+          "name": "facilities_name_not_blank",
+          "value": "trim(\"facilities\".\"name\") <> ''"
+        },
+        "facilities_nws_zone_not_blank": {
+          "name": "facilities_nws_zone_not_blank",
+          "value": "trim(\"facilities\".\"nws_zone\") <> ''"
+        },
+        "facilities_timezone_not_blank": {
+          "name": "facilities_timezone_not_blank",
+          "value": "trim(\"facilities\".\"timezone\") <> ''"
+        },
         "facilities_latitude_range": {
           "name": "facilities_latitude_range",
           "value": "\"facilities\".\"latitude\" between -90 and 90"
@@ -521,19 +564,19 @@
         },
         "facilities_hours": {
           "name": "facilities_hours",
-          "value": "\"facilities\".\"opens_at\" is strftime('%H:%M', \"facilities\".\"opens_at\") and \"facilities\".\"opens_at\" < '24:00' and \"facilities\".\"closes_at\" is strftime('%H:%M', \"facilities\".\"closes_at\") and \"facilities\".\"closes_at\" < '24:00' and \"facilities\".\"opens_at\" < \"facilities\".\"closes_at\""
+          "value": "\"facilities\".\"opens_at\" is strftime('%H:%M', julianday(\"facilities\".\"opens_at\")) and \"facilities\".\"closes_at\" is strftime('%H:%M', julianday(\"facilities\".\"closes_at\")) and \"facilities\".\"opens_at\" < \"facilities\".\"closes_at\""
         },
         "facilities_arrival_window": {
           "name": "facilities_arrival_window",
-          "value": "\"facilities\".\"arrival_window_start\" is strftime('%H:%M', \"facilities\".\"arrival_window_start\") and \"facilities\".\"arrival_window_start\" < '24:00' and \"facilities\".\"arrival_window_end\" is strftime('%H:%M', \"facilities\".\"arrival_window_end\") and \"facilities\".\"arrival_window_end\" < '24:00' and \"facilities\".\"arrival_window_start\" < \"facilities\".\"arrival_window_end\""
+          "value": "\"facilities\".\"arrival_window_start\" is strftime('%H:%M', julianday(\"facilities\".\"arrival_window_start\")) and \"facilities\".\"arrival_window_end\" is strftime('%H:%M', julianday(\"facilities\".\"arrival_window_end\")) and \"facilities\".\"arrival_window_start\" < \"facilities\".\"arrival_window_end\""
         },
         "facilities_departure_window": {
           "name": "facilities_departure_window",
-          "value": "\"facilities\".\"departure_window_start\" is strftime('%H:%M', \"facilities\".\"departure_window_start\") and \"facilities\".\"departure_window_start\" < '24:00' and \"facilities\".\"departure_window_end\" is strftime('%H:%M', \"facilities\".\"departure_window_end\") and \"facilities\".\"departure_window_end\" < '24:00' and \"facilities\".\"departure_window_start\" < \"facilities\".\"departure_window_end\""
+          "value": "\"facilities\".\"departure_window_start\" is strftime('%H:%M', julianday(\"facilities\".\"departure_window_start\")) and \"facilities\".\"departure_window_end\" is strftime('%H:%M', julianday(\"facilities\".\"departure_window_end\")) and \"facilities\".\"departure_window_start\" < \"facilities\".\"departure_window_end\""
         },
         "facilities_decision_deadline_format": {
           "name": "facilities_decision_deadline_format",
-          "value": "\"facilities\".\"decision_deadline\" is strftime('%H:%M', \"facilities\".\"decision_deadline\") and \"facilities\".\"decision_deadline\" < '24:00'"
+          "value": "\"facilities\".\"decision_deadline\" is strftime('%H:%M', julianday(\"facilities\".\"decision_deadline\"))"
         },
         "facilities_typical_commute_minutes_positive": {
           "name": "facilities_typical_commute_minutes_positive",

@@ -11,6 +11,8 @@ const IMPOSSIBLE_INSTANT = "2026-02-30T13:00:00.000Z";
 const SEEDED_FACILITY_ID = 1;
 const PAST_MIDNIGHT = "24:30";
 const MISSING_BUILDING_ID = 999;
+const HOUR_24_INSTANT = "2026-10-02T24:01:00.000Z";
+const BLANK_NOTE = "   ";
 
 it("rejects an empty title even when a caller bypasses the HTTP validator", async () => {
   const store = await createTestDatabase();
@@ -191,6 +193,63 @@ it("rejects an employee assigned to a building that does not exist", async () =>
     ).rejects.toMatchObject({
       cause: {
         message: expect.stringContaining("FOREIGN KEY constraint failed"),
+      },
+    });
+  } finally {
+    store.close();
+  }
+});
+
+it("rejects a status event effective at hour 24", async () => {
+  const store = await createTestDatabase();
+  try {
+    await seedDemoFacilities(store.db);
+
+    await expect(
+      store.db
+        .insert(employeeStatusEvents)
+        .values({
+          employeeId: SEEDED_EMPLOYEE_ID,
+          status: "teleworking",
+          reportedById: SEEDED_DECISION_MAKER_ID,
+          reportedAt: REPORTED_AT,
+          effectiveFrom: HOUR_24_INSTANT,
+        })
+        .execute(),
+    ).rejects.toMatchObject({
+      cause: {
+        message: expect.stringContaining(
+          "CHECK constraint failed: employee_status_events_effective_from_format",
+        ),
+      },
+    });
+  } finally {
+    store.close();
+  }
+});
+
+it("rejects a not_working status event whose note is blank", async () => {
+  const store = await createTestDatabase();
+  try {
+    await seedDemoFacilities(store.db);
+
+    await expect(
+      store.db
+        .insert(employeeStatusEvents)
+        .values({
+          employeeId: SEEDED_EMPLOYEE_ID,
+          status: "not_working",
+          note: BLANK_NOTE,
+          reportedById: SEEDED_DECISION_MAKER_ID,
+          reportedAt: REPORTED_AT,
+          effectiveFrom: REPORTED_AT,
+        })
+        .execute(),
+    ).rejects.toMatchObject({
+      cause: {
+        message: expect.stringContaining(
+          "CHECK constraint failed: employee_status_events_not_working_requires_note",
+        ),
       },
     });
   } finally {

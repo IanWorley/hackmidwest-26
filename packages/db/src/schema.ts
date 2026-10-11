@@ -1,14 +1,5 @@
+import { between, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import {
-  between,
-  eq,
-  inArray,
-  isNotNull,
-  ne,
-  type SQL,
-  sql,
-} from "drizzle-orm";
-import {
-  type AnySQLiteColumn,
   check,
   integer,
   primaryKey,
@@ -16,47 +7,16 @@ import {
   sqliteTable,
   text,
 } from "drizzle-orm/sqlite-core";
-
-// Zero-padded 24-hour `HH:MM`, so string comparison orders local times.
-const LOCAL_TIME_FORMAT = "%H:%M";
-// Exactly `Date.prototype.toISOString()`, so string comparison orders instants.
-const UTC_INSTANT_FORMAT = "%Y-%m-%dT%H:%M:%fZ";
-// strftime passes 24:xx through unchanged, so the clock bound is explicit.
-const END_OF_DAY = "24:00";
-
-// strftime returns NULL for an impossible value and normalizes overflow (Feb 30
-// becomes Mar 2), so only a real time in exactly this shape survives the round
-// trip. `is` instead of `=` because a NULL comparison would pass the CHECK.
-// SQLite DDL cannot contain bind parameters, so every CHECK inlines its values.
-function hasFormat(column: AnySQLiteColumn, format: string): SQL {
-  return sql`${column} is strftime(${format}, ${column})`.inlineParams();
-}
-
-function isLocalTime(column: AnySQLiteColumn): SQL {
-  return sql`${hasFormat(column, LOCAL_TIME_FORMAT)} and ${column} < ${END_OF_DAY}`.inlineParams();
-}
-
-function isUtcInstant(column: AnySQLiteColumn): SQL {
-  return hasFormat(column, UTC_INSTANT_FORMAT);
-}
-
-function isLocalTimeRange(start: AnySQLiteColumn, end: AnySQLiteColumn): SQL {
-  return sql`${isLocalTime(start)} and ${isLocalTime(end)} and ${start} < ${end}`;
-}
-
-// SQLite stores a non-numeric string in an integer column, and TEXT compares above every number.
-function isPositiveInteger(column: AnySQLiteColumn): SQL {
-  return sql`typeof(${column}) = 'integer' and ${column} > 0`;
-}
-
-// Drizzle reads any stored value other than 1 as false, so a stray 2 would flip the flag.
-function isBoolean(column: AnySQLiteColumn): SQL {
-  return sql`${column} in (0, 1)`;
-}
-
-function implies(condition: SQL, requirement: SQL): SQL {
-  return sql`not (${condition}) or ${requirement}`.inlineParams();
-}
+import {
+  implies,
+  isBoolean,
+  isLocalTime,
+  isLocalTimeRange,
+  isNonBlank,
+  isPositiveInteger,
+  isUtcInstant,
+  nonBlankChecks,
+} from "./checks";
 
 export const TASK_TITLE_LENGTH = { min: 1, max: 120 } as const;
 
@@ -93,12 +53,17 @@ export const tasks = sqliteTable(
   ],
 );
 
-export const decisionMakers = sqliteTable("decision_makers", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  name: text("name").notNull(),
-  role: text("role").notNull(),
-  email: text("email").notNull(),
-});
+export const decisionMakers = sqliteTable(
+  "decision_makers",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    name: text("name").notNull(),
+    role: text("role").notNull(),
+    email: text("email").notNull(),
+  },
+  (table) =>
+    nonBlankChecks("decision_makers", table.name, table.role, table.email),
+);
 
 export const facilities = sqliteTable(
   "facilities",
@@ -126,6 +91,7 @@ export const facilities = sqliteTable(
       .references(() => decisionMakers.id),
   },
   (table) => [
+    ...nonBlankChecks("facilities", table.name, table.nwsZone, table.timezone),
     check(
       "facilities_latitude_range",
       between(
@@ -188,13 +154,17 @@ export const facilityHazards = sqliteTable(
   ],
 );
 
-export const buildings = sqliteTable("buildings", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  facilityId: integer("facility_id")
-    .notNull()
-    .references(() => facilities.id),
-  name: text("name").notNull(),
-});
+export const buildings = sqliteTable(
+  "buildings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    facilityId: integer("facility_id")
+      .notNull()
+      .references(() => facilities.id),
+    name: text("name").notNull(),
+  },
+  (table) => nonBlankChecks("buildings", table.name),
+);
 
 /** The HR roster. An employee's facility is their assigned building's facility. */
 export const employees = sqliteTable(
@@ -222,6 +192,7 @@ export const employees = sqliteTable(
     commuteMinutes: integer("commute_minutes"),
   },
   (table) => [
+    ...nonBlankChecks("employees", table.name, table.email),
     check(
       "employees_preferred_channel",
       inArray(table.preferredChannel, NOTIFICATION_CHANNELS).inlineParams(),
@@ -238,7 +209,7 @@ export const employees = sqliteTable(
       "employees_sms_requires_mobile_phone",
       implies(
         eq(table.preferredChannel, "sms"),
-        sql`${isNotNull(table.mobilePhone)} and trim(${table.mobilePhone}) <> ''`,
+        sql`${isNotNull(table.mobilePhone)} and ${isNonBlank(table.mobilePhone)}`,
       ),
     ),
     check(
@@ -253,14 +224,18 @@ export const employees = sqliteTable(
 );
 
 /** A building's own roster, which can disagree with HR. A null employee is someone HR does not list. */
-export const buildingRosterEntries = sqliteTable("building_roster_entries", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  buildingId: integer("building_id")
-    .notNull()
-    .references(() => buildings.id),
-  listedName: text("listed_name").notNull(),
-  employeeId: integer("employee_id").references(() => employees.id),
-});
+export const buildingRosterEntries = sqliteTable(
+  "building_roster_entries",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    buildingId: integer("building_id")
+      .notNull()
+      .references(() => buildings.id),
+    listedName: text("listed_name").notNull(),
+    employeeId: integer("employee_id").references(() => employees.id),
+  },
+  (table) => nonBlankChecks("building_roster_entries", table.listedName),
+);
 
 /** Add-only: migration triggers reject UPDATE and DELETE and drop an insert that reuses an id, so a correction is a newer event. */
 export const employeeStatusEvents = sqliteTable(
@@ -285,7 +260,10 @@ export const employeeStatusEvents = sqliteTable(
     ),
     check(
       "employee_status_events_not_working_requires_note",
-      implies(eq(table.status, "not_working"), isNotNull(table.note)),
+      implies(
+        eq(table.status, "not_working"),
+        sql`${isNotNull(table.note)} and ${isNonBlank(table.note)}`,
+      ),
     ),
     check(
       "employee_status_events_reported_at_format",
