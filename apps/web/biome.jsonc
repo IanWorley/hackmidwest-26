@@ -5,6 +5,32 @@
   "css": { "parser": { "tailwindDirectives": true } },
   "overrides": [
     {
+      // The production server is a Bun entry point outside the browser
+      // bundle: it reads the environment, uses Node and Bun modules, and keys
+      // its t3env schema by the CONSTANT_CASE variable name.
+      "includes": ["serve.ts"],
+      "linter": {
+        "rules": {
+          "correctness": { "noNodejsModules": "off" },
+          "nursery": { "noBunModules": "off" },
+          "style": {
+            "noProcessEnv": "off",
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "selector": { "kind": "objectLiteralProperty" },
+                    "formats": ["camelCase", "CONSTANT_CASE"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       // t3env keys its schemas by environment variable name, which is CONSTANT_CASE.
       "includes": ["src/config.ts"],
       "linter": {

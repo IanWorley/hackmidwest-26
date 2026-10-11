@@ -14,6 +14,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "react-plugins.ts",
+    "serve.ts",
     "test/**/*.ts"
   ],
   "exclude": ["dist", "node_modules"]
