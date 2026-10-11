@@ -110,7 +110,7 @@ function buildNotificationPackage<S extends PackageSource>(
     if (status.kind === "not_working") {
       placed.push({ kind: "excused", line });
     } else {
-      const intent = { kind: "initial", status } as const;
+      const intent = { kind: "initial", status: line.status } as const;
       recipients.push({
         ...line,
         ...planNotice(context, line.employee, intent),
@@ -167,7 +167,7 @@ function buildPostureChangeUpdate({
     }
     return planNotice(superseding.context, line.employee, {
       kind: "update",
-      status: line.status.effective,
+      status: line.status,
     });
   });
   return {
