@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ConfirmDecisionDialog } from "./confirm-decision-dialog";
 import { DecideByCountdown } from "./decide-by-countdown";
 import {
   type Decision,
@@ -26,7 +27,11 @@ import { DirectivesSection } from "./directives-section";
 import { isForFacilityDay } from "./facility-day";
 import { FacilityHours, HazardBadges } from "./facility-fields";
 import { formatFacilityDate } from "./format-time";
+import { NewerRecommendationBanner } from "./newer-recommendation-banner";
+import type { NoticeScreen } from "./notice-screen";
+import { ChainSection, NotificationsSection } from "./notice-sections";
 import { RecommendationView } from "./recommendation-view";
+import { useConfirmedDecision } from "./use-confirmed-decision";
 import { useNow } from "./use-now";
 
 const TIME_ZONE_LABEL = "Time zone";
@@ -49,6 +54,10 @@ type EvaluateState = "idle" | "evaluating" | "evaluated" | "failed";
 interface ScreenProps {
   readonly screen: DecisionScreen;
   readonly onReload: () => Promise<void>;
+}
+
+interface NoticeProps {
+  readonly notices: NoticeScreen;
 }
 
 function FacilityDetails({
@@ -190,28 +199,38 @@ function RecommendationDecision({
   onReload,
   now,
   recommendation,
-}: ScreenProps & {
-  readonly now: number;
-  readonly recommendation: Recommendation;
-}): JSX.Element {
-  const submitDecision = useCallback(
+  notices,
+}: ScreenProps &
+  NoticeProps & {
+    readonly now: number;
+    readonly recommendation: Recommendation;
+  }): JSX.Element {
+  const record = useCallback(
     (request: DecisionRequest): ReturnType<typeof decide> =>
       decide(recommendation.id, request),
     [recommendation.id],
   );
+  const { submitDecision, dialogProps } = useConfirmedDecision(record);
 
   return (
-    <DecisionPanel
-      decideBy={recommendation.decideBy}
-      hasCurrentDecision={screen.currentDecision !== null}
-      now={now}
-      onReload={onReload}
-      recommendationId={recommendation.id}
-      recommendedPosture={recommendation.posture}
-      recorders={screen.recorders}
-      submitDecision={submitDecision}
-      supersedesDecisionId={screen.latestDecisionId}
-    />
+    <>
+      <ConfirmDecisionDialog
+        {...dialogProps}
+        preview={notices.preview}
+        timezone={screen.facility.timezone}
+      />
+      <DecisionPanel
+        decideBy={recommendation.decideBy}
+        hasCurrentDecision={screen.currentDecision !== null}
+        now={now}
+        onReload={onReload}
+        recommendationId={recommendation.id}
+        recommendedPosture={recommendation.posture}
+        recorders={screen.recorders}
+        submitDecision={submitDecision}
+        supersedesDecisionId={screen.latestDecisionId}
+      />
+    </>
   );
 }
 
@@ -250,7 +269,8 @@ function CurrentDirectives({
 export function DecisionScreenView({
   screen,
   onReload,
-}: ScreenProps): JSX.Element {
+  notices,
+}: ScreenProps & NoticeProps): JSX.Element {
   const now = useNow(screen.loadedAt);
   const { facility, latestRecommendation, currentDecision, history } = screen;
 
@@ -270,11 +290,20 @@ export function DecisionScreenView({
         <FacilityDetails facility={facility} />
       </div>
       <BackupNotice history={history} />
+      {notices.decidedRecommendation !== null &&
+        latestRecommendation !== null && (
+          <NewerRecommendationBanner
+            decided={notices.decidedRecommendation}
+            latest={latestRecommendation}
+            timezone={facility.timezone}
+          />
+        )}
       <RecommendationSection now={now} onReload={onReload} screen={screen} />
       {latestRecommendation !== null &&
         isForFacilityDay(latestRecommendation, screen.facilityDate) && (
           <RecommendationDecision
             now={now}
+            notices={notices}
             onReload={onReload}
             recommendation={latestRecommendation}
             screen={screen}
@@ -288,7 +317,17 @@ export function DecisionScreenView({
           screen={screen}
         />
       )}
+      {currentDecision !== null && notices.current !== null && (
+        <NotificationsSection
+          decisionId={currentDecision.id}
+          result={notices.current}
+          timezone={facility.timezone}
+        />
+      )}
       <DecisionHistory history={history} timeZone={facility.timezone} />
+      {notices.verification !== null && (
+        <ChainSection verification={notices.verification} />
+      )}
     </article>
   );
 }

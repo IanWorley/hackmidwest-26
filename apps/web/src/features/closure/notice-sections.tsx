@@ -1,0 +1,60 @@
+import type { JSX } from "react";
+import { ChainStatus } from "./decision-verification";
+import { DispatchPanel } from "./dispatch-panel";
+import {
+  type DecisionNotificationsResult,
+  type DecisionVerification,
+  dispatchDecision,
+} from "./notification-api";
+import { NotificationRecipients } from "./notification-recipients";
+
+const NOTIFICATIONS_HEADING = "Notifications";
+const CHAIN_HEADING = "Record chain";
+
+export function NotificationsSection({
+  decisionId,
+  result,
+  timezone,
+}: {
+  decisionId: number;
+  result: DecisionNotificationsResult;
+  timezone: string;
+}): JSX.Element {
+  return (
+    <section aria-label={NOTIFICATIONS_HEADING} className="space-y-4">
+      <h2 className="font-heading font-semibold text-xl">
+        {NOTIFICATIONS_HEADING}
+      </h2>
+      {result.kind === "conflict" && (
+        <p role="status">{result.conflict.message}</p>
+      )}
+      {result.kind === "found" && (
+        <>
+          <NotificationRecipients
+            pkg={result.view.package}
+            timezone={timezone}
+          />
+          <DispatchPanel
+            decisionId={decisionId}
+            dispatch={dispatchDecision}
+            initial={result.view}
+            timezone={timezone}
+          />
+        </>
+      )}
+    </section>
+  );
+}
+
+export function ChainSection({
+  verification,
+}: {
+  verification: DecisionVerification;
+}): JSX.Element {
+  return (
+    <section aria-label={CHAIN_HEADING} className="space-y-2">
+      <h2 className="font-heading font-semibold text-xl">{CHAIN_HEADING}</h2>
+      <ChainStatus verification={verification} />
+    </section>
+  );
+}

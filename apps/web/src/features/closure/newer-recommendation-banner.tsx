@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { facilityClock } from "./facility-clock";
-import { POSTURE_LABELS } from "./posture-labels";
+import { POSTURE_LABELS } from "./labels";
 import {
   type ComparedRecommendation,
   type Confidence,

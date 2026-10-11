@@ -7,11 +7,19 @@ import {
 import { KANSAS_CITY_RECOMMENDATION } from "../../../test/recommendation-fixture";
 import type { DecisionScreen } from "./decision-api";
 import { DecisionScreenView } from "./decision-screen";
+import type { NoticeScreen } from "./notice-screen";
 
 const HTTP_CREATED = 201;
 const HTTP_BAD_GATEWAY = 502;
 const LOADED_AT = Date.parse("2026-10-11T08:30:00Z");
 const MINUTE_MS = 60_000;
+
+const NO_NOTICES: NoticeScreen = {
+  preview: null,
+  current: null,
+  verification: null,
+  decidedRecommendation: null,
+};
 
 const SCREEN: DecisionScreen = {
   facility: {
@@ -67,7 +75,13 @@ afterEach(() => {
 it("moves focus to the recommendation heading once a re-evaluation loads", async () => {
   evaluationRespondsWith(HTTP_CREATED);
   const onReload = vi.fn<() => Promise<void>>(() => Promise.resolve());
-  render(<DecisionScreenView onReload={onReload} screen={SCREEN} />);
+  render(
+    <DecisionScreenView
+      notices={NO_NOTICES}
+      onReload={onReload}
+      screen={SCREEN}
+    />,
+  );
   fireEvent.click(screen.getByRole("button", { name: "Re-evaluate" }));
 
   const heading = screen.getByRole("heading", { name: "Recommendation" });
@@ -82,7 +96,13 @@ it("moves focus to the recommendation heading once a re-evaluation loads", async
 
 it("returns focus to Re-evaluate and says nothing changed when it fails", async () => {
   evaluationRespondsWith(HTTP_BAD_GATEWAY);
-  render(<DecisionScreenView onReload={reloadNothing} screen={SCREEN} />);
+  render(
+    <DecisionScreenView
+      notices={NO_NOTICES}
+      onReload={reloadNothing}
+      screen={SCREEN}
+    />,
+  );
   const button = screen.getByRole("button", { name: "Re-evaluate" });
   fireEvent.click(button);
 
