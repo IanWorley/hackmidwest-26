@@ -1,4 +1,5 @@
 import { type Static, t } from "elysia";
+import { CLOSED } from "../schema-options";
 
 const NullableNumber = t.Union([t.Number(), t.Null()]);
 const NullableString = t.Union([t.String(), t.Null()]);
@@ -40,41 +41,61 @@ const AlertMessageTypeSchema = t.UnionEnum(ALERT_MESSAGE_TYPES);
 const GeoPointSchema = t.Object({ lat: t.Number(), lon: t.Number() });
 
 /** NWS reports missing hourly data as null values, so every forecast value may be null. */
-const ForecastPeriodSchema = t.Object({
-  startTime: t.String(),
-  endTime: t.String(),
-  isDaytime: t.Boolean(),
-  temperature: NullableNumber,
-  temperatureUnit: NullableString,
-  windSpeed: NullableString,
-  windDirection: NullableString,
-  shortForecast: NullableString,
-  probabilityOfPrecipitation: NullableNumber,
-});
+const ForecastPeriodSchema = t.Object(
+  {
+    startTime: t.String(),
+    endTime: t.String(),
+    isDaytime: t.Boolean(),
+    temperature: NullableNumber,
+    temperatureUnit: NullableString,
+    windSpeed: NullableString,
+    windDirection: NullableString,
+    shortForecast: NullableString,
+    probabilityOfPrecipitation: NullableNumber,
+  },
+  CLOSED,
+);
+
+const ForecastSchema = t.Object(
+  {
+    /** The forecast's own URL, for tracing it back to its source. */
+    rawRef: t.String(),
+    /** When NWS last updated the forecast; staleness is measured from here. */
+    updateTime: t.String(),
+    periods: t.Array(ForecastPeriodSchema),
+  },
+  CLOSED,
+);
 
 /**
  * When the hazard applies. `start` is the alert's onset, else its effective time. `end` is its
  * `ends` time, else its `expires` time; `endBasis: "expires"` marks that weaker estimate, so a
  * caller should treat such an end with lower confidence.
  */
-const HazardWindowSchema = t.Object({
-  start: t.String(),
-  end: t.String(),
-  endBasis: t.Union([t.Literal("ends"), t.Literal("expires")]),
-});
+const HazardWindowSchema = t.Object(
+  {
+    start: t.String(),
+    end: t.String(),
+    endBasis: t.Union([t.Literal("ends"), t.Literal("expires")]),
+  },
+  CLOSED,
+);
 
-const NwsAlertSchema = t.Object({
-  id: t.String(),
-  event: t.String(),
-  headline: NullableString,
-  severity: AlertSeveritySchema,
-  certainty: AlertCertaintySchema,
-  urgency: AlertUrgencySchema,
-  messageType: AlertMessageTypeSchema,
-  /** Ids of earlier alerts this one updates or cancels. */
-  references: t.Array(t.String()),
-  hazardWindow: HazardWindowSchema,
-});
+const NwsAlertSchema = t.Object(
+  {
+    id: t.String(),
+    event: t.String(),
+    headline: NullableString,
+    severity: AlertSeveritySchema,
+    certainty: AlertCertaintySchema,
+    urgency: AlertUrgencySchema,
+    messageType: AlertMessageTypeSchema,
+    /** Ids of earlier alerts this one updates or cancels. */
+    references: t.Array(t.String()),
+    hazardWindow: HazardWindowSchema,
+  },
+  CLOSED,
+);
 
 const QuantitySchema = t.Object({
   value: NullableNumber,
@@ -83,6 +104,7 @@ const QuantitySchema = t.Object({
 
 type GeoPoint = Static<typeof GeoPointSchema>;
 type ForecastPeriod = Static<typeof ForecastPeriodSchema>;
+type NwsForecast = Static<typeof ForecastSchema>;
 type HazardWindow = Static<typeof HazardWindowSchema>;
 type NwsAlert = Static<typeof NwsAlertSchema>;
 type Quantity = Static<typeof QuantitySchema>;
@@ -118,13 +140,14 @@ function hazardWindow({
   return { start, end: ends, endBasis: "ends" };
 }
 
-export type { ForecastPeriod, GeoPoint, NwsAlert, NwsObservation };
+export type { ForecastPeriod, GeoPoint, NwsAlert, NwsForecast, NwsObservation };
 export {
   AlertCertaintySchema,
   AlertMessageTypeSchema,
   AlertSeveritySchema,
   AlertUrgencySchema,
   ForecastPeriodSchema,
+  ForecastSchema,
   GeoPointSchema,
   hazardWindow,
   NullableNumber,

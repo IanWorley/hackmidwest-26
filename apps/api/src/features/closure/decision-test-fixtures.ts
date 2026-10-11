@@ -49,7 +49,7 @@ const SHA256_HEX = /^[0-9a-f]{64}$/u;
 const RECOMMENDATION: RecommendationContent = {
   facilityId: FACILITY_ID,
   evaluatedAt: "2026-10-02T10:00:00.000Z",
-  asOf: "2026-10-02T09:55:00.000Z",
+  asOf: "2026-10-02T10:00:00.000Z",
   posture: "delayed_arrival",
   confidence: "medium",
   decideBy: DECIDE_BY,

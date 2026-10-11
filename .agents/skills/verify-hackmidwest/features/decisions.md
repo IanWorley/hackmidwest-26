@@ -24,25 +24,25 @@ A named decision maker accepts, overrides, or defers a recommendation through `P
 - `POST /api/recommendations/:id/decisions` with a JSON body whose `action` is `accept`, `override`, or `defer`.
 - `GET /api/facilities/:id/decisions`.
 - `GET /api/decisions/:id/verify`.
-- No route creates a recommendation yet, and no route runs the missed-deadline `no_decision` write. Do not report either as verified here.
+- Recommendations come from `POST /api/facilities/:id/recommendations`, which also writes the missed-deadline `no_decision` row. Both are verified in [recommendations](./recommendations.md), not here.
 
 ## Driving it with verify.sh
 
 Preconditions:
 
 - Baseline state from the index on a fresh `up`, so the recommendation and decision ids below start at `1`.
-- Staging exception: no route creates recommendations yet, so the recipe inserts them with `sqlite3` against the instance's own `DB_PATH`. It and the missing-predecessor tamper at the end are the only direct writes, and each is recorded by the `db` read that follows it. Define the helpers in the same shell command as the steps that use them. `rec` prints the canonical JSON of a recommendation (sorted keys, every column except `id` and `content_hash`), so its SHA-256 is the content hash the API recomputes:
+- Staging exception: a deferral must recheck before `decideBy`, and a live evaluation's `decideBy` is that morning's deadline, so the recipe inserts recommendations with a far-future `decideBy` using `sqlite3` against the instance's own `DB_PATH`. It and the missing-predecessor tamper at the end are the only direct writes, and each is recorded by the `db` read that follows it. Define the helpers in the same shell command as the steps that use them. `rec` prints the canonical JSON of a recommendation (sorted keys, every column except `id` and `content_hash`), so its SHA-256 is the content hash the API recomputes. Each staged row has `as_of` equal to `evaluated_at`, so it is live; a preview can't be decided:
 
   ```sh
   source /tmp/verify-hackmidwest/runs/<id>/state.env
   DECIDE_BY=2099-10-02T11:00:00.000Z
-  rec() { printf '{"asOf":"2026-10-02T09:55:00.000Z","confidence":"medium","decideBy":"%s","evaluatedAt":"%s","facilityId":%s,"posture":"delayed_arrival","snapshot":{}}' "$DECIDE_BY" "$1" "$2"; }
-  stage() { sqlite3 "$DB_PATH" "insert into recommendations (facility_id, evaluated_at, as_of, posture, confidence, decide_by, snapshot, content_hash) values ($2, '$1', '2026-10-02T09:55:00.000Z', 'delayed_arrival', 'medium', '$DECIDE_BY', '{}', '$3')"; }
+  rec() { printf '{"asOf":"%s","confidence":"medium","decideBy":"%s","evaluatedAt":"%s","facilityId":%s,"posture":"delayed_arrival","snapshot":{}}' "$1" "$DECIDE_BY" "$1" "$2"; }
+  stage() { sqlite3 "$DB_PATH" "insert into recommendations (facility_id, evaluated_at, as_of, posture, confidence, decide_by, snapshot, content_hash) values ($2, '$1', '$1', 'delayed_arrival', 'medium', '$DECIDE_BY', '{}', '$3')"; }
   REASON='"reason":{"category":"road_reports","text":"County reports the highway closed."}'
   ```
 
-- **Stage a recommendation.** Run `stage 2026-10-02T10:00:00.000Z 1 "$(rec 2026-10-02T10:00:00.000Z 1 | sha256sum | cut -c1-64)"`, then `RUN_ID=<id> $V db decisions-staged-recommendation "select id, facility_id, posture, decide_by, content_hash from recommendations order by id"`. One row `1|1|delayed_arrival|2099-10-02T11:00:00.000Z|f63defaecf61533e0c7898e6b417df3b5e5f1dd180cdccee1ed72392eaa25583`.
-- **Accept.** Run `RUN_ID=<id> $V api decisions-accept POST /api/recommendations/1/decisions '{"action":"accept","decidedById":1}'`. `201` with `"id":1`, `"action":"accept"`, `"chosenPosture":"delayed_arrival"`, `"recommendationHash":"f63defae…5583"`, `"decidedByName":"Dana Whitfield"`, `"identityVerified":false`, `"supersedesDecisionId":null`, and a positive `minutesBeforeDecideBy`.
+- **Stage a recommendation.** Run `stage 2026-10-02T10:00:00.000Z 1 "$(rec 2026-10-02T10:00:00.000Z 1 | sha256sum | cut -c1-64)"`, then `RUN_ID=<id> $V db decisions-staged-recommendation "select id, facility_id, posture, decide_by, content_hash from recommendations order by id"`. One row `1|1|delayed_arrival|2099-10-02T11:00:00.000Z|24f0c363ba3b73227b7d31c747888aaae18ffbc1e642c36aee18ec7a19ef94d1`.
+- **Accept.** Run `RUN_ID=<id> $V api decisions-accept POST /api/recommendations/1/decisions '{"action":"accept","decidedById":1}'`. `201` with `"id":1`, `"action":"accept"`, `"chosenPosture":"delayed_arrival"`, `"recommendationHash":"24f0c363…94d1"`, `"decidedByName":"Dana Whitfield"`, `"identityVerified":false`, `"supersedesDecisionId":null`, and a positive `minutesBeforeDecideBy`.
 - **Reason required.** Run `RUN_ID=<id> $V api decisions-override-no-reason POST /api/recommendations/1/decisions '{"action":"override","chosenPosture":"full_closure","decidedById":1,"supersedesDecisionId":1}'`. `422` with body `{"type":"validation","on":"body","property":"/reason","message":"Expected required property"}`.
 - **Unknown field.** Run `RUN_ID=<id> $V api decisions-unknown-field POST /api/recommendations/1/decisions '{"action":"accept","decidedById":1,"supersedesDecisionId":1,"posture":"full_closure"}'`. `422` with body `{"type":"validation","on":"body","property":"/posture","message":"Unexpected property"}`.
 - **Unknown nested field.** Run `RUN_ID=<id> $V api decisions-unknown-nested-field POST /api/recommendations/1/decisions '{"action":"override","chosenPosture":"full_closure","decidedById":1,"supersedesDecisionId":1,"reason":{"category":"road_reports","text":"County reports the highway closed.","severity":"high"}}'`. `422` with body `{"type":"validation","on":"body","property":"/reason/severity","message":"Unexpected property"}`.

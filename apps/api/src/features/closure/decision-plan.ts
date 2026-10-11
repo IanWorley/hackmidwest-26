@@ -9,12 +9,18 @@ import {
 } from "./decision-body";
 import type { RecordContent } from "./decision-chain";
 import type { DecisionResponse, DecisionRow } from "./decision-view";
+import { modeOf } from "./recommendation-mode";
 
 type RecommendationRow = typeof recommendations.$inferSelect;
 type DecisionMakerRow = typeof decisionMakers.$inferSelect;
 type DecisionContent = RecordContent<DecisionRow>;
 
 const conflictResponse = t.Union([
+  t.Object({
+    // An as-of preview is never decided. This names the live recommendation to decide instead, or null when there is none.
+    conflict: t.Literal("preview_recommendation"),
+    latestRecommendationId: t.Nullable(t.Integer()),
+  }),
   t.Object({
     conflict: t.Literal("newer_recommendation"),
     latestRecommendationId: t.Integer(),
@@ -39,7 +45,8 @@ type DecisionOutcome =
 interface DecisionContext {
   readonly recommendation: RecommendationRow;
   readonly decider: DecisionMakerRow | undefined;
-  readonly latestRecommendationId: number;
+  /** The facility's newest live recommendation, null when it has only previews. */
+  readonly latestRecommendationId: number | null;
   readonly latestDecisionId: number | null;
 }
 
@@ -125,12 +132,24 @@ function actionColumns(
   }
 }
 
-/** A stale view loses: the request must name the newest recommendation and the newest decision on it. */
+/** A stale view loses: the request must name the newest live recommendation and the newest decision on it. */
 function conflictFor(
   body: DecisionBody,
   context: DecisionContext,
 ): Refusal | undefined {
-  if (context.latestRecommendationId > context.recommendation.id) {
+  if (modeOf(context.recommendation) === "as_of") {
+    return {
+      kind: "conflict",
+      conflict: {
+        conflict: "preview_recommendation",
+        latestRecommendationId: context.latestRecommendationId,
+      },
+    };
+  }
+  if (
+    context.latestRecommendationId !== null &&
+    context.latestRecommendationId !== context.recommendation.id
+  ) {
     return {
       kind: "conflict",
       conflict: {

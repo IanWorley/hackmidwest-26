@@ -6,8 +6,8 @@ import {
   humanInputs,
   recommendations,
 } from "@hackmidwest/db";
-import { and, desc, eq, getTableColumns, max, or } from "drizzle-orm";
-import { Data, DateTime, Effect, Option } from "effect";
+import { and, desc, eq, getTableColumns, or } from "drizzle-orm";
+import { Data, DateTime, Effect, Option, Semaphore } from "effect";
 import { Database } from "../../runtime";
 import type { DecisionBody } from "./decision-body";
 import {
@@ -23,10 +23,17 @@ import {
   toDecisionResponse,
 } from "./decision-view";
 import { parseDecimalId } from "./facilities";
+import { LIVE_RECOMMENDATION, NEWEST_FIRST } from "./recommendation-mode";
 import { contentHash } from "./records";
 
 type DecisionMakerRow = typeof decisionMakers.$inferSelect;
 type HumanInputContent = Omit<typeof humanInputs.$inferInsert, "decisionId">;
+
+// libsql opens a connection per transaction and sets no busy timeout, so two writes started
+// together, such as a human's decision and a missed deadline's, fight over SQLite's write lock. The
+// loser fails and leaves its connection unable to commit again. Every write on the decision chain
+// (decisions, directives, notification dispatches) queues here.
+const decisionChainWrites = Semaphore.makeUnsafe(1);
 
 class DecisionWriteError extends Data.TaggedError("DecisionWriteError")<{
   readonly cause: unknown;
@@ -75,9 +82,16 @@ async function loadDecisionContext(
     return undefined;
   }
   const [latestRecommendation] = await tx
-    .select({ id: max(recommendations.id) })
+    .select({ id: recommendations.id })
     .from(recommendations)
-    .where(eq(recommendations.facilityId, recommendation.facilityId));
+    .where(
+      and(
+        eq(recommendations.facilityId, recommendation.facilityId),
+        LIVE_RECOMMENDATION,
+      ),
+    )
+    .orderBy(...NEWEST_FIRST)
+    .limit(1);
   const [newestDecision] = await tx
     .select({ id: decisions.id })
     .from(decisions)
@@ -87,8 +101,7 @@ async function loadDecisionContext(
   return {
     recommendation,
     decider: await eligibleDecider(tx, recommendation.facilityId, decidedById),
-    // Rows are add-only and ids only grow, so the highest id is the latest evaluation.
-    latestRecommendationId: latestRecommendation?.id ?? recommendation.id,
+    latestRecommendationId: latestRecommendation?.id ?? null,
     latestDecisionId: newestDecision?.id ?? null,
   };
 }
@@ -169,8 +182,13 @@ const recordDecision = Effect.fn("recordDecision")(function* (
         decideInTransaction(tx, recommendationId.value, body, decidedAt),
       ),
     catch: (cause) => new DecisionWriteError({ cause }),
-  });
+  }).pipe(Semaphore.withPermit(decisionChainWrites));
 });
 
 export type { Transaction };
-export { DecisionWriteError, insertDecision, recordDecision };
+export {
+  DecisionWriteError,
+  decisionChainWrites,
+  insertDecision,
+  recordDecision,
+};

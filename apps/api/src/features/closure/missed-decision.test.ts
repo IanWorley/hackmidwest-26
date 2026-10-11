@@ -1,11 +1,12 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { recommendations } from "@hackmidwest/db";
 import { openDatabase } from "@hackmidwest/db/connection";
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { DateTime, Effect, Option } from "effect";
 import { expect, it } from "vitest";
-import { Database } from "../../runtime";
+import { Database, HTTP_CONFLICT, HTTP_CREATED } from "../../runtime";
 import {
   ACCEPT,
   AFTER_DECIDE_BY,
@@ -13,21 +14,32 @@ import {
   BACKUP_ID,
   type Db,
   DECIDE_BY,
+  DEFER,
   decide,
   FACILITY_ID,
   FIRST_DECISION_ID,
+  RECOMMENDATION,
   RECOMMENDATION_HASH,
   RECOMMENDATION_ID,
+  SECOND_DECISION_ID,
   SHA256_HEX,
   storedDecisions,
 } from "./decision-test-fixtures";
 import { recordMissedDecision } from "./decisions";
+import { contentHash } from "./records";
+
+const PREVIEW_ID = 2;
+const PREVIEW = { ...RECOMMENDATION, asOf: "2026-10-02T09:00:00.000Z" };
 
 const withApp = appRunner(createTestDatabaseWithDemoFacilities);
 
-function runMissed(db: Db, now: string): Promise<Option.Option<number>> {
+function runMissed(
+  db: Db,
+  now: string,
+  recommendationId: number = RECOMMENDATION_ID,
+): Promise<Option.Option<number>> {
   return Effect.runPromise(
-    recordMissedDecision(RECOMMENDATION_ID, DateTime.makeUnsafe(now)).pipe(
+    recordMissedDecision(recommendationId, DateTime.makeUnsafe(now)).pipe(
       Effect.map(Option.map(({ id }) => id)),
       Effect.provideService(Database, db),
     ),
@@ -87,6 +99,64 @@ it("writes nothing when someone already decided", async () => {
   });
 });
 
+it("records a lapsed deferral as a no_decision by the backup that supersedes it, however often it runs", async () => {
+  await withApp(async ({ db, request }) => {
+    await request(decide(), DEFER);
+
+    const first = await runMissed(db, AFTER_DECIDE_BY);
+    const second = await runMissed(db, AFTER_DECIDE_BY);
+
+    const [, missed] = await storedDecisions(db);
+    expect([first, second, missed]).toEqual([
+      Option.some(SECOND_DECISION_ID),
+      Option.none(),
+      {
+        id: SECOND_DECISION_ID,
+        recommendationId: RECOMMENDATION_ID,
+        recommendationHash: RECOMMENDATION_HASH,
+        facilityId: FACILITY_ID,
+        action: "no_decision",
+        chosenPosture: null,
+        recheckAt: null,
+        decidedById: BACKUP_ID,
+        decidedByName: "Marcus Oyelaran",
+        decidedByRole: "State Administrative Officer",
+        decidedAt: AFTER_DECIDE_BY,
+        identityVerified: false,
+        reasonCategory: "other",
+        reasonText: "Deferred, then no decision before decideBy",
+        supersedesDecisionId: FIRST_DECISION_ID,
+        contentHash: expect.stringMatching(SHA256_HEX),
+      },
+    ]);
+  });
+});
+
+it("writes nothing for a deferral whose decideBy has not passed", async () => {
+  await withApp(async ({ db, request }) => {
+    await request(decide(), DEFER);
+
+    const result = await runMissed(db, DECIDE_BY);
+
+    expect([
+      result,
+      (await storedDecisions(db)).map(({ action }) => action),
+    ]).toEqual([Option.none(), ["defer"]]);
+  });
+});
+
+it("writes nothing for a preview, which never enters a decision chain", async () => {
+  await withApp(async ({ db }) => {
+    await db
+      .insert(recommendations)
+      .values({ ...PREVIEW, contentHash: contentHash(PREVIEW) });
+
+    const result = await runMissed(db, AFTER_DECIDE_BY, PREVIEW_ID);
+
+    expect([result, await storedDecisions(db)]).toEqual([Option.none(), []]);
+  });
+});
+
 it("records one no_decision row when two connections race, and neither fails", async () => {
   const directory = mkdtempSync(join(tmpdir(), "missed-decision-"));
   const path = join(directory, "db.sqlite");
@@ -107,6 +177,41 @@ it("records one no_decision row when two connections race, and neither fails", a
         expect((await storedDecisions(db)).map(({ action }) => action)).toEqual(
           ["no_decision"],
         );
+      } finally {
+        other.close();
+      }
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+it("serializes a human decision with a racing missed-deadline write, so neither fails", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "decision-race-"));
+  const path = join(directory, "db.sqlite");
+  const withFileApp = appRunner(() =>
+    createTestDatabaseWithDemoFacilities({ kind: "file", path }),
+  );
+  try {
+    await withFileApp(async ({ db, request }) => {
+      const other = openDatabase({ kind: "file", path });
+      try {
+        const [response, missed] = await Promise.all([
+          request(decide(), ACCEPT),
+          runMissed(other.db, AFTER_DECIDE_BY),
+        ]);
+
+        const decidedFirst = [HTTP_CREATED, Option.none(), ["accept"]];
+        const missedFirst = [
+          HTTP_CONFLICT,
+          Option.some(FIRST_DECISION_ID),
+          ["no_decision"],
+        ];
+        expect([decidedFirst, missedFirst]).toContainEqual([
+          response.status,
+          missed,
+          (await storedDecisions(db)).map(({ action }) => action),
+        ]);
       } finally {
         other.close();
       }

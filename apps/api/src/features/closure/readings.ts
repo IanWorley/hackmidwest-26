@@ -1,6 +1,7 @@
 import { type Static, t } from "elysia";
 import type { NwsObservation } from "../../clients/nws-model";
 import type { AirQualityObservation } from "../../clients/open-meteo";
+import { CLOSED } from "../../schema-options";
 
 const READING_SOURCES = ["nws", "open-meteo"] as const;
 const OBSERVATION_METRICS = [
@@ -21,15 +22,18 @@ const READING_UNIT_BY_NWS_CODE: ReadonlyMap<string, ReadingUnit> = new Map([
   ["wmoUnit:m", "m"],
 ]);
 
-const ReadingSchema = t.Object({
-  source: t.UnionEnum(READING_SOURCES),
-  observedAt: t.String(),
-  metric: t.UnionEnum(READING_METRICS),
-  value: t.Number(),
-  unit: t.UnionEnum(READING_UNITS),
-  /** The upstream record this reading came from. */
-  rawRef: t.String(),
-});
+const ReadingSchema = t.Object(
+  {
+    source: t.UnionEnum(READING_SOURCES),
+    observedAt: t.String(),
+    metric: t.UnionEnum(READING_METRICS),
+    value: t.Number(),
+    unit: t.UnionEnum(READING_UNITS),
+    /** The upstream record this reading came from. */
+    rawRef: t.String(),
+  },
+  CLOSED,
+);
 
 type Reading = Static<typeof ReadingSchema>;
 
