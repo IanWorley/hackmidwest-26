@@ -1,11 +1,12 @@
-import { HAZARDS } from "@hackmidwest/db";
+import { HAZARDS, POSTURES, ROAD_CLASSES } from "@hackmidwest/db";
+import { KANSAS_CITY, YAKIMA } from "@hackmidwest/db/demo-facilities";
 import { describe, expect, it } from "vitest";
 import type { FloodCategory } from "../../clients/nwps";
-import { POSTURES } from "./postures";
 import {
   type Cutoff,
   NWS_SEVERITIES,
   type NwsSeverity,
+  postHazardBuffer,
   THRESHOLDS,
 } from "./thresholds";
 
@@ -70,4 +71,28 @@ describe("THRESHOLDS", () => {
       expect(postureRanks).toEqual([...postureRanks].sort((a, b) => a - b));
     },
   );
+});
+
+describe("postHazardBuffer", () => {
+  it("waits longer after winter for Yakima's rural roads than Kansas City's metro core", () => {
+    expect({
+      yakima: postHazardBuffer("winter", YAKIMA.roadClass).value,
+      kansasCity: postHazardBuffer("winter", KANSAS_CITY.roadClass).value,
+    }).toEqual({ yakima: 540, kansasCity: 180 });
+  });
+
+  it("never shortens the winter buffer as the road class gets quieter", () => {
+    const minutes = ROAD_CLASSES.map(
+      (roadClass) => postHazardBuffer("winter", roadClass).value,
+    );
+    expect(minutes).toEqual([...minutes].sort((a, b) => a - b));
+  });
+
+  it("gives every road class the same wind buffer", () => {
+    expect(
+      ROAD_CLASSES.map(
+        (roadClass) => postHazardBuffer("wind", roadClass).value,
+      ),
+    ).toEqual([60, 60, 60, 60, 60]);
+  });
 });

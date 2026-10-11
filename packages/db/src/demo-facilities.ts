@@ -79,6 +79,8 @@ const KANSAS_CITY: DemoFacility = {
   typicalCommuteMinutes: 35,
   decisionDeadline: "05:00",
   notificationLeadMinutes: 60,
+  // I-70 and I-35 through the metro core carry AADT over 30,000.
+  roadClass: "superCommuter",
   decisionMakerId: DANA_WHITFIELD_ID,
   backupDecisionMakerId: MARCUS_OYELARAN_ID,
 };
@@ -99,6 +101,7 @@ const FARGO: DemoFacility = {
   typicalCommuteMinutes: 20,
   decisionDeadline: "05:30",
   notificationLeadMinutes: 45,
+  roadClass: "urbanCommuter",
   decisionMakerId: GRACE_LINDQVIST_ID,
   backupDecisionMakerId: MARCUS_OYELARAN_ID,
 };
@@ -119,6 +122,8 @@ const YAKIMA: DemoFacility = {
   typicalCommuteMinutes: 25,
   decisionDeadline: "05:15",
   notificationLeadMinutes: 45,
+  // Staff commute in on valley orchard routes.
+  roadClass: "ruralCommuter",
   decisionMakerId: PRIYA_RAMAN_ID,
   backupDecisionMakerId: TOMAS_IBARRA_ID,
 };
@@ -139,6 +144,7 @@ const LAFAYETTE: DemoFacility = {
   typicalCommuteMinutes: 30,
   decisionDeadline: "05:00",
   notificationLeadMinutes: 60,
+  roadClass: "urbanCommuter",
   decisionMakerId: TOMAS_IBARRA_ID,
   backupDecisionMakerId: PRIYA_RAMAN_ID,
 };

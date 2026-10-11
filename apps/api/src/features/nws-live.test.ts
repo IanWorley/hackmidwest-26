@@ -8,6 +8,7 @@ import { makeOpenMeteoClient } from "../clients/open-meteo";
 import {
   createApiRuntime,
   HTTP_INTERNAL_SERVER_ERROR,
+  HTTP_NOT_FOUND,
   HTTP_OK,
   INTERNAL_ERROR_MESSAGE,
 } from "../runtime";
@@ -16,7 +17,6 @@ import { NWS_LIVE_PATH } from "./nws-live";
 const REQUEST_ORIGIN = "http://api.test";
 const WEB_ORIGIN = "http://web.test";
 const HTTP_UNPROCESSABLE = 422;
-const HTTP_NOT_FOUND = 404;
 const OBSERVATION_URL =
   "https://api.weather.gov/stations/KMKC/observations/2026-10-11T00:30:00+00:00";
 

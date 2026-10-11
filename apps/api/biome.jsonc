@@ -18,6 +18,7 @@
             "allowedNames": [
               "apiLayer",
               "createApp",
+              "createFacilitiesModule",
               "createFloodLiveModule",
               "createNwsLiveModule",
               "createTasksModule"

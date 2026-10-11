@@ -44,6 +44,7 @@ export class OpenMeteoClient extends Context.Service<
 >()("@hackmidwest/api/OpenMeteoClient") {}
 
 export const HTTP_OK = 200;
+export const HTTP_NOT_FOUND = 404;
 export const HTTP_INTERNAL_SERVER_ERROR = 500;
 export const INTERNAL_ERROR_MESSAGE = "Internal server error";
 

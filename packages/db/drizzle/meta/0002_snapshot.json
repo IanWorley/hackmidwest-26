@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "58b489cb-a760-4458-8252-4f3bac52be62",
+  "id": "470f5fd5-2824-4fd6-8736-058cf64e72ff",
   "prevId": "afd4268a-b374-43a2-94cc-ac98cefaece5",
   "tables": {
     "building_roster_entries": {
@@ -440,13 +440,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "nwps_gauge_id": {
-          "name": "nwps_gauge_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "opens_at": {
           "name": "opens_at",
           "type": "text",
@@ -510,6 +503,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "road_class": {
+          "name": "road_class",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "decision_maker_id": {
           "name": "decision_maker_id",
           "type": "integer",
@@ -569,10 +569,6 @@
           "name": "facilities_longitude_range",
           "value": "\"facilities\".\"longitude\" between -180 and 180"
         },
-        "facilities_nwps_gauge_id_format": {
-          "name": "facilities_nwps_gauge_id_format",
-          "value": "\"facilities\".\"nwps_gauge_id\" is null or \"facilities\".\"nwps_gauge_id\" glob '[A-Z][A-Z][A-Z][A-Z][0-9]'"
-        },
         "facilities_hours": {
           "name": "facilities_hours",
           "value": "\"facilities\".\"opens_at\" is strftime('%H:%M', julianday(\"facilities\".\"opens_at\")) and \"facilities\".\"closes_at\" is strftime('%H:%M', julianday(\"facilities\".\"closes_at\")) and \"facilities\".\"opens_at\" < \"facilities\".\"closes_at\""
@@ -596,6 +592,10 @@
         "facilities_notification_lead_minutes_positive": {
           "name": "facilities_notification_lead_minutes_positive",
           "value": "typeof(\"facilities\".\"notification_lead_minutes\") = 'integer' and \"facilities\".\"notification_lead_minutes\" > 0"
+        },
+        "facilities_road_class": {
+          "name": "facilities_road_class",
+          "value": "\"facilities\".\"road_class\" in ('superCommuter', 'urbanCommuter', 'ruralCommuter', 'primary', 'secondary')"
         },
         "facilities_backup_differs": {
           "name": "facilities_backup_differs",
@@ -643,7 +643,7 @@
       "checkConstraints": {
         "facility_hazards_hazard": {
           "name": "facility_hazards_hazard",
-          "value": "\"facility_hazards\".\"hazard\" in ('winter', 'wind', 'airQuality', 'flood')"
+          "value": "\"facility_hazards\".\"hazard\" in ('winter', 'wind', 'airQuality')"
         }
       }
     },

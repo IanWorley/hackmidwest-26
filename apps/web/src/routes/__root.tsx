@@ -10,10 +10,9 @@ import type { JSX } from "react";
 import { APP_NAME } from "@/lib/page-title";
 import styles from "@/styles.css?url";
 
-const DEFAULT_TITLE = "Hack Midwest tasks";
-
 const NAV_ITEMS = [
   { to: "/tasks", label: "Tasks" },
+  { to: "/facilities", label: "Facilities" },
 ] as const satisfies readonly { to: LinkProps["to"]; label: string }[];
 
 function RootDocument(): JSX.Element {
@@ -56,7 +55,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: DEFAULT_TITLE },
+      { title: APP_NAME },
     ],
     links: [{ rel: "stylesheet", href: styles }],
   }),

@@ -11,4 +11,4 @@ INSERT INTO `__new_facility_hazards`("facility_id", "hazard") SELECT "facility_i
 DROP TABLE `facility_hazards`;--> statement-breakpoint
 ALTER TABLE `__new_facility_hazards` RENAME TO `facility_hazards`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
-ALTER TABLE `facilities` ADD `nwps_gauge_id` text CONSTRAINT "facilities_nwps_gauge_id_format" CHECK("nwps_gauge_id" is null or "nwps_gauge_id" glob '[A-Z][A-Z][A-Z][A-Z][0-9]');
+ALTER TABLE `facilities` ADD `nwps_gauge_id` text CONSTRAINT "facilities_nwps_gauge_id_format" CHECK("nwps_gauge_id" glob '[A-Z][A-Z][A-Z][A-Z][0-9]');

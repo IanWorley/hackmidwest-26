@@ -32,8 +32,32 @@ function isLocalTimeRange(start: AnySQLiteColumn, end: AnySQLiteColumn): SQL {
 }
 
 // SQLite stores a non-numeric string in an integer column, and TEXT compares above every number.
+function isInteger(column: AnySQLiteColumn): SQL {
+  return sql`typeof(${column}) = 'integer'`;
+}
+
 function isPositiveInteger(column: AnySQLiteColumn): SQL {
-  return sql`typeof(${column}) = 'integer' and ${column} > 0`;
+  return sql`${isInteger(column)} and ${column} > 0`;
+}
+
+// A lowercase hex SHA-256 digest, the form `node:crypto` produces with `digest("hex")`.
+const SHA256_HEX_LENGTH = 64;
+const ANY_NON_LOWERCASE_HEX_GLOB = "*[^0-9a-f]*";
+
+function isSha256Hex(column: AnySQLiteColumn): SQL {
+  return sql`length(${column}) = ${SHA256_HEX_LENGTH} and ${column} not glob ${ANY_NON_LOWERCASE_HEX_GLOB}`.inlineParams();
+}
+
+// An NWS location identifier as NWPS lists every river gauge, e.g. KCDM7.
+const NWPS_GAUGE_ID_GLOB = "[A-Z][A-Z][A-Z][A-Z][0-9]";
+
+// A NULL glob passes the CHECK, so a facility without a gauge is allowed.
+function isNwpsGaugeId(column: AnySQLiteColumn): SQL {
+  return sql`${column} glob ${NWPS_GAUGE_ID_GLOB}`.inlineParams();
+}
+
+function isJson(column: AnySQLiteColumn): SQL {
+  return sql`json_valid(${column})`;
 }
 
 // Drizzle reads any stored value other than 1 as false, so a stray 2 would flip the flag.
@@ -72,10 +96,13 @@ function implies(condition: SQL, requirement: SQL): SQL {
 export {
   implies,
   isBoolean,
+  isJson,
   isLocalTime,
   isLocalTimeRange,
   isNonBlank,
+  isNwpsGaugeId,
   isPositiveInteger,
+  isSha256Hex,
   isUtcInstant,
   nonBlankChecks,
 };

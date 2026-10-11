@@ -1,4 +1,4 @@
-import type { Hazard } from "@hackmidwest/db";
+import type { Hazard, RoadClass } from "@hackmidwest/db";
 import type { FloodCategory } from "../../clients/nwps";
 import type { Posture } from "./postures";
 
@@ -8,7 +8,11 @@ const HIGH_WIND_GUST_MPH = 58;
 const HIGH_WIND_GUST_DURATION_MINUTES = 0;
 const AQI_UNHEALTHY = 151;
 const AQI_VERY_UNHEALTHY = 201;
+const SUPER_COMMUTER_BARE_LANE_REGAIN_MINUTES = 180;
 const URBAN_COMMUTER_BARE_LANE_REGAIN_MINUTES = 300;
+const RURAL_COMMUTER_BARE_LANE_REGAIN_MINUTES = 540;
+const PRIMARY_BARE_LANE_REGAIN_MINUTES = 720;
+const SECONDARY_BARE_LANE_REGAIN_MINUTES = 2160;
 const WIND_POST_HAZARD_BUFFER_MINUTES = 60;
 const CAMS_GLOBAL_TIME_STEP_MINUTES = 180;
 const OPM_LONGEST_ILLUSTRATED_DELAY_HOURS = 4;
@@ -35,6 +39,10 @@ const NWPS_GAUGE_URL = "https://api.water.noaa.gov/nwps/v1/gauges/{lid}";
 const NWS_AFTER_FLOOD_URL = "https://www.weather.gov/safety/flood-after";
 const CAP_V1_2_URL =
   "https://docs.oasis-open.org/emergency/cap/v1.2/CAP-v1.2-os.html";
+const MNDOT_CLEAR_ROADS_SOURCE =
+  "Minnesota Department of Transportation, Maintenance Manual Chapter 2: Clear Roads (November 15, 2023); Minnesota trunk-highway targets, applied as a proxy for commute roads in other states";
+const MNDOT_CLEAR_ROADS_URL =
+  "https://www.dot.state.mn.us/maintenance/pdf/manual/CHAPTER%202%2011-15-23.pdf";
 const AIRNOW_AQI_SOURCE = "U.S. EPA AirNow, AQI Basics";
 const AIRNOW_AQI_URL = "https://www.airnow.gov/aqi/aqi-basics/";
 const OPM_SOURCE =
@@ -91,7 +99,9 @@ export type Cutoff = (
 
 export interface HazardThresholds {
   readonly cutoffs: Readonly<Record<string, Cutoff>>;
-  readonly postHazardBufferMinutes: CitedValue<"minutes">;
+  readonly postHazardBufferMinutes:
+    | CitedValue<"minutes">
+    | Readonly<Record<RoadClass, CitedValue<"minutes">>>;
   readonly maxDelayHours: CitedValue<"hours">;
 }
 
@@ -121,12 +131,36 @@ export const THRESHOLDS = {
       },
     },
     postHazardBufferMinutes: {
-      value: URBAN_COMMUTER_BARE_LANE_REGAIN_MINUTES,
-      unit: "minutes",
-      source:
-        "Minnesota Department of Transportation, Maintenance Manual Chapter 2: Clear Roads (November 15, 2023)",
-      citation:
-        "§2-5.02 and Table 2: the target Bare Lane Regain Time, measured from the end of the event, is 0-3 hrs for Super Commuter routes (AADT over 30,000), 2-5 hrs for Urban Commuter (10,000-30,000), and 4-9 hrs for Rural Commuter (2,000-10,000). The buffer takes the 5-hour Urban Commuter upper bound as a metro default; a facility served by rural roads needs longer. https://www.dot.state.mn.us/maintenance/pdf/manual/CHAPTER%202%2011-15-23.pdf",
+      superCommuter: {
+        value: SUPER_COMMUTER_BARE_LANE_REGAIN_MINUTES,
+        unit: "minutes",
+        source: MNDOT_CLEAR_ROADS_SOURCE,
+        citation: `§2-5.02 and Table 2: Bare Lane Regain Time, measured from the end of the event, targets 0-3 hrs for Super Commuter routes (AADT over 30,000). The buffer takes the 3-hour upper bound. ${MNDOT_CLEAR_ROADS_URL}`,
+      },
+      urbanCommuter: {
+        value: URBAN_COMMUTER_BARE_LANE_REGAIN_MINUTES,
+        unit: "minutes",
+        source: MNDOT_CLEAR_ROADS_SOURCE,
+        citation: `§2-5.02 and Table 2: Bare Lane Regain Time, measured from the end of the event, targets 2-5 hrs for Urban Commuter routes (AADT 10,000-30,000). The buffer takes the 5-hour upper bound. ${MNDOT_CLEAR_ROADS_URL}`,
+      },
+      ruralCommuter: {
+        value: RURAL_COMMUTER_BARE_LANE_REGAIN_MINUTES,
+        unit: "minutes",
+        source: MNDOT_CLEAR_ROADS_SOURCE,
+        citation: `§2-5.02 and Table 2: Bare Lane Regain Time, measured from the end of the event, targets 4-9 hrs for Rural Commuter routes (AADT 2,000-10,000). The buffer takes the 9-hour upper bound. ${MNDOT_CLEAR_ROADS_URL}`,
+      },
+      primary: {
+        value: PRIMARY_BARE_LANE_REGAIN_MINUTES,
+        unit: "minutes",
+        source: MNDOT_CLEAR_ROADS_SOURCE,
+        citation: `§2-5.02 and Table 2: Bare Lane Regain Time, measured from the end of the event, targets 6-12 hrs for Primary routes (AADT 800-2,000). The buffer takes the 12-hour upper bound. ${MNDOT_CLEAR_ROADS_URL}`,
+      },
+      secondary: {
+        value: SECONDARY_BARE_LANE_REGAIN_MINUTES,
+        unit: "minutes",
+        source: MNDOT_CLEAR_ROADS_SOURCE,
+        citation: `§2-5.02 and Table 2: Bare Lane Regain Time, measured from the end of the event, targets 9-36 hrs for Secondary routes (AADT under 800). The buffer takes the 36-hour upper bound. ${MNDOT_CLEAR_ROADS_URL}`,
+      },
     },
     maxDelayHours: {
       value: OPM_LONGEST_ILLUSTRATED_DELAY_HOURS,
@@ -243,3 +277,17 @@ export const THRESHOLDS = {
     },
   },
 } as const satisfies Record<Hazard, HazardThresholds>;
+
+export function postHazardBuffer(
+  hazard: Hazard,
+  roadClass: RoadClass,
+): CitedValue<"minutes"> {
+  const buffer: HazardThresholds["postHazardBufferMinutes"] =
+    THRESHOLDS[hazard].postHazardBufferMinutes;
+  if ("value" in buffer) {
+    return buffer;
+  }
+  return buffer[roadClass];
+}
+
+export { NWPS_FORECAST_STEP_MINUTES };
