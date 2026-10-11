@@ -17,7 +17,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 - Prefer ARIA roles and exact accessible names. Use `expect-text` only for elements that have no accessible name.
 - Treat every command as literal. Keep quoted names, paths, and JSON unchanged.
 - Run browser actions through `$V browser`, HTTP through `$V api`, stored-state checks through `$V db`, and schema rejections through `$V db-reject`.
-- Mutate data only through `POST /api/tasks` and `POST /api/recommendations/:id/decisions`. Never write to SQLite directly. Two exceptions: `db-reject` writes only to a throwaway snapshot, and the [decisions](./decisions.md) recipe stages recommendation rows with `sqlite3` because no route creates them yet.
+- Mutate data only through `POST /api/tasks`, `POST /api/recommendations/:id/decisions`, and `POST /api/employees/:id/status`. Never write to SQLite directly. Two exceptions: `db-reject` writes only to a throwaway snapshot, and the [decisions](./decisions.md) recipe stages recommendation rows with `sqlite3` because no route creates them yet.
 
 ## Proof and skip reporting
 
@@ -50,6 +50,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [Agent API](./agent-api.md) covers the separate agent API: its `GET /health` liveness and its `GET /tasks/summary` read of the tasks API over HTTP.
 - [NWS live pull](./nws-live.md) covers the temporary `GET /api/nws/live` route: a live National Weather Service pull for one point, its range validation, and its 500 outside NWS coverage.
 - [Decisions](./decisions.md) covers `POST /api/recommendations/:id/decisions` (accept, override, defer, superseding, and its `409` and `422` answers), `GET /api/facilities/:id/decisions`, and `GET /api/decisions/:id/verify`.
+- [Personnel status](./personnel-status.md) covers `POST /api/employees/:id/status` (its `201`, `422`, and `404` answers) and `GET /api/facilities/:id/personnel` with each person's baseline, newest event, and effective status under the current decision and its directives.
 - [Flood live pull](./flood-live.md) covers the temporary `GET /api/flood/live` route: live NWS flood warnings and an optional NWPS river gauge for one point, the flood cutoffs they cross, its gauge validation, and its 500 for an unknown gauge.
 - [Storage invariants](./storage-invariants.md) covers the add-only triggers and `CHECK` constraints, proven with `db-reject` against writes that bypass the routes.
 - [Task list load failure](./tasks-load-error.md) covers the error alert shown when the API is unreachable or its storage fails, and the API's generic 500.
