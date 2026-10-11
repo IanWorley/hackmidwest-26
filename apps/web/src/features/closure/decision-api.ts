@@ -1,5 +1,6 @@
 import { api } from "../../lib/api";
 import type { FormField } from "./decision-form";
+import { currentDecisionOf } from "./facility-day";
 import { loadFacility } from "./load-facilities";
 
 const HTTP_NOT_FOUND = 404;
@@ -132,6 +133,18 @@ async function loadBuildings(facilityId: number, signal: AbortSignal) {
   return result.data;
 }
 
+async function loadFacilityDate(facilityId: number, signal: AbortSignal) {
+  const result = await api.api
+    .facilities({ id: facilityId })
+    ["facility-date"].get({ fetch: { signal } });
+  if (result.error !== null) {
+    throw new Error("Unable to load the facility's current day", {
+      cause: result.error.value,
+    });
+  }
+  return result.data.facilityDate;
+}
+
 async function loadDirectives(decisionId: number, signal: AbortSignal) {
   const result = await api.api
     .decisions({ id: decisionId })
@@ -144,18 +157,6 @@ async function loadDirectives(decisionId: number, signal: AbortSignal) {
   return result.data;
 }
 
-/** History is newest first, so the first decision on the shown recommendation is the one a new decision supersedes. */
-function currentDecisionOf<Row extends { recommendationId: number }>(
-  history: readonly Row[],
-  recommendation: { id: number } | null,
-): Row | null {
-  return (
-    history.find(
-      (decision) => decision.recommendationId === recommendation?.id,
-    ) ?? null
-  );
-}
-
 /** Everything the decision screen renders, read in one loader so a reload refreshes it together. */
 async function loadDecisionScreen({
   facilityId,
@@ -165,20 +166,26 @@ async function loadDecisionScreen({
   signal: AbortSignal;
 }) {
   const facility = await loadFacility({ facilityId, signal });
-  const [latestRecommendation, history, recorders, buildings] =
+  const [latestRecommendation, history, recorders, buildings, facilityDate] =
     await Promise.all([
       loadLatestRecommendation(facility.id, signal),
       loadHistory(facility.id, signal),
       loadRecorders(facility.id, signal),
       loadBuildings(facility.id, signal),
+      loadFacilityDate(facility.id, signal),
     ]);
-  const currentDecision = currentDecisionOf(history, latestRecommendation);
+  const currentDecision = currentDecisionOf(
+    history,
+    latestRecommendation,
+    facilityDate,
+  );
   let directives: Awaited<ReturnType<typeof loadDirectives>> = [];
   if (currentDecision !== null) {
     directives = await loadDirectives(currentDecision.id, signal);
   }
   return {
     facility,
+    facilityDate,
     latestRecommendation,
     history,
     currentDecision,
@@ -267,10 +274,4 @@ export type {
   Recommendation,
   Recorder,
 };
-export {
-  currentDecisionOf,
-  decide,
-  evaluateFacility,
-  issueDirective,
-  loadDecisionScreen,
-};
+export { decide, evaluateFacility, issueDirective, loadDecisionScreen };

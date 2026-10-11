@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { KANSAS_CITY_RECOMMENDATION } from "../../../test/recommendation-fixture";
 import type { DecisionScreen } from "./decision-api";
 import { DecisionScreenView } from "./decision-screen";
 
@@ -29,6 +30,7 @@ const SCREEN: DecisionScreen = {
     roadClass: "superCommuter",
     hazards: ["winter", "wind", "airQuality"],
   },
+  facilityDate: "2026-10-11",
   latestRecommendation: null,
   history: [],
   currentDecision: null,
@@ -81,4 +83,26 @@ it("returns focus to Re-evaluate and says nothing changed when it fails", async 
   expect(screen.getByRole("alert").textContent).toBe(
     "Re-evaluation failed. The recommendation shown is unchanged; try again.",
   );
+});
+
+it("sends an earlier day's recommendation back to Re-evaluate with nothing to decide on", () => {
+  render(
+    <DecisionScreenView
+      onReload={reloadNothing}
+      screen={{
+        ...SCREEN,
+        facilityDate: "2026-10-12",
+        latestRecommendation: KANSAS_CITY_RECOMMENDATION,
+      }}
+    />,
+  );
+
+  expect(screen.getByRole("alert").textContent).toBe(
+    "This recommendation is for Sun, Oct 11. Re-evaluate for today.",
+  );
+  expect(screen.queryByRole("heading", { name: "Decide" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Directives" })).toBeNull();
+  expect(
+    screen.getByRole("heading", { name: "Decision history" }),
+  ).toBeTruthy();
 });
