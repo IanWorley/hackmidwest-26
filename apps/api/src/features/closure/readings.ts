@@ -21,15 +21,18 @@ const READING_UNIT_BY_NWS_CODE: ReadonlyMap<string, ReadingUnit> = new Map([
   ["wmoUnit:m", "m"],
 ]);
 
-const ReadingSchema = t.Object({
-  source: t.UnionEnum(READING_SOURCES),
-  observedAt: t.String(),
-  metric: t.UnionEnum(READING_METRICS),
-  value: t.Number(),
-  unit: t.UnionEnum(READING_UNITS),
-  /** The upstream record this reading came from. */
-  rawRef: t.String(),
-});
+const ReadingSchema = t.Object(
+  {
+    source: t.UnionEnum(READING_SOURCES),
+    observedAt: t.String(),
+    metric: t.UnionEnum(READING_METRICS),
+    value: t.Number(),
+    unit: t.UnionEnum(READING_UNITS),
+    /** The upstream record this reading came from. */
+    rawRef: t.String(),
+  },
+  { additionalProperties: false },
+);
 
 type Reading = Static<typeof ReadingSchema>;
 
