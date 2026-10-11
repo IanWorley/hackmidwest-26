@@ -1,3 +1,4 @@
+import type { Hazard } from "@hackmidwest/db";
 import type { Posture } from "./postures";
 
 const HIGH_WIND_SUSTAINED_MPH = 40;
@@ -40,10 +41,6 @@ export const NWS_SEVERITIES = [
 ] as const;
 
 export type NwsSeverity = (typeof NWS_SEVERITIES)[number];
-
-export const HAZARDS = ["winter", "wind", "airQuality"] as const;
-
-export type Hazard = (typeof HAZARDS)[number];
 
 export interface CitedValue<Unit extends string, Value = number> {
   readonly value: Value;
