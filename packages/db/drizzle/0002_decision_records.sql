@@ -9,7 +9,6 @@ CREATE TABLE `decisions` (
 	`decided_by_name` text NOT NULL,
 	`decided_by_role` text NOT NULL,
 	`decided_at` text NOT NULL,
-	`minutes_before_decide_by` integer NOT NULL,
 	`identity_verified` integer NOT NULL,
 	`reason_category` text,
 	`reason_text` text,
@@ -25,7 +24,6 @@ CREATE TABLE `decisions` (
 	CONSTRAINT "decisions_action" CHECK("decisions"."action" in ('accept', 'override', 'defer', 'no_decision')),
 	CONSTRAINT "decisions_chosen_posture" CHECK(("decisions"."chosen_posture" is not null) = ("decisions"."action" in ('accept', 'override')) and ("decisions"."chosen_posture" is null or "decisions"."chosen_posture" in ('normal', 'delayed_arrival', 'early_dismissal', 'unscheduled_telework', 'full_closure'))),
 	CONSTRAINT "decisions_decided_at_format" CHECK("decisions"."decided_at" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday("decisions"."decided_at"))),
-	CONSTRAINT "decisions_minutes_before_decide_by_integer" CHECK(typeof("decisions"."minutes_before_decide_by") = 'integer'),
 	CONSTRAINT "decisions_identity_verified_boolean" CHECK("decisions"."identity_verified" in (0, 1)),
 	CONSTRAINT "decisions_reason_pair" CHECK(("decisions"."reason_category" is null) = ("decisions"."reason_text" is null) and ("decisions"."reason_category" is null or "decisions"."reason_category" in ('local_conditions', 'road_reports', 'directive', 'essential_operations', 'data_looks_wrong', 'other') and trim("decisions"."reason_text", char(32, 9, 10, 11, 12, 13)) <> '')),
 	CONSTRAINT "decisions_override_and_defer_require_reason" CHECK(not ("decisions"."action" in ('override', 'defer')) or "decisions"."reason_category" is not null),
@@ -131,6 +129,13 @@ CREATE TRIGGER `decisions_reject_second_successor` BEFORE INSERT ON `decisions`
 WHEN NEW.`supersedes_decision_id` IS NOT NULL AND EXISTS (SELECT 1 FROM `decisions` WHERE `supersedes_decision_id` = NEW.`supersedes_decision_id`)
 BEGIN
 	SELECT RAISE(ABORT, 'decisions is add-only: this decision is already superseded; supersede the newest decision instead');
+END;
+--> statement-breakpoint
+-- The predecessor must already exist for the same facility, which also rejects a decision that supersedes itself.
+CREATE TRIGGER `decisions_supersede_same_facility` BEFORE INSERT ON `decisions`
+WHEN NEW.`supersedes_decision_id` IS NOT NULL AND NOT EXISTS (SELECT 1 FROM `decisions` WHERE `id` = NEW.`supersedes_decision_id` AND `facility_id` = NEW.`facility_id`)
+BEGIN
+	SELECT RAISE(ABORT, 'decisions must supersede an earlier decision for the same facility');
 END;
 --> statement-breakpoint
 -- A decision records exactly what its decider saw, so it must agree with the recommendation it references.

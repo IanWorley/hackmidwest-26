@@ -88,7 +88,6 @@ function implies(condition: SQL, requirement: SQL): SQL {
 export {
   implies,
   isBoolean,
-  isInteger,
   isJson,
   isLocalTime,
   isLocalTimeRange,

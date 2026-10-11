@@ -10,7 +10,6 @@ import {
 import {
   implies,
   isBoolean,
-  isInteger,
   isJson,
   isNonBlank,
   isSha256Hex,
@@ -119,8 +118,6 @@ export const decisions = sqliteTable(
     decidedByName: text("decided_by_name").notNull(),
     decidedByRole: text("decided_by_role").notNull(),
     decidedAt: text("decided_at").notNull(),
-    // Negative when the decision came after decideBy.
-    minutesBeforeDecideBy: integer("minutes_before_decide_by").notNull(),
     identityVerified: integer("identity_verified", {
       mode: "boolean",
     }).notNull(),
@@ -150,10 +147,6 @@ export const decisions = sqliteTable(
       sql`(${table.chosenPosture} is not null) = (${inArray(table.action, ACTIONS_WITH_CHOSEN_POSTURE)}) and (${table.chosenPosture} is null or ${inArray(table.chosenPosture, POSTURES)})`.inlineParams(),
     ),
     check("decisions_decided_at_format", isUtcInstant(table.decidedAt)),
-    check(
-      "decisions_minutes_before_decide_by_integer",
-      isInteger(table.minutesBeforeDecideBy),
-    ),
     check(
       "decisions_identity_verified_boolean",
       isBoolean(table.identityVerified),

@@ -298,8 +298,8 @@ so the record shows both what the system advised and what the person chose.
 - [ ] **Decision actions:** `accept`, `override` (different posture), `defer` (re-check time, must be before
       `decideBy`).
 - [ ] **Decision fields:** `recommendationId` + `recommendationHash` (exactly what the person saw),
-      `facilityId`, `action`, `chosenPosture`, `decidedById`, `decidedAt` (UTC), minutes before/after
-      `decideBy`, `identityVerified` (always `false` in the demo; see below).
+      `facilityId`, `action`, `chosenPosture`, `decidedById`, `decidedAt` (UTC); minutes before/after
+      `decideBy` are derived on read from `decidedAt` and the recommendation's `decideBy`, not stored, `identityVerified` (always `false` in the demo; see below).
 - [ ] **Reasons:** required for `override` and `defer`; a category (`local_conditions`, `road_reports`,
       `directive`, `essential_operations`, `data_looks_wrong`, `other`) plus free text. Enforced twice: a
       TypeBox body schema (so the route returns 422 with the field) and a `CHECK` in the migration.

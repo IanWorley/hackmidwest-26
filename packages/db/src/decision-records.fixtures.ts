@@ -8,6 +8,7 @@ import {
 import { seedDemoFacilities } from "./seed";
 
 export const SEEDED_FACILITY_ID = 1;
+export const SECOND_SEEDED_FACILITY_ID = 2;
 export const SEEDED_DECISION_MAKER_ID = 1;
 export const SEEDED_EMPLOYEE_ID = 1;
 export const RECOMMENDATION_ID = 1;
@@ -24,8 +25,6 @@ export const AS_OF = "2026-10-02T09:55:00.000Z";
 export const EVALUATED_AT = "2026-10-02T10:00:00.000Z";
 export const DECIDED_AT = "2026-10-02T10:30:00.000Z";
 export const DECIDE_BY = "2026-10-02T11:00:00.000Z";
-// DECIDED_AT is 30 minutes before DECIDE_BY.
-export const MINUTES_BEFORE_DECIDE_BY = 30;
 export const SEND_BY = "2026-10-02T11:30:00.000Z";
 export const RECORDED_AT = "2026-10-02T10:35:00.000Z";
 export const DECIDER_NAME = "Dana Whitfield";
@@ -58,8 +57,24 @@ export const ROOT_DECISION = {
   decidedByName: DECIDER_NAME,
   decidedByRole: DECIDER_ROLE,
   decidedAt: DECIDED_AT,
-  minutesBeforeDecideBy: MINUTES_BEFORE_DECIDE_BY,
   identityVerified: false,
+  contentHash: DECISION_HASH,
+} as const;
+
+export const CORRECTION = {
+  recommendationId: RECOMMENDATION_ID,
+  recommendationHash: RECOMMENDATION_HASH,
+  facilityId: SEEDED_FACILITY_ID,
+  action: "override",
+  chosenPosture: "full_closure",
+  decidedById: SEEDED_DECISION_MAKER_ID,
+  decidedByName: DECIDER_NAME,
+  decidedByRole: DECIDER_ROLE,
+  decidedAt: DECIDED_AT,
+  identityVerified: false,
+  reasonCategory: "road_reports",
+  reasonText: "County reports the highway closed.",
+  supersedesDecisionId: DECISION_ID,
   contentHash: DECISION_HASH,
 } as const;
 

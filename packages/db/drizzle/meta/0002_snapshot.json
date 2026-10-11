@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "512ccee3-4878-4ca3-a469-12fcdd80901f",
+  "id": "9733c37b-81b1-46a3-84dc-bd4cc2ad2674",
   "prevId": "afd4268a-b374-43a2-94cc-ac98cefaece5",
   "tables": {
     "building_roster_entries": {
@@ -236,13 +236,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "minutes_before_decide_by": {
-          "name": "minutes_before_decide_by",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "identity_verified": {
           "name": "identity_verified",
           "type": "integer",
@@ -356,10 +349,6 @@
         "decisions_decided_at_format": {
           "name": "decisions_decided_at_format",
           "value": "\"decisions\".\"decided_at\" is strftime('%Y-%m-%dT%H:%M:%fZ', julianday(\"decisions\".\"decided_at\"))"
-        },
-        "decisions_minutes_before_decide_by_integer": {
-          "name": "decisions_minutes_before_decide_by_integer",
-          "value": "typeof(\"decisions\".\"minutes_before_decide_by\") = 'integer'"
         },
         "decisions_identity_verified_boolean": {
           "name": "decisions_identity_verified_boolean",
