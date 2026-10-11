@@ -11,7 +11,7 @@ import { APP_NAME } from "@/lib/page-title";
 import styles from "@/styles.css?url";
 
 const NAV_ITEMS = [
-  { to: "/tasks", label: "Tasks" },
+  { to: "/conditions", label: "Conditions" },
   { to: "/facilities", label: "Facilities" },
 ] as const satisfies readonly { to: LinkProps["to"]; label: string }[];
 
