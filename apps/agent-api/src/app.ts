@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { createHealthModule } from "./features/health";
 import { createNarrateModule } from "./features/narrate";
+import { createOrchestrateModule } from "./features/orchestrate";
 import { createTaskSummaryModule } from "./features/task-summary";
 import type { RunRequest } from "./runtime";
 
@@ -12,5 +13,6 @@ export function createApp({ runRequest }: AppDependencies) {
   return new Elysia()
     .use(createHealthModule(runRequest))
     .use(createTaskSummaryModule(runRequest))
-    .use(createNarrateModule(runRequest));
+    .use(createNarrateModule(runRequest))
+    .use(createOrchestrateModule(runRequest));
 }
