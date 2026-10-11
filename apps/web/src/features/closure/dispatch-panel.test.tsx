@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { JSX } from "react";
 import { expect, it, vi } from "vitest";
 import { DispatchPanel } from "./dispatch-panel";
 import type { DispatchResult } from "./notification-api";
@@ -96,4 +97,49 @@ it("shows why a decision cannot be dispatched", async () => {
 
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toBe("This decision was already dispatched");
+});
+
+it("offers no dispatch when the package has nobody to tell", () => {
+  render(
+    <DispatchPanel
+      decisionId={DECISION_ID}
+      dispatch={vi.fn<(id: number) => Promise<DispatchResult>>()}
+      initial={{
+        ...UNDISPATCHED,
+        package: { ...UNDISPATCHED.package, recipients: [] },
+      }}
+      timezone={TIMEZONE}
+    />,
+  );
+
+  expect([
+    screen.getByText("Nobody needs a notice.").textContent,
+    screen.queryByRole("button", { name: "Dispatch notifications" }),
+  ]).toEqual(["Nobody needs a notice.", null]);
+});
+
+it("starts fresh when the page reloads with a newer decision", async () => {
+  const dispatch = vi.fn(async (_id: number) => DISPATCHED);
+  function panel(decisionId: number): JSX.Element {
+    return (
+      <DispatchPanel
+        decisionId={decisionId}
+        dispatch={dispatch}
+        initial={UNDISPATCHED}
+        timezone={TIMEZONE}
+      />
+    );
+  }
+  const { rerender } = render(panel(DECISION_ID));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Dispatch notifications" }),
+  );
+  await screen.findByRole("table", { name: "Dispatched notices" });
+
+  rerender(panel(DECISION_ID + 1));
+
+  expect([
+    screen.queryByRole("table", { name: "Dispatched notices" }),
+    screen.getByRole("button", { name: "Dispatch notifications" }).textContent,
+  ]).toEqual([null, "Dispatch notifications"]);
 });

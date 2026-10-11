@@ -19,6 +19,8 @@ const OVERRIDE_NOTE =
   "This list is for the recommended posture. The notice for your chosen posture is built after you record the decision.";
 const CONFIRM_LABEL = "Record decision";
 const BACK_LABEL = "Back";
+const DEFER_TEXT =
+  "A deferral sets no posture, so nobody is notified until a decision does.";
 const PREVIEW_UNAVAILABLE_TEXT =
   "The notification list could not be loaded. Recording still works, and the decided package is built afterward.";
 
@@ -64,13 +66,19 @@ export function ConfirmDecisionDialog({
   );
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="sm:max-w-2xl" showCloseButton={false}>
+      <DialogContent
+        className="max-h-11/12 overflow-y-auto sm:max-w-2xl"
+        showCloseButton={false}
+      >
         <DialogHeader>
           <DialogTitle>{TITLE}</DialogTitle>
           <DialogDescription>{DESCRIPTION}</DialogDescription>
         </DialogHeader>
         <OverrideNote show={request?.action === "override"} />
-        <Recipients preview={preview} timezone={timezone} />
+        {request?.action === "defer" && <p role="status">{DEFER_TEXT}</p>}
+        {request?.action !== "defer" && (
+          <Recipients preview={preview} timezone={timezone} />
+        )}
         <DialogFooter>
           <Button disabled={pending} onClick={onCancel} variant="outline">
             {BACK_LABEL}

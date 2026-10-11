@@ -77,3 +77,23 @@ it("says the list is for the recommended posture when the manager overrides", as
   fireEvent.click(screen.getByRole("button", { name: "Back" }));
   expect(await outcome).toEqual({ kind: "cancelled" });
 });
+
+it("tells the manager a deferral notifies nobody instead of listing recipients", async () => {
+  const outcome = startSubmit(vi.fn<Record>(), {
+    action: "defer",
+    recheckAt: "2026-01-15T11:30:00.000Z",
+    decidedById: 1,
+    reason: { category: "road_reports", text: "Waiting on the county." },
+  });
+
+  expect([
+    screen.getByRole("status").textContent,
+    screen.queryByRole("table", { name: "Who will be notified" }),
+  ]).toEqual([
+    "A deferral sets no posture, so nobody is notified until a decision does.",
+    null,
+  ]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Back" }));
+  expect(await outcome).toEqual({ kind: "cancelled" });
+});
