@@ -62,6 +62,21 @@ async function recommend(db: Db, alerts: EngineInput["alerts"]): Promise<void> {
     .values({ ...content, contentHash: contentHash(content) });
 }
 
+type Request = (path: string, body?: object) => Promise<Response>;
+
+/** A hash no package has, for refusals that answer before the package is compared. */
+const UNREVIEWED = { packageHash: "never-shown" } as const;
+
+/** Dispatches the package `GET …/notifications` shows now, as the decision screen does. */
+async function dispatchReviewed(
+  request: Request,
+  decisionId: number = FIRST_DECISION_ID,
+): Promise<Response> {
+  const shown = await request(notifications(decisionId));
+  const { packageHash } = await shown.json();
+  return request(dispatch(decisionId), { packageHash });
+}
+
 function dispatchCount(db: Db): Promise<number> {
   return db.$count(notificationDispatches);
 }
@@ -74,9 +89,11 @@ export {
   CLEAR,
   dispatch,
   dispatchCount,
+  dispatchReviewed,
   employeeIds,
   notifications,
   preview,
   recommend,
   STORM,
+  UNREVIEWED,
 };

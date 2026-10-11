@@ -15,8 +15,8 @@ import {
   NEWER_RECOMMENDATION_ID,
 } from "./decision-test-fixtures";
 import {
-  dispatch,
   dispatchCount,
+  dispatchReviewed,
   employeeIds,
   notifications,
   preview,
@@ -105,7 +105,7 @@ it("records one dispatch per recipient", async () => {
     await recommend(db, STORM);
     await request(decide(NEWER_RECOMMENDATION_ID), ACCEPT);
 
-    const response = await request(dispatch(), {});
+    const response = await dispatchReviewed(request);
     const body = await response.json();
 
     expect([
@@ -129,9 +129,9 @@ it("refuses a second dispatch of the same decision and writes nothing", async ()
   await withApp(async ({ db, request }) => {
     await recommend(db, STORM);
     await request(decide(NEWER_RECOMMENDATION_ID), ACCEPT);
-    await request(dispatch(), {});
+    await dispatchReviewed(request);
 
-    const response = await request(dispatch(), {});
+    const response = await dispatchReviewed(request);
 
     expect([
       response.status,
@@ -153,7 +153,7 @@ it("keeps the decision chain intact after a dispatch", async () => {
   await withApp(async ({ db, request }) => {
     await recommend(db, STORM);
     await request(decide(NEWER_RECOMMENDATION_ID), ACCEPT);
-    await request(dispatch(), {});
+    await dispatchReviewed(request);
 
     const response = await request(
       `/api/decisions/${FIRST_DECISION_ID}/verify`,

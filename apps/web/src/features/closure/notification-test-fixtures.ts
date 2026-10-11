@@ -60,6 +60,7 @@ const PREVIEW: NotificationPreview = {
 
 const UNDISPATCHED: DecisionNotifications = {
   package: { ...PREVIEW, source: { kind: "decided", decisionId: 21 } },
+  packageHash: "reviewed-package-hash",
   dispatches: [],
 };
 

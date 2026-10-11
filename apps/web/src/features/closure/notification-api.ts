@@ -86,18 +86,14 @@ async function loadDecisionNotifications({
   });
 }
 
-/** The decided package as the server would build it now, read on demand rather than by the route loader. */
-function refreshDecisionNotifications(
+/** Sends the hash of the package the manager reviewed; the API answers `package_changed` if it moved on. */
+async function dispatchDecision(
   decisionId: number,
-): Promise<DecisionNotificationsResult> {
-  return loadDecisionNotifications({
-    decisionId,
-    signal: new AbortController().signal,
-  });
-}
-
-async function dispatchDecision(decisionId: number): Promise<DispatchResult> {
-  const result = await api.api.decisions({ id: decisionId }).dispatch.post();
+  packageHash: string,
+): Promise<DispatchResult> {
+  const result = await api.api
+    .decisions({ id: decisionId })
+    .dispatch.post({ packageHash });
   if (result.error === null) {
     return { kind: "dispatched", view: result.data };
   }
@@ -142,5 +138,4 @@ export {
   loadDecisionVerification,
   loadNotificationPreview,
   loadRecommendation,
-  refreshDecisionNotifications,
 };

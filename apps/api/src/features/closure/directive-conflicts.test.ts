@@ -25,7 +25,11 @@ import {
   RECOMMENDATION,
   SECOND_DECISION_ID,
 } from "./decision-test-fixtures";
-import { dispatch, recommend, STORM } from "./notification-route-test-fixtures";
+import {
+  dispatchReviewed,
+  recommend,
+  STORM,
+} from "./notification-route-test-fixtures";
 import { contentHash } from "./records";
 
 const withApp = appRunner(createTestDatabaseWithDemoFacilities);
@@ -179,7 +183,7 @@ it("refuses a directive once the decision's notices were dispatched", async () =
   await withApp(async ({ db, request }) => {
     await recommend(db, STORM);
     await request(decide(NEWER_RECOMMENDATION_ID), ACCEPT);
-    await request(dispatch(), {});
+    await dispatchReviewed(request);
 
     const response = await request(DIRECTIVES_PATH, ESSENTIAL_REPORT);
 

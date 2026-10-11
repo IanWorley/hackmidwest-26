@@ -5,6 +5,7 @@ import type {
   NotificationPackage,
   PackageSource,
 } from "./notifications";
+import { type ContentHash, contentHash, type JsonValue } from "./records";
 
 type Recipient = NotificationPackage["recipients"][number];
 type Exclusion = NotificationPackage["exclusions"][number];
@@ -107,6 +108,8 @@ const dispatchTimelineView = t.Object({
 
 const decisionNotificationsView = t.Object({
   package: notificationPackageView,
+  /** The content hash of `package`. A dispatch sends back the one the manager reviewed. */
+  packageHash: t.String(),
   dispatches: t.Array(dispatchTimelineView),
 });
 type DecisionNotificationsView = typeof decisionNotificationsView.static;
@@ -116,6 +119,8 @@ const NO_POSTURE_MESSAGE =
 const UNTIMED_POSTURE_MESSAGE =
   "The recommendation never timed this posture, so there is no delay or release to announce";
 const ALREADY_DISPATCHED_MESSAGE = "This decision was already dispatched";
+const PACKAGE_CHANGED_MESSAGE =
+  "Who is told, or how, changed since this package was shown. Nothing was sent; review it and dispatch again.";
 const NOT_CURRENT_DECISION_MESSAGE =
   "Only the facility's current decision can be dispatched";
 
@@ -134,6 +139,12 @@ const notificationConflictResponse = t.Union([
     conflict: t.Literal("already_dispatched"),
     message: t.Literal(ALREADY_DISPATCHED_MESSAGE),
     recordedAt: t.String(),
+  }),
+  t.Object({
+    conflict: t.Literal("package_changed"),
+    message: t.Literal(PACKAGE_CHANGED_MESSAGE),
+    /** The package as it would go out now, so the client can tell which one it should show. */
+    packageHash: t.String(),
   }),
   t.Object({
     conflict: t.Literal("not_current_decision"),
@@ -228,11 +239,22 @@ function toNotificationView(pkg: NotificationPackage): NotificationPackageView {
   };
 }
 
+/** Hashed with the record chain's canonical JSON, so equal packages hash alike whatever their key order. */
+function packageHashOf(view: NotificationPackageView): ContentHash {
+  const json: JsonValue = JSON.parse(JSON.stringify(view));
+  return contentHash(json);
+}
+
 function toDecisionNotificationsView(
   pkg: NotificationPackage,
   dispatches: readonly DispatchTimelineEntry[],
 ): DecisionNotificationsView {
-  return { package: toNotificationView(pkg), dispatches: [...dispatches] };
+  const view = toNotificationView(pkg);
+  return {
+    package: view,
+    packageHash: packageHashOf(view),
+    dispatches: [...dispatches],
+  };
 }
 
 export type {
@@ -247,6 +269,8 @@ export {
   NOT_CURRENT_DECISION_MESSAGE,
   notificationConflictResponse,
   notificationPackageView,
+  PACKAGE_CHANGED_MESSAGE,
+  packageHashOf,
   toDecisionNotificationsView,
   toNotificationView,
   UNTIMED_POSTURE_MESSAGE,

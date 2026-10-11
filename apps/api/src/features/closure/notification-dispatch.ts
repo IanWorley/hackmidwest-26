@@ -17,6 +17,8 @@ import {
   type DecisionNotificationsView,
   NOT_CURRENT_DECISION_MESSAGE,
   type NotificationConflict,
+  PACKAGE_CHANGED_MESSAGE,
+  packageHashOf,
   toDecisionNotificationsView,
   toNotificationView,
 } from "./notification-view";
@@ -104,6 +106,7 @@ function dispatchRefusal({
 async function dispatchInTransaction(
   tx: Transaction,
   decisionId: number,
+  reviewedHash: string,
   now: string,
 ): Promise<DecisionNotificationsOutcome> {
   const facts = await loadDecisionFacts(tx, decisionId, now);
@@ -117,6 +120,19 @@ async function dispatchInTransaction(
   const planned = decidedPackage(facts, now);
   if (planned.kind === "conflict") {
     return planned;
+  }
+  // Rebuilt at dispatch time, the package can differ from the reviewed one: a directive landed, or
+  // a notice passed its send-by and moved to the fastest channel. Only the reviewed one goes out.
+  const packageHash = packageHashOf(toNotificationView(planned.pkg));
+  if (packageHash !== reviewedHash) {
+    return {
+      kind: "conflict",
+      conflict: {
+        conflict: "package_changed",
+        message: PACKAGE_CHANGED_MESSAGE,
+        packageHash,
+      },
+    };
   }
   const content = dispatchContent(planned.pkg, now);
   // Nobody to tell leaves no row, so the decision still reads as undispatched.
@@ -183,11 +199,13 @@ const decisionNotifications = Effect.fn("decisionNotifications")(function* (
 });
 
 /**
- * Records one dispatch row per recipient. The once-only and chain-tip checks share the write
- * transaction with the insert; the unique index on (decision, employee) is the backstop.
+ * Records one dispatch row per recipient, only when the package is still the one reviewed. The
+ * once-only, chain-tip, and package checks share the write transaction with the insert; the unique
+ * index on (decision, employee) is the backstop.
  */
 const dispatchNotifications = Effect.fn("dispatchNotifications")(function* (
   decimalId: string,
+  reviewedHash: string,
 ) {
   const decisionId = parseDecimalId(decimalId);
   if (Option.isNone(decisionId)) {
@@ -197,7 +215,9 @@ const dispatchNotifications = Effect.fn("dispatchNotifications")(function* (
   const db = yield* Database;
   return yield* Effect.tryPromise({
     try: () =>
-      db.transaction((tx) => dispatchInTransaction(tx, decisionId.value, now)),
+      db.transaction((tx) =>
+        dispatchInTransaction(tx, decisionId.value, reviewedHash, now),
+      ),
     catch: (cause) =>
       new NotificationStoreError({ operation: "dispatch", cause }),
   }).pipe(Semaphore.withPermit(decisionChainWrites));
