@@ -1,0 +1,176 @@
+# url: http://localhost:41905/facilities/1
+# title: Kansas City Area Service Center · Hack Midwest
+- main:
+  - article:
+    - paragraph: Decision deadline passed 1 h 46 min ago
+    - region "Directives":
+      - heading "Directives" [level=2]
+      - paragraph: Tell a building, the essential group, or one employee to do something other than the posture says. The most specific directive wins, and between two for the same people, the later one wins.
+      - paragraph: "Standing decision: Overrode, Full closure, recorded Sun, Oct 11, 06:46 CDT."
+      - paragraph: No directives on this decision yet.
+      - form "Issue directive":
+        - status
+        - text: Applies to
+        - combobox "Applies to":
+          - option "Choose…" [disabled] [selected]
+        - text: Directive
+        - combobox "Directive":
+          - option "Choose…" [disabled] [selected]
+          - option "Report on site"
+          - option "Telework"
+          - option "Dismissed"
+          - option "Excused"
+        - text: Reason category
+        - combobox "Reason category":
+          - option "Choose…" [disabled] [selected]
+          - option "Local conditions"
+          - option "Road reports"
+          - option "Directive from leadership"
+          - option "Essential operations"
+          - option "Data looks wrong"
+          - option "Other"
+        - text: Reason
+        - textbox "Reason"
+        - text: Recorded by
+        - combobox "Recorded by":
+          - option "Choose…" [disabled] [selected]
+          - option "Dana Whitfield, County Executive Director"
+          - option "Marcus Oyelaran, State Administrative Officer"
+        - paragraph: "Identity unverified: the record names whoever you pick here without checking it."
+        - button "Issue directive"
+    - region "Notifications":
+      - heading "Notifications" [level=2]
+      - heading "Who will be notified" [level=3]
+      - table "Who will be notified":
+        - rowgroup:
+          - row "Name Channel Send by Delivery":
+            - columnheader "Name"
+            - columnheader "Channel"
+            - columnheader "Send by"
+            - columnheader "Delivery"
+        - rowgroup:
+          - row "Avery Calloway Email 04:55 Late":
+            - cell "Avery Calloway"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Bianca Ferraro Email 04:55 Late":
+            - cell "Bianca Ferraro"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Caleb Mendoza Text message 04:55 Late":
+            - cell "Caleb Mendoza"
+            - cell "Text message"
+            - cell "04:55"
+            - cell "Late"
+          - row "Elliot Brandt Email 04:55 Late":
+            - cell "Elliot Brandt"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Hana Kowalczyk Email 04:55 Late":
+            - cell "Hana Kowalczyk"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Isaac Thorne Email 03:55 Late":
+            - cell "Isaac Thorne"
+            - cell "Email"
+            - cell "03:55"
+            - cell "Late"
+          - row "Joelle Baptiste Email 03:55 Late":
+            - cell "Joelle Baptiste"
+            - cell "Email"
+            - cell "03:55"
+            - cell "Late"
+          - row "Kenji Watanabe Text message 04:55 Late":
+            - cell "Kenji Watanabe"
+            - cell "Text message"
+            - cell "04:55"
+            - cell "Late"
+          - row "Lena Marchetti Email 04:55 Late":
+            - cell "Lena Marchetti"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Mateo Alvarez Email 04:55 Late":
+            - cell "Mateo Alvarez"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Nadia Petrov Email 04:55 Late":
+            - cell "Nadia Petrov"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Owen Gallagher Email 04:55 Late":
+            - cell "Owen Gallagher"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Paloma Reyes Email 04:55 Late":
+            - cell "Paloma Reyes"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Quinn Hartley Email 04:55 Late":
+            - cell "Quinn Hartley"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Rosa Delgado Email 04:55 Late":
+            - cell "Rosa Delgado"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Silas Montgomery Email 04:55 Late":
+            - cell "Silas Montgomery"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+          - row "Tessa Nguyen Email 04:55 Late":
+            - cell "Tessa Nguyen"
+            - cell "Email"
+            - cell "04:55"
+            - cell "Late"
+      - heading "Not notified" [level=3]
+      - list "Not notified":
+        - listitem: "Delia Okafor: Already teleworking"
+        - listitem: "Farah Haddad: Not working"
+        - listitem: "Gideon Marsh: Not working"
+        - listitem: "Victor Lindgren: Not in HR records"
+      - button "Dispatch notifications"
+    - region "Record chain":
+      - heading "Record chain" [level=2]
+      - text: Chain intact
+- dialog "Confirm and notify":
+  - heading "Confirm and notify" [level=2]
+  - paragraph: Recording this decision commits the facility to the notices below.
+  - heading "Who will be notified" [level=3]
+  - paragraph: Nobody needs a notice.
+  - heading "Not notified" [level=3]
+  - list "Not notified":
+    - listitem: "Avery Calloway: No change to their day"
+    - listitem: "Bianca Ferraro: No change to their day"
+    - listitem: "Caleb Mendoza: No change to their day"
+    - listitem: "Delia Okafor: Already teleworking"
+    - listitem: "Elliot Brandt: No change to their day"
+    - listitem: "Farah Haddad: Not working"
+    - listitem: "Gideon Marsh: Not working"
+    - listitem: "Hana Kowalczyk: No change to their day"
+    - listitem: "Isaac Thorne: No change to their day"
+    - listitem: "Joelle Baptiste: No change to their day"
+    - listitem: "Kenji Watanabe: No change to their day"
+    - listitem: "Lena Marchetti: No change to their day"
+    - listitem: "Mateo Alvarez: No change to their day"
+    - listitem: "Nadia Petrov: No change to their day"
+    - listitem: "Owen Gallagher: No change to their day"
+    - listitem: "Paloma Reyes: No change to their day"
+    - listitem: "Quinn Hartley: No change to their day"
+    - listitem: "Rosa Delgado: No change to their day"
+    - listitem: "Silas Montgomery: No change to their day"
+    - listitem: "Tessa Nguyen: No change to their day"
+    - listitem: "Victor Lindgren: Not in HR records"
+  - button "Back"
+  - button "Record decision"

@@ -1,0 +1,131 @@
+# url: http://localhost:41905/facilities/3
+# title: Yakima Service Center · Hack Midwest
+- banner:
+  - navigation "Main":
+    - link "Hack Midwest":
+      - /url: /
+    - link "Conditions":
+      - /url: /conditions
+    - link "Facilities":
+      - /url: /facilities
+- main:
+  - article:
+    - heading "Yakima Service Center" [level=1]
+    - term: Time zone
+    - definition: America/Los_Angeles
+    - term: Hours
+    - definition: 07:30–16:00
+    - term: NWS zone
+    - definition: WAZ027
+    - term: Hazards
+    - definition:
+      - list:
+        - listitem: Winter storm
+        - listitem: Air quality
+    - link "People and status":
+      - /url: /facilities/3/personnel
+    - status:
+      - text: A newer recommendation is available
+      - paragraph: Posture, confidence, and hazard window match the recommendation you decided on.
+      - paragraph: Your decision is unchanged. Record a new decision to act on it.
+    - heading "Recommendation" [level=2]
+    - button "Re-evaluate"
+    - status: New recommendation loaded.
+    - paragraph: Decide by Sun, Oct 11, 05:15 PDT
+    - paragraph: 29 min left to decide
+    - text: "Normal operations Confidence: High"
+    - paragraph: Live evaluation, Sun, Oct 11, 04:45 PDT
+    - heading "Rationale" [level=3]
+    - paragraph: No monitored hazard crosses a cutoff, so recommend normal operations on 2026-10-11. Decide by 05:15. Confidence is high.
+    - heading "Thresholds crossed" [level=3]
+    - paragraph: No threshold was crossed.
+    - heading "Inputs" [level=3]
+    - list:
+      - listitem: NWS hourly forecast, as of Sat, Oct 10, 23:46 PDT
+      - listitem: Open-Meteo air quality, as of Sun, Oct 11, 04:00 PDT
+      - listitem: NWS observations, as of Sun, Oct 11, 04:25 PDT
+      - listitem: NWS alerts, as of Sun, Oct 11, 04:45 PDT
+    - region "Decide":
+      - heading "Decide" [level=2]
+      - paragraph: Directives belong to the decision they were issued on. A new decision starts with none.
+      - status
+      - group "Decision actions":
+        - text: Decision actions
+        - button "Accept"
+        - button "Override"
+        - button "Defer"
+    - region "Directives":
+      - heading "Directives" [level=2]
+      - paragraph: Tell a building, the essential group, or one employee to do something other than the posture says. The most specific directive wins, and between two for the same people, the later one wins.
+      - paragraph: "Standing decision: Accepted, Normal operations, recorded Sun, Oct 11, 04:44 PDT."
+      - paragraph: The recommendation above is newer and nobody has decided on it, so this decision still stands.
+      - paragraph: No directives on this decision yet.
+      - form "Issue directive":
+        - status
+        - text: Applies to
+        - combobox "Applies to":
+          - option "Choose…" [disabled] [selected]
+        - text: Directive
+        - combobox "Directive":
+          - option "Choose…" [disabled] [selected]
+          - option "Report on site"
+          - option "Telework"
+          - option "Dismissed"
+          - option "Excused"
+        - text: Reason category
+        - combobox "Reason category":
+          - option "Choose…" [disabled] [selected]
+          - option "Local conditions"
+          - option "Road reports"
+          - option "Directive from leadership"
+          - option "Essential operations"
+          - option "Data looks wrong"
+          - option "Other"
+        - text: Reason
+        - textbox "Reason"
+        - text: Recorded by
+        - combobox "Recorded by":
+          - option "Choose…" [disabled] [selected]
+          - option "Priya Raman, District Conservationist"
+          - option "Tomas Ibarra, Facility Operations Manager"
+        - paragraph: "Identity unverified: the record names whoever you pick here without checking it."
+        - button "Issue directive"
+    - region "Notifications":
+      - heading "Notifications" [level=2]
+      - heading "Who will be notified" [level=3]
+      - paragraph: Nobody needs a notice.
+      - heading "Not notified" [level=3]
+      - list "Not notified":
+        - listitem: "Yusuf Karimi: No change to their day"
+        - listitem: "Zoe Whitaker: No change to their day"
+        - listitem: "Amara Collins: No change to their day"
+    - heading "Decision history" [level=2]
+    - table "Decision history":
+      - rowgroup:
+        - row "Recorded Action Posture Recorded by Reason Before deadline":
+          - columnheader "Recorded"
+          - columnheader "Action"
+          - columnheader "Posture"
+          - columnheader "Recorded by"
+          - columnheader "Reason"
+          - columnheader "Before deadline"
+      - rowgroup:
+        - row "Sun, Oct 11, 04:44 PDT Accepted Normal operations Tomas Ibarra, Facility Operations Manager (unverified) None given 30 min early":
+          - cell "Sun, Oct 11, 04:44 PDT"
+          - cell "Accepted"
+          - cell "Normal operations"
+          - cell "Tomas Ibarra, Facility Operations Manager (unverified)"
+          - cell "None given":
+            - paragraph: None given
+          - cell "30 min early"
+        - 'row "Sun, Oct 11, 04:42 PDT Overrode Full closure Priya Raman, District Conservationist (unverified) Road reports: County reports ice on Route 9. 32 min early"':
+          - cell "Sun, Oct 11, 04:42 PDT"
+          - cell "Overrode"
+          - cell "Full closure"
+          - cell "Priya Raman, District Conservationist (unverified)"
+          - 'cell "Road reports: County reports ice on Route 9."':
+            - paragraph: "Road reports: County reports ice on Route 9."
+          - cell "32 min early"
+    - region "Record chain":
+      - heading "Record chain" [level=2]
+      - text: Chain intact

@@ -1,0 +1,74 @@
+# url: http://localhost:41905/facilities/4
+# title: Lafayette Service Center · Hack Midwest
+- banner:
+  - navigation "Main":
+    - link "Hack Midwest":
+      - /url: /
+    - link "Conditions":
+      - /url: /conditions
+    - link "Facilities":
+      - /url: /facilities
+- main:
+  - article:
+    - heading "Lafayette Service Center" [level=1]
+    - term: Time zone
+    - definition: America/Chicago
+    - term: Hours
+    - definition: 07:00–15:30
+    - term: NWS zone
+    - definition: LAZ044
+    - term: Hazards
+    - definition:
+      - list:
+        - listitem: High wind
+    - link "People and status":
+      - /url: /facilities/4/personnel
+    - alert: Nobody decided before the deadline. The backup decision maker is Priya Raman, District Conservationist.
+    - heading "Recommendation" [level=2]
+    - button "Re-evaluate"
+    - status
+    - paragraph: Decide by Sun, Oct 11, 05:00 CDT
+    - paragraph: Decision deadline passed 1 h 45 min ago
+    - text: "Normal operations Confidence: High"
+    - paragraph: Live evaluation, Sun, Oct 11, 06:45 CDT
+    - heading "Rationale" [level=3]
+    - paragraph: No monitored hazard crosses a cutoff, so recommend normal operations on 2026-10-11. The 05:00 decision deadline has passed. Confidence is high.
+    - heading "Thresholds crossed" [level=3]
+    - paragraph: No threshold was crossed.
+    - heading "Inputs" [level=3]
+    - list:
+      - listitem: NWS hourly forecast, as of Sun, Oct 11, 02:45 CDT
+      - listitem: Open-Meteo air quality, as of Sun, Oct 11, 06:00 CDT
+      - listitem: NWS observations, as of Sun, Oct 11, 06:25 CDT
+      - listitem: NWS alerts, as of Sun, Oct 11, 06:45 CDT
+    - region "Decide":
+      - heading "Decide" [level=2]
+      - status
+      - group "Decision actions":
+        - text: Decision actions
+        - button "Accept"
+        - button "Override"
+        - button "Defer" [disabled]
+      - paragraph: No re-check time fits before the decision deadline, so this cannot be deferred.
+    - heading "Decision history" [level=2]
+    - table "Decision history":
+      - rowgroup:
+        - row "Recorded Action Posture Recorded by Reason Before deadline":
+          - columnheader "Recorded"
+          - columnheader "Action"
+          - columnheader "Posture"
+          - columnheader "Recorded by"
+          - columnheader "Reason"
+          - columnheader "Before deadline"
+      - rowgroup:
+        - row "Sun, Oct 11, 06:45 CDT No decision None Priya Raman, District Conservationist (unverified) None given 1546 min late":
+          - cell "Sun, Oct 11, 06:45 CDT"
+          - cell "No decision"
+          - cell "None"
+          - cell "Priya Raman, District Conservationist (unverified)"
+          - cell "None given":
+            - paragraph: None given
+          - cell "1546 min late"
+    - region "Record chain":
+      - heading "Record chain" [level=2]
+      - text: Chain intact

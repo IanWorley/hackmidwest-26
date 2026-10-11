@@ -1,0 +1,235 @@
+# url: http://localhost:41905/facilities/1
+# title: Kansas City Area Service Center · Hack Midwest
+- banner:
+  - navigation "Main":
+    - link "Hack Midwest":
+      - /url: /
+    - link "Conditions":
+      - /url: /conditions
+    - link "Facilities":
+      - /url: /facilities
+- main:
+  - article:
+    - heading "Kansas City Area Service Center" [level=1]
+    - term: Time zone
+    - definition: America/Chicago
+    - term: Hours
+    - definition: 07:30–16:30
+    - term: NWS zone
+    - definition: MOZ037
+    - term: Hazards
+    - definition:
+      - list:
+        - listitem: Winter storm
+        - listitem: High wind
+        - listitem: Air quality
+        - listitem: Flood
+    - link "People and status":
+      - /url: /facilities/1/personnel
+    - status:
+      - text: A newer recommendation is available
+      - paragraph: Posture, confidence, and hazard window match the recommendation you decided on.
+      - paragraph: Your decision is unchanged. Record a new decision to act on it.
+    - heading "Recommendation" [level=2]
+    - button "Re-evaluate"
+    - status: New recommendation loaded.
+    - paragraph: Decide by Sun, Oct 11, 05:00 CDT
+    - paragraph: Decision deadline passed 1 h 48 min ago
+    - text: "Normal operations Confidence: High"
+    - paragraph: Live evaluation, Sun, Oct 11, 06:48 CDT
+    - heading "Rationale" [level=3]
+    - paragraph: No monitored hazard crosses a cutoff, so recommend normal operations on 2026-10-11. The 05:00 decision deadline has passed. Confidence is high.
+    - heading "Thresholds crossed" [level=3]
+    - paragraph: No threshold was crossed.
+    - heading "Inputs" [level=3]
+    - list:
+      - listitem: NWS river gauge, as of Sun, Oct 11, 04:30 CDT
+      - listitem: Open-Meteo air quality, as of Sun, Oct 11, 06:00 CDT
+      - listitem: NWS hourly forecast, as of Sun, Oct 11, 06:01 CDT
+      - listitem: NWS observations, as of Sun, Oct 11, 06:25 CDT
+      - listitem: NWS alerts, as of Sun, Oct 11, 06:48 CDT
+    - region "Decide":
+      - heading "Decide" [level=2]
+      - paragraph: Directives belong to the decision they were issued on. A new decision starts with none.
+      - status
+      - group "Decision actions":
+        - text: Decision actions
+        - button "Accept"
+        - button "Override"
+        - button "Defer" [disabled]
+      - paragraph: No re-check time fits before the decision deadline, so this cannot be deferred.
+    - region "Directives":
+      - heading "Directives" [level=2]
+      - paragraph: Tell a building, the essential group, or one employee to do something other than the posture says. The most specific directive wins, and between two for the same people, the later one wins.
+      - paragraph: "Standing decision: Overrode, Full closure, recorded Sun, Oct 11, 06:48 CDT."
+      - paragraph: The recommendation above is newer and nobody has decided on it, so this decision still stands.
+      - paragraph: No directives on this decision yet.
+      - status: This decision's notices were dispatched, and dispatch happens once, so a new directive would reach nobody. Record a new decision to change what staff are told.
+    - region "Notifications":
+      - heading "Notifications" [level=2]
+      - heading "Dispatched notices" [level=3]
+      - table "Dispatched notices":
+        - rowgroup:
+          - row "Name Channel Recorded at Lead time":
+            - columnheader "Name"
+            - columnheader "Channel"
+            - columnheader "Recorded at"
+            - columnheader "Lead time"
+        - rowgroup:
+          - row "Avery Calloway Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Avery Calloway"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Bianca Ferraro Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Bianca Ferraro"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Caleb Mendoza Text message 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Caleb Mendoza"
+            - cell "Text message"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Elliot Brandt Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Elliot Brandt"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Hana Kowalczyk Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Hana Kowalczyk"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Isaac Thorne Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Isaac Thorne"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Joelle Baptiste Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Joelle Baptiste"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Kenji Watanabe Text message 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Kenji Watanabe"
+            - cell "Text message"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Lena Marchetti Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Lena Marchetti"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Mateo Alvarez Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Mateo Alvarez"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Nadia Petrov Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Nadia Petrov"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Owen Gallagher Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Owen Gallagher"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Paloma Reyes Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Paloma Reyes"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Quinn Hartley Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Quinn Hartley"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Rosa Delgado Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Rosa Delgado"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Silas Montgomery Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Silas Montgomery"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+          - row "Tessa Nguyen Email 06:48 Recorded 19 min after the arrival window opened After send-by":
+            - cell "Tessa Nguyen"
+            - cell "Email"
+            - cell "06:48"
+            - cell "Recorded 19 min after the arrival window opened After send-by":
+              - paragraph: Recorded 19 min after the arrival window opened
+              - paragraph: After send-by
+    - heading "Decision history" [level=2]
+    - table "Decision history":
+      - rowgroup:
+        - row "Recorded Action Posture Recorded by Reason Before deadline":
+          - columnheader "Recorded"
+          - columnheader "Action"
+          - columnheader "Posture"
+          - columnheader "Recorded by"
+          - columnheader "Reason"
+          - columnheader "Before deadline"
+      - rowgroup:
+        - 'row "Sun, Oct 11, 06:48 CDT Overrode Full closure Dana Whitfield, County Executive Director (unverified) Local conditions: Water main break on site. 109 min late"':
+          - cell "Sun, Oct 11, 06:48 CDT"
+          - cell "Overrode"
+          - cell "Full closure"
+          - cell "Dana Whitfield, County Executive Director (unverified)"
+          - 'cell "Local conditions: Water main break on site."':
+            - paragraph: "Local conditions: Water main break on site."
+          - cell "109 min late"
+        - 'row "Sun, Oct 11, 06:47 CDT Overrode Full closure Dana Whitfield, County Executive Director (unverified) Local conditions: Water main break on site. 108 min late"':
+          - cell "Sun, Oct 11, 06:47 CDT"
+          - cell "Overrode"
+          - cell "Full closure"
+          - cell "Dana Whitfield, County Executive Director (unverified)"
+          - 'cell "Local conditions: Water main break on site."':
+            - paragraph: "Local conditions: Water main break on site."
+          - cell "108 min late"
+        - 'row "Sun, Oct 11, 06:46 CDT Overrode Full closure Dana Whitfield, County Executive Director (unverified) Local conditions: Water main break on site. 107 min late"':
+          - cell "Sun, Oct 11, 06:46 CDT"
+          - cell "Overrode"
+          - cell "Full closure"
+          - cell "Dana Whitfield, County Executive Director (unverified)"
+          - 'cell "Local conditions: Water main break on site."':
+            - paragraph: "Local conditions: Water main break on site."
+          - cell "107 min late"
+    - region "Record chain":
+      - heading "Record chain" [level=2]
+      - text: Chain intact

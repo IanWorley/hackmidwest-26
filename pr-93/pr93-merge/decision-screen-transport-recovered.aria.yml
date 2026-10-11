@@ -1,0 +1,17 @@
+# url: http://localhost:41905/facilities/3
+# title: Yakima Service Center · Hack Midwest
+- main:
+  - article:
+    - paragraph: 29 min left to decide
+- dialog "Confirm and notify":
+  - heading "Confirm and notify" [level=2]
+  - paragraph: Recording this decision commits the facility to the notices below.
+  - heading "Who will be notified" [level=3]
+  - paragraph: Nobody needs a notice.
+  - heading "Not notified" [level=3]
+  - list "Not notified":
+    - listitem: "Yusuf Karimi: No change to their day"
+    - listitem: "Zoe Whitaker: No change to their day"
+    - listitem: "Amara Collins: No change to their day"
+  - button "Back"
+  - button "Record decision"

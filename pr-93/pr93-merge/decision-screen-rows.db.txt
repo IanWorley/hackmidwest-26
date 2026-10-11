@@ -1,0 +1,3 @@
+sql> select d.id, d.action, d.chosen_posture, d.decided_by_name, x.scope, x.directive, x.reason_category, x.issued_by_name, x.issued_by_role from decisions d left join decision_directives x on x.decision_id = d.id order by d.id
+id|action|chosen_posture|decided_by_name|scope|directive|reason_category|issued_by_name|issued_by_role
+1|override|full_closure|Priya Raman|building:5|excused|local_conditions|Tomas Ibarra|Facility Operations Manager

@@ -1,0 +1,3 @@
+sql> select id, recommendation_id, action, decided_by_name from decisions where facility_id = 4 order by id
+id|recommendation_id|action|decided_by_name
+4|6|no_decision|Priya Raman

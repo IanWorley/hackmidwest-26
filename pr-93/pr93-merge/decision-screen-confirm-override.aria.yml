@@ -1,0 +1,36 @@
+# url: http://localhost:41905/facilities/1
+# title: Kansas City Area Service Center · Hack Midwest
+- main:
+  - article:
+    - paragraph: Decision deadline passed 1 h 46 min ago
+- dialog "Confirm and notify":
+  - heading "Confirm and notify" [level=2]
+  - paragraph: Recording this decision commits the facility to the notices below.
+  - paragraph: This list is for the recommended posture. Your chosen posture's notice is built after you record the decision, and only if the recommendation times it; Notifications says so when it does not.
+  - heading "Who will be notified" [level=3]
+  - paragraph: Nobody needs a notice.
+  - heading "Not notified" [level=3]
+  - list "Not notified":
+    - listitem: "Avery Calloway: No change to their day"
+    - listitem: "Bianca Ferraro: No change to their day"
+    - listitem: "Caleb Mendoza: No change to their day"
+    - listitem: "Delia Okafor: Already teleworking"
+    - listitem: "Elliot Brandt: No change to their day"
+    - listitem: "Farah Haddad: Not working"
+    - listitem: "Gideon Marsh: Not working"
+    - listitem: "Hana Kowalczyk: No change to their day"
+    - listitem: "Isaac Thorne: No change to their day"
+    - listitem: "Joelle Baptiste: No change to their day"
+    - listitem: "Kenji Watanabe: No change to their day"
+    - listitem: "Lena Marchetti: No change to their day"
+    - listitem: "Mateo Alvarez: No change to their day"
+    - listitem: "Nadia Petrov: No change to their day"
+    - listitem: "Owen Gallagher: No change to their day"
+    - listitem: "Paloma Reyes: No change to their day"
+    - listitem: "Quinn Hartley: No change to their day"
+    - listitem: "Rosa Delgado: No change to their day"
+    - listitem: "Silas Montgomery: No change to their day"
+    - listitem: "Tessa Nguyen: No change to their day"
+    - listitem: "Victor Lindgren: Not in HR records"
+  - button "Back"
+  - button "Record decision"

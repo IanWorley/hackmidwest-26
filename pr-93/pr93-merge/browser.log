@@ -1,0 +1,735 @@
+2026-10-11T11:42:35.844Z step goto "/facilities/3"
+2026-10-11T11:42:40.036Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:40.036Z step expect-text "No recommendation yet. Re-evaluate to pull live conditions and get one."
+2026-10-11T11:42:40.071Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:40.071Z step click "button" "Re-evaluate"
+2026-10-11T11:42:40.112Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:40.112Z step expect "heading" "Decide"
+2026-10-11T11:42:40.546Z net POST http://localhost:37353/api/facilities/3/recommendations -> 201
+2026-10-11T11:42:40.557Z net GET http://localhost:37353/api/facilities/3 -> 200
+2026-10-11T11:42:40.565Z net GET http://localhost:37353/api/facilities/3/recommendations/latest -> 200
+2026-10-11T11:42:40.569Z net GET http://localhost:37353/api/facilities/3/recorders -> 200
+2026-10-11T11:42:40.570Z net GET http://localhost:37353/api/facilities/3/decisions -> 200
+2026-10-11T11:42:40.572Z net GET http://localhost:37353/api/facilities/3/buildings -> 200
+2026-10-11T11:42:40.575Z net GET http://localhost:37353/api/facilities/3/facility-date -> 200
+2026-10-11T11:42:40.586Z net GET http://localhost:37353/api/recommendations/1/notifications/preview -> 200
+2026-10-11T11:42:40.899Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:40.899Z step snap "decision-screen-live"
+2026-10-11T11:42:41.011Z   saved decision-screen-live.aria.yml decision-screen-live.png
+2026-10-11T11:42:41.011Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:41.568Z step goto "/facilities/3"
+2026-10-11T11:42:42.679Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:42.679Z step click "button" "Defer"
+2026-10-11T11:42:42.760Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:42.760Z step select "Re-check in" "15 min"
+2026-10-11T11:42:42.768Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:42.769Z step select "Reason category" "Road reports"
+2026-10-11T11:42:42.773Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:42.773Z step select "Recorded by" "Priya Raman, District Conservationist"
+2026-10-11T11:42:42.778Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:42.778Z step click "button" "Record deferral"
+2026-10-11T11:42:42.825Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:42.826Z step expect-text "Enter a reason."
+2026-10-11T11:42:42.831Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:42.831Z step expect-focus "textbox" "Reason"
+2026-10-11T11:42:42.858Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:42.858Z step snap "decision-screen-defer-reason"
+2026-10-11T11:42:43.000Z   saved decision-screen-defer-reason.aria.yml decision-screen-defer-reason.png
+2026-10-11T11:42:43.000Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:43.558Z step goto "/facilities/3"
+2026-10-11T11:42:44.650Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:44.650Z step click "button" "Override"
+2026-10-11T11:42:44.727Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:44.727Z step click "button" "Record override"
+2026-10-11T11:42:44.776Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:44.776Z step expect-text "Choose a posture other than the recommended one."
+2026-10-11T11:42:44.781Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:44.781Z step expect-focus "combobox" "Posture instead"
+2026-10-11T11:42:44.812Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:44.813Z step snap "decision-screen-override-empty"
+2026-10-11T11:42:44.949Z   saved decision-screen-override-empty.aria.yml decision-screen-override-empty.png
+2026-10-11T11:42:44.949Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:53.553Z step goto "/facilities/3"
+2026-10-11T11:42:54.680Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:54.680Z step click "button" "Re-evaluate"
+2026-10-11T11:42:54.746Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:54.746Z step expect-text "New recommendation loaded."
+2026-10-11T11:42:54.857Z net POST http://localhost:37353/api/facilities/3/recommendations -> 201
+2026-10-11T11:42:54.867Z net GET http://localhost:37353/api/facilities/3 -> 200
+2026-10-11T11:42:54.872Z net GET http://localhost:37353/api/facilities/3/recommendations/latest -> 200
+2026-10-11T11:42:54.874Z net GET http://localhost:37353/api/facilities/3/recorders -> 200
+2026-10-11T11:42:54.875Z net GET http://localhost:37353/api/facilities/3/decisions -> 200
+2026-10-11T11:42:54.878Z net GET http://localhost:37353/api/facilities/3/facility-date -> 200
+2026-10-11T11:42:54.879Z net GET http://localhost:37353/api/facilities/3/buildings -> 200
+2026-10-11T11:42:54.883Z net GET http://localhost:37353/api/recommendations/2/notifications/preview -> 200
+2026-10-11T11:42:54.930Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:54.930Z step expect-focus "heading" "Recommendation"
+2026-10-11T11:42:54.959Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:55.499Z step goto "/facilities/3"
+2026-10-11T11:42:56.597Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:56.598Z step click "button" "Override"
+2026-10-11T11:42:56.678Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:56.678Z step within "form" "Override the recommendation"
+2026-10-11T11:42:56.678Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:56.678Z step select "Posture instead" "Full closure"
+2026-10-11T11:42:56.690Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:56.690Z step select "Reason category" "Road reports"
+2026-10-11T11:42:56.697Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:56.697Z step fill "Reason" "County reports ice on Route 9."
+2026-10-11T11:42:56.704Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:56.704Z step select "Recorded by" "Priya Raman, District Conservationist"
+2026-10-11T11:42:56.709Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:56.709Z step click "button" "Record override"
+2026-10-11T11:42:56.791Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:56.791Z step within-page 
+2026-10-11T11:42:56.791Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:56.791Z step expect "dialog" "Confirm and notify"
+2026-10-11T11:42:56.796Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:56.796Z step click "button" "Record decision"
+2026-10-11T11:42:56.969Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:56.969Z step expect-text "Decision recorded."
+2026-10-11T11:42:57.004Z net POST http://localhost:37353/api/recommendations/2/decisions -> 201
+2026-10-11T11:42:57.025Z net GET http://localhost:37353/api/facilities/3 -> 200
+2026-10-11T11:42:57.032Z net GET http://localhost:37353/api/facilities/3/recommendations/latest -> 200
+2026-10-11T11:42:57.034Z net GET http://localhost:37353/api/facilities/3/decisions -> 200
+2026-10-11T11:42:57.035Z net GET http://localhost:37353/api/facilities/3/recorders -> 200
+2026-10-11T11:42:57.037Z net GET http://localhost:37353/api/facilities/3/buildings -> 200
+2026-10-11T11:42:57.042Z net GET http://localhost:37353/api/facilities/3/facility-date -> 200
+2026-10-11T11:42:57.048Z net GET http://localhost:37353/api/decisions/1/directives -> 200
+2026-10-11T11:42:57.055Z net GET http://localhost:37353/api/recommendations/2/notifications/preview -> 200
+2026-10-11T11:42:57.069Z net GET http://localhost:37353/api/decisions/1/notifications -> 200
+2026-10-11T11:42:57.075Z net GET http://localhost:37353/api/decisions/1/verify -> 200
+2026-10-11T11:42:57.159Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.159Z step expect-focus-text "Decision recorded."
+2026-10-11T11:42:57.183Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.184Z step within "form" "Issue directive"
+2026-10-11T11:42:57.184Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.184Z step select "Applies to" "Main Office"
+2026-10-11T11:42:57.191Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.191Z step select "Directive" "Excused"
+2026-10-11T11:42:57.199Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.199Z step select "Reason category" "Local conditions"
+2026-10-11T11:42:57.214Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.214Z step fill "Reason" "The Main Office has no heat."
+2026-10-11T11:42:57.225Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.225Z step select "Recorded by" "Tomas Ibarra, Facility Operations Manager"
+2026-10-11T11:42:57.239Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.239Z step click "button" "Issue directive"
+2026-10-11T11:42:57.308Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.308Z step within-page 
+2026-10-11T11:42:57.308Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.308Z step expect-text "Directive issued."
+2026-10-11T11:42:57.321Z net POST http://localhost:37353/api/decisions/1/directives -> 201
+2026-10-11T11:42:57.328Z net GET http://localhost:37353/api/facilities/3 -> 200
+2026-10-11T11:42:57.334Z net GET http://localhost:37353/api/facilities/3/recommendations/latest -> 200
+2026-10-11T11:42:57.334Z net GET http://localhost:37353/api/facilities/3/decisions -> 200
+2026-10-11T11:42:57.335Z net GET http://localhost:37353/api/facilities/3/recorders -> 200
+2026-10-11T11:42:57.336Z net GET http://localhost:37353/api/facilities/3/buildings -> 200
+2026-10-11T11:42:57.338Z net GET http://localhost:37353/api/facilities/3/facility-date -> 200
+2026-10-11T11:42:57.343Z net GET http://localhost:37353/api/decisions/1/directives -> 200
+2026-10-11T11:42:57.347Z net GET http://localhost:37353/api/recommendations/2/notifications/preview -> 200
+2026-10-11T11:42:57.352Z net GET http://localhost:37353/api/decisions/1/notifications -> 200
+2026-10-11T11:42:57.355Z net GET http://localhost:37353/api/decisions/1/verify -> 200
+2026-10-11T11:42:57.386Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.387Z step expect-focus-text "Directive issued."
+2026-10-11T11:42:57.389Z   at http://localhost:41905/facilities/3
+2026-10-11T11:42:57.389Z step snap "decision-screen-override-directive"
+2026-10-11T11:42:57.587Z   saved decision-screen-override-directive.aria.yml decision-screen-override-directive.png
+2026-10-11T11:42:57.587Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:08.345Z step goto "/facilities/3"
+2026-10-11T11:44:09.491Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:09.492Z step click "button" "Re-evaluate"
+2026-10-11T11:44:09.556Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:09.556Z step expect-text "New recommendation loaded."
+2026-10-11T11:44:09.688Z net POST http://localhost:37353/api/facilities/3/recommendations -> 201
+2026-10-11T11:44:09.699Z net GET http://localhost:37353/api/facilities/3 -> 200
+2026-10-11T11:44:09.704Z net GET http://localhost:37353/api/facilities/3/recommendations/latest -> 200
+2026-10-11T11:44:09.706Z net GET http://localhost:37353/api/facilities/3/decisions -> 200
+2026-10-11T11:44:09.709Z net GET http://localhost:37353/api/facilities/3/recorders -> 200
+2026-10-11T11:44:09.709Z net GET http://localhost:37353/api/facilities/3/buildings -> 200
+2026-10-11T11:44:09.711Z net GET http://localhost:37353/api/facilities/3/facility-date -> 200
+2026-10-11T11:44:09.713Z net GET http://localhost:37353/api/decisions/1/directives -> 200
+2026-10-11T11:44:09.720Z net GET http://localhost:37353/api/recommendations/3/notifications/preview -> 200
+2026-10-11T11:44:09.724Z net GET http://localhost:37353/api/decisions/1/notifications -> 200
+2026-10-11T11:44:09.726Z net GET http://localhost:37353/api/decisions/1/verify -> 200
+2026-10-11T11:44:09.740Z net GET http://localhost:37353/api/recommendations/2 -> 200
+2026-10-11T11:44:09.843Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:09.843Z step expect "heading" "Directives"
+2026-10-11T11:44:09.846Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:09.847Z step expect-text "The recommendation above is newer and nobody has decided on it, so this decision still stands."
+2026-10-11T11:44:09.850Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:09.850Z step snap "decision-screen-reevaluated-standing"
+2026-10-11T11:44:10.020Z   saved decision-screen-reevaluated-standing.aria.yml decision-screen-reevaluated-standing.png
+2026-10-11T11:44:10.021Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:10.614Z step goto "/facilities/3"
+2026-10-11T11:44:11.747Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:11.748Z step tab "other"
+2026-10-11T11:44:11.778Z [other]   at about:blank
+2026-10-11T11:44:11.779Z [other] step goto "/facilities/3"
+2026-10-11T11:44:12.900Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:44:12.900Z [other] step click "button" "Accept"
+2026-10-11T11:44:12.982Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:44:12.982Z [other] step within "form" "Accept the recommendation"
+2026-10-11T11:44:12.982Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:44:12.982Z [other] step select "Recorded by" "Tomas Ibarra, Facility Operations Manager"
+2026-10-11T11:44:12.990Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:44:12.990Z [other] step click "button" "Record acceptance"
+2026-10-11T11:44:13.078Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.078Z [other] step within-page 
+2026-10-11T11:44:13.078Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.078Z [other] step expect "dialog" "Confirm and notify"
+2026-10-11T11:44:13.083Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.083Z [other] step click "button" "Record decision"
+2026-10-11T11:44:13.254Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.254Z [other] step expect-text "Decision recorded."
+2026-10-11T11:44:13.303Z [other] net POST http://localhost:37353/api/recommendations/3/decisions -> 201
+2026-10-11T11:44:13.322Z [other] net GET http://localhost:37353/api/facilities/3 -> 200
+2026-10-11T11:44:13.328Z [other] net GET http://localhost:37353/api/facilities/3/recommendations/latest -> 200
+2026-10-11T11:44:13.329Z [other] net GET http://localhost:37353/api/facilities/3/decisions -> 200
+2026-10-11T11:44:13.330Z [other] net GET http://localhost:37353/api/facilities/3/recorders -> 200
+2026-10-11T11:44:13.333Z [other] net GET http://localhost:37353/api/facilities/3/buildings -> 200
+2026-10-11T11:44:13.335Z [other] net GET http://localhost:37353/api/facilities/3/facility-date -> 200
+2026-10-11T11:44:13.338Z [other] net GET http://localhost:37353/api/decisions/2/directives -> 200
+2026-10-11T11:44:13.343Z [other] net GET http://localhost:37353/api/recommendations/3/notifications/preview -> 200
+2026-10-11T11:44:13.348Z [other] net GET http://localhost:37353/api/decisions/2/notifications -> 200
+2026-10-11T11:44:13.351Z [other] net GET http://localhost:37353/api/decisions/2/verify -> 200
+2026-10-11T11:44:13.440Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.440Z [other] step tab "main"
+2026-10-11T11:44:13.441Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.441Z step click "button" "Accept"
+2026-10-11T11:44:13.560Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.561Z step within "form" "Accept the recommendation"
+2026-10-11T11:44:13.561Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.561Z step select "Recorded by" "Priya Raman, District Conservationist"
+2026-10-11T11:44:13.570Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.570Z step click "button" "Record acceptance"
+2026-10-11T11:44:13.684Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.684Z step within-page 
+2026-10-11T11:44:13.684Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.684Z step expect "dialog" "Confirm and notify"
+2026-10-11T11:44:13.690Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.690Z step click "button" "Record decision"
+2026-10-11T11:44:13.861Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:13.861Z step expect-text "Someone else decided first."
+2026-10-11T11:44:13.908Z console.error Failed to load resource: the server responded with a status of 409 (Conflict)
+2026-10-11T11:44:13.909Z net POST http://localhost:37353/api/recommendations/3/decisions -> 409
+2026-10-11T11:44:13.928Z net GET http://localhost:37353/api/facilities/3 -> 200
+2026-10-11T11:44:13.934Z net GET http://localhost:37353/api/facilities/3/recommendations/latest -> 200
+2026-10-11T11:44:13.935Z net GET http://localhost:37353/api/facilities/3/decisions -> 200
+2026-10-11T11:44:13.937Z net GET http://localhost:37353/api/facilities/3/recorders -> 200
+2026-10-11T11:44:13.937Z net GET http://localhost:37353/api/facilities/3/buildings -> 200
+2026-10-11T11:44:13.940Z net GET http://localhost:37353/api/facilities/3/facility-date -> 200
+2026-10-11T11:44:13.943Z net GET http://localhost:37353/api/decisions/2/directives -> 200
+2026-10-11T11:44:13.948Z net GET http://localhost:37353/api/recommendations/3/notifications/preview -> 200
+2026-10-11T11:44:13.952Z net GET http://localhost:37353/api/decisions/2/notifications -> 200
+2026-10-11T11:44:13.955Z net GET http://localhost:37353/api/decisions/2/verify -> 200
+2026-10-11T11:44:14.047Z   at http://localhost:41905/facilities/3
+2026-10-11T11:44:14.047Z step snap "decision-screen-stale-decision"
+2026-10-11T11:44:14.258Z   saved decision-screen-stale-decision.aria.yml decision-screen-stale-decision.png
+2026-10-11T11:44:14.258Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:12.414Z step goto "/facilities/3"
+2026-10-11T11:45:13.539Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:13.540Z step tab "other"
+2026-10-11T11:45:13.569Z [other]   at about:blank
+2026-10-11T11:45:13.569Z [other] step goto "/facilities/3"
+2026-10-11T11:45:14.651Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:45:14.651Z [other] step click "button" "Re-evaluate"
+2026-10-11T11:45:14.720Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:45:14.720Z [other] step expect-text "New recommendation loaded."
+2026-10-11T11:45:14.829Z [other] net POST http://localhost:37353/api/facilities/3/recommendations -> 201
+2026-10-11T11:45:14.839Z [other] net GET http://localhost:37353/api/facilities/3 -> 200
+2026-10-11T11:45:14.846Z [other] net GET http://localhost:37353/api/facilities/3/recommendations/latest -> 200
+2026-10-11T11:45:14.847Z [other] net GET http://localhost:37353/api/facilities/3/decisions -> 200
+2026-10-11T11:45:14.847Z [other] net GET http://localhost:37353/api/facilities/3/recorders -> 200
+2026-10-11T11:45:14.849Z [other] net GET http://localhost:37353/api/facilities/3/buildings -> 200
+2026-10-11T11:45:14.852Z [other] net GET http://localhost:37353/api/facilities/3/facility-date -> 200
+2026-10-11T11:45:14.855Z [other] net GET http://localhost:37353/api/decisions/2/directives -> 200
+2026-10-11T11:45:14.861Z [other] net GET http://localhost:37353/api/recommendations/4/notifications/preview -> 200
+2026-10-11T11:45:14.868Z [other] net GET http://localhost:37353/api/decisions/2/notifications -> 200
+2026-10-11T11:45:14.869Z [other] net GET http://localhost:37353/api/decisions/2/verify -> 200
+2026-10-11T11:45:14.871Z [other] net GET http://localhost:37353/api/recommendations/3 -> 200
+2026-10-11T11:45:14.904Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:45:14.904Z [other] step snap "decision-screen-newer-in-other-tab"
+2026-10-11T11:45:15.084Z [other]   saved decision-screen-newer-in-other-tab.aria.yml decision-screen-newer-in-other-tab.png
+2026-10-11T11:45:15.084Z [other]   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.084Z [other] step tab "main"
+2026-10-11T11:45:15.085Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.085Z step click "button" "Accept"
+2026-10-11T11:45:15.159Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.159Z step within "form" "Accept the recommendation"
+2026-10-11T11:45:15.159Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.159Z step select "Reason category" "Other"
+2026-10-11T11:45:15.166Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.167Z step fill "Reason" "Holding normal operations."
+2026-10-11T11:45:15.176Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.176Z step select "Recorded by" "Priya Raman, District Conservationist"
+2026-10-11T11:45:15.180Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.180Z step click "button" "Record acceptance"
+2026-10-11T11:45:15.260Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.260Z step within-page 
+2026-10-11T11:45:15.260Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.261Z step expect "dialog" "Confirm and notify"
+2026-10-11T11:45:15.264Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.265Z step click "button" "Record decision"
+2026-10-11T11:45:15.441Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.441Z step expect-text "A newer recommendation exists."
+2026-10-11T11:45:15.473Z console.error Failed to load resource: the server responded with a status of 409 (Conflict)
+2026-10-11T11:45:15.475Z net POST http://localhost:37353/api/recommendations/3/decisions -> 409
+2026-10-11T11:45:15.493Z net GET http://localhost:37353/api/facilities/3 -> 200
+2026-10-11T11:45:15.502Z net GET http://localhost:37353/api/facilities/3/recommendations/latest -> 200
+2026-10-11T11:45:15.503Z net GET http://localhost:37353/api/facilities/3/decisions -> 200
+2026-10-11T11:45:15.504Z net GET http://localhost:37353/api/facilities/3/recorders -> 200
+2026-10-11T11:45:15.506Z net GET http://localhost:37353/api/facilities/3/buildings -> 200
+2026-10-11T11:45:15.508Z net GET http://localhost:37353/api/facilities/3/facility-date -> 200
+2026-10-11T11:45:15.513Z net GET http://localhost:37353/api/decisions/2/directives -> 200
+2026-10-11T11:45:15.519Z net GET http://localhost:37353/api/recommendations/4/notifications/preview -> 200
+2026-10-11T11:45:15.530Z net GET http://localhost:37353/api/decisions/2/notifications -> 200
+2026-10-11T11:45:15.530Z net GET http://localhost:37353/api/decisions/2/verify -> 200
+2026-10-11T11:45:15.530Z net GET http://localhost:37353/api/recommendations/3 -> 200
+2026-10-11T11:45:15.624Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.625Z step expect-focus-text "A newer recommendation exists.Nothing was saved. The newer recommendation is now shown above; review it before you decide."
+2026-10-11T11:45:15.647Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:15.647Z step snap "decision-screen-stale-recommendation"
+2026-10-11T11:45:15.830Z   saved decision-screen-stale-recommendation.aria.yml decision-screen-stale-recommendation.png
+2026-10-11T11:45:15.830Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:16.384Z step goto "/facilities/3"
+2026-10-11T11:45:17.501Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:17.501Z step click "button" "Accept"
+2026-10-11T11:45:17.579Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:17.579Z step within "form" "Accept the recommendation"
+2026-10-11T11:45:17.579Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:17.579Z step select "Recorded by" "Priya Raman, District Conservationist"
+2026-10-11T11:45:17.590Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:17.590Z step click "button" "Record acceptance"
+2026-10-11T11:45:17.673Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:17.673Z step within-page 
+2026-10-11T11:45:17.673Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:17.673Z step expect "dialog" "Confirm and notify"
+2026-10-11T11:45:17.679Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:17.679Z step block-api 
+2026-10-11T11:45:17.681Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:17.682Z step click "button" "Record decision"
+2026-10-11T11:45:17.919Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:17.919Z step expect-text "The decision could not be recorded."
+2026-10-11T11:45:17.965Z net POST http://localhost:37353/api/recommendations/4/decisions -> FAILED net::ERR_CONNECTION_REFUSED
+2026-10-11T11:45:17.965Z console.error Failed to load resource: net::ERR_CONNECTION_REFUSED
+2026-10-11T11:45:18.004Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:18.004Z step expect-focus-text "The decision could not be recorded.Nothing was saved. Try again."
+2026-10-11T11:45:18.027Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:18.027Z step snap "decision-screen-transport-failed"
+2026-10-11T11:45:18.353Z   saved decision-screen-transport-failed.aria.yml decision-screen-transport-failed.png
+2026-10-11T11:45:18.353Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:18.353Z step unblock-api 
+2026-10-11T11:45:18.355Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:18.355Z step within "form" "Accept the recommendation"
+2026-10-11T11:45:18.355Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:18.355Z step click "button" "Record acceptance"
+2026-10-11T11:45:18.427Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:18.427Z step within-page 
+2026-10-11T11:45:18.427Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:18.427Z step expect "dialog" "Confirm and notify"
+2026-10-11T11:45:18.431Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:18.431Z step click "button" "Record decision"
+2026-10-11T11:45:18.599Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:18.599Z step expect-text "Decision recorded."
+2026-10-11T11:45:18.646Z net POST http://localhost:37353/api/recommendations/4/decisions -> 201
+2026-10-11T11:45:18.663Z net GET http://localhost:37353/api/facilities/3 -> 200
+2026-10-11T11:45:18.672Z net GET http://localhost:37353/api/facilities/3/recommendations/latest -> 200
+2026-10-11T11:45:18.672Z net GET http://localhost:37353/api/facilities/3/decisions -> 200
+2026-10-11T11:45:18.673Z net GET http://localhost:37353/api/facilities/3/recorders -> 200
+2026-10-11T11:45:18.674Z net GET http://localhost:37353/api/facilities/3/buildings -> 200
+2026-10-11T11:45:18.678Z net GET http://localhost:37353/api/facilities/3/facility-date -> 200
+2026-10-11T11:45:18.680Z net GET http://localhost:37353/api/decisions/3/directives -> 200
+2026-10-11T11:45:18.685Z net GET http://localhost:37353/api/recommendations/4/notifications/preview -> 200
+2026-10-11T11:45:18.688Z net GET http://localhost:37353/api/decisions/3/notifications -> 200
+2026-10-11T11:45:18.692Z net GET http://localhost:37353/api/decisions/3/verify -> 200
+2026-10-11T11:45:18.783Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:18.783Z step snap "decision-screen-transport-recovered"
+2026-10-11T11:45:19.048Z   saved decision-screen-transport-recovered.aria.yml decision-screen-transport-recovered.png
+2026-10-11T11:45:19.048Z   at http://localhost:41905/facilities/3
+2026-10-11T11:45:45.528Z step goto "/facilities/4"
+2026-10-11T11:45:46.643Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:46.643Z step expect-text "This recommendation is for Sat, Oct 10. Re-evaluate for today."
+2026-10-11T11:45:46.678Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:46.678Z step snap "decision-screen-earlier-day"
+2026-10-11T11:45:46.768Z   saved decision-screen-earlier-day.aria.yml decision-screen-earlier-day.png
+2026-10-11T11:45:46.768Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:47.323Z step goto "/facilities/4"
+2026-10-11T11:45:48.394Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:48.395Z step click "button" "Re-evaluate"
+2026-10-11T11:45:48.473Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:48.473Z step expect-text "New recommendation loaded."
+2026-10-11T11:45:48.578Z net POST http://localhost:37353/api/facilities/4/recommendations -> 201
+2026-10-11T11:45:48.588Z net GET http://localhost:37353/api/facilities/4 -> 200
+2026-10-11T11:45:48.595Z net GET http://localhost:37353/api/facilities/4/recommendations/latest -> 200
+2026-10-11T11:45:48.596Z net GET http://localhost:37353/api/facilities/4/decisions -> 200
+2026-10-11T11:45:48.598Z net GET http://localhost:37353/api/facilities/4/recorders -> 200
+2026-10-11T11:45:48.598Z net GET http://localhost:37353/api/facilities/4/buildings -> 200
+2026-10-11T11:45:48.600Z net GET http://localhost:37353/api/facilities/4/facility-date -> 200
+2026-10-11T11:45:48.605Z net GET http://localhost:37353/api/recommendations/7/notifications/preview -> 200
+2026-10-11T11:45:48.607Z net GET http://localhost:37353/api/decisions/4/verify -> 200
+2026-10-11T11:45:48.657Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:48.657Z step expect-text "Nobody decided before the deadline."
+2026-10-11T11:45:48.659Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:48.659Z step expect-text "The backup decision maker is Priya Raman, District Conservationist."
+2026-10-11T11:45:48.663Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:48.663Z step snap "decision-screen-backup"
+2026-10-11T11:45:48.786Z   saved decision-screen-backup.aria.yml decision-screen-backup.png
+2026-10-11T11:45:48.786Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:49.347Z step goto "/facilities/4"
+2026-10-11T11:45:50.443Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:50.444Z step expect-text "No re-check time fits before the decision deadline, so this cannot be deferred."
+2026-10-11T11:45:50.476Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:50.476Z step snap "decision-screen-defer-closed"
+2026-10-11T11:45:50.601Z   saved decision-screen-defer-closed.aria.yml decision-screen-defer-closed.png
+2026-10-11T11:45:50.601Z   at http://localhost:41905/facilities/4
+2026-10-11T11:45:59.540Z step goto "/facilities/1"
+2026-10-11T11:46:00.626Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:00.626Z step click "button" "Re-evaluate"
+2026-10-11T11:46:00.688Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:00.689Z step expect-text "New recommendation loaded."
+2026-10-11T11:46:00.921Z net POST http://localhost:37353/api/facilities/1/recommendations -> 201
+2026-10-11T11:46:00.931Z net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:46:00.937Z net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:46:00.939Z net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:46:00.940Z net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:46:00.941Z net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:46:00.943Z net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:46:00.948Z net GET http://localhost:37353/api/recommendations/8/notifications/preview -> 200
+2026-10-11T11:46:00.990Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:00.990Z step expect "heading" "Decide"
+2026-10-11T11:46:00.995Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:01.563Z step goto "/facilities/1"
+2026-10-11T11:46:02.660Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:02.660Z step click "button" "Accept"
+2026-10-11T11:46:02.735Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:02.735Z step within "form" "Accept the recommendation"
+2026-10-11T11:46:02.736Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:02.736Z step select "Recorded by" "Dana Whitfield, County Executive Director"
+2026-10-11T11:46:02.746Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:02.747Z step click "button" "Record acceptance"
+2026-10-11T11:46:02.836Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:02.837Z step within-page 
+2026-10-11T11:46:02.837Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:02.837Z step expect "dialog" "Confirm and notify"
+2026-10-11T11:46:02.843Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:02.843Z step snap "decision-screen-confirm"
+2026-10-11T11:46:03.182Z   saved decision-screen-confirm.aria.yml decision-screen-confirm.png
+2026-10-11T11:46:03.183Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:03.183Z step click "button" "Back"
+2026-10-11T11:46:03.265Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:03.265Z step expect "button" "Record acceptance"
+2026-10-11T11:46:03.449Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:03.449Z step snap "decision-screen-confirm-back"
+2026-10-11T11:46:03.572Z   saved decision-screen-confirm-back.aria.yml decision-screen-confirm-back.png
+2026-10-11T11:46:03.572Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:11.568Z step goto "/facilities/1"
+2026-10-11T11:46:12.665Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:12.666Z step click "button" "Override"
+2026-10-11T11:46:12.753Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:12.753Z step within "form" "Override the recommendation"
+2026-10-11T11:46:12.753Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:12.753Z step select "Posture instead" "Full closure"
+2026-10-11T11:46:12.763Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:12.763Z step select "Reason category" "Local conditions"
+2026-10-11T11:46:12.771Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:12.771Z step fill "Reason" "Water main break on site."
+2026-10-11T11:46:12.781Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:12.781Z step select "Recorded by" "Dana Whitfield, County Executive Director"
+2026-10-11T11:46:12.789Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:12.789Z step click "button" "Record override"
+2026-10-11T11:46:12.870Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:12.870Z step within-page 
+2026-10-11T11:46:12.870Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:12.871Z step expect "dialog" "Confirm and notify"
+2026-10-11T11:46:12.876Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:12.876Z step snap "decision-screen-confirm-override"
+2026-10-11T11:46:13.171Z   saved decision-screen-confirm-override.aria.yml decision-screen-confirm-override.png
+2026-10-11T11:46:13.171Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:13.171Z step click "button" "Record decision"
+2026-10-11T11:46:13.290Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:13.290Z step expect-text "Decision recorded."
+2026-10-11T11:46:13.292Z net POST http://localhost:37353/api/recommendations/8/decisions -> 201
+2026-10-11T11:46:13.310Z net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:46:13.316Z net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:46:13.318Z net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:46:13.320Z net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:46:13.322Z net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:46:13.323Z net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:46:13.327Z net GET http://localhost:37353/api/decisions/5/directives -> 200
+2026-10-11T11:46:13.332Z net GET http://localhost:37353/api/recommendations/8/notifications/preview -> 200
+2026-10-11T11:46:13.349Z net GET http://localhost:37353/api/decisions/5/notifications -> 200
+2026-10-11T11:46:13.352Z net GET http://localhost:37353/api/decisions/5/verify -> 200
+2026-10-11T11:46:13.411Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:13.411Z step expect "region" "Notifications"
+2026-10-11T11:46:13.425Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:13.426Z step snap "decision-screen-notifications"
+2026-10-11T11:46:13.661Z   saved decision-screen-notifications.aria.yml decision-screen-notifications.png
+2026-10-11T11:46:13.661Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:13.661Z step click "button" "Dispatch notifications"
+2026-10-11T11:46:13.697Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:13.697Z step expect "table" "Dispatched notices"
+2026-10-11T11:46:13.731Z net POST http://localhost:37353/api/decisions/5/dispatch -> 201
+2026-10-11T11:46:13.748Z net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:46:13.752Z net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:46:13.761Z net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:46:13.761Z net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:46:13.761Z net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:46:13.762Z net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:46:13.764Z net GET http://localhost:37353/api/decisions/5/directives -> 200
+2026-10-11T11:46:13.768Z net GET http://localhost:37353/api/recommendations/8/notifications/preview -> 200
+2026-10-11T11:46:13.777Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:13.777Z step expect "region" "Record chain"
+2026-10-11T11:46:13.780Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:13.780Z step expect-text "This decision's notices were dispatched, and dispatch happens once, so a new directive would reach nobody. Record a new decision to change what staff are told."
+2026-10-11T11:46:13.782Z net GET http://localhost:37353/api/decisions/5/notifications -> 200
+2026-10-11T11:46:13.808Z net GET http://localhost:37353/api/decisions/5/verify -> 200
+2026-10-11T11:46:13.863Z   at http://localhost:41905/facilities/1
+2026-10-11T11:46:13.863Z step snap "decision-screen-dispatched"
+2026-10-11T11:46:14.058Z   saved decision-screen-dispatched.aria.yml decision-screen-dispatched.png
+2026-10-11T11:46:14.058Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:29.683Z step goto "/facilities/1"
+2026-10-11T11:47:30.866Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:30.866Z step click "button" "Re-evaluate"
+2026-10-11T11:47:30.934Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:30.934Z step expect-text "New recommendation loaded."
+2026-10-11T11:47:31.411Z net POST http://localhost:37353/api/facilities/1/recommendations -> 201
+2026-10-11T11:47:31.426Z net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:47:31.435Z net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:47:31.435Z net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:47:31.440Z net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:47:31.440Z net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:47:31.443Z net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:47:31.446Z net GET http://localhost:37353/api/decisions/5/directives -> 200
+2026-10-11T11:47:31.452Z net GET http://localhost:37353/api/recommendations/9/notifications/preview -> 200
+2026-10-11T11:47:31.466Z net GET http://localhost:37353/api/decisions/5/notifications -> 200
+2026-10-11T11:47:31.484Z net GET http://localhost:37353/api/decisions/5/verify -> 200
+2026-10-11T11:47:31.488Z net GET http://localhost:37353/api/recommendations/8 -> 200
+2026-10-11T11:47:31.723Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:31.723Z step click "button" "Override"
+2026-10-11T11:47:31.757Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:31.757Z step within "form" "Override the recommendation"
+2026-10-11T11:47:31.757Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:31.758Z step select "Posture instead" "Full closure"
+2026-10-11T11:47:31.769Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:31.769Z step select "Reason category" "Local conditions"
+2026-10-11T11:47:31.776Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:31.776Z step fill "Reason" "Water main break on site."
+2026-10-11T11:47:31.784Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:31.784Z step select "Recorded by" "Dana Whitfield, County Executive Director"
+2026-10-11T11:47:31.791Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:31.791Z step click "button" "Record override"
+2026-10-11T11:47:31.868Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:31.869Z step within-page 
+2026-10-11T11:47:31.869Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:31.869Z step expect "dialog" "Confirm and notify"
+2026-10-11T11:47:31.872Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:31.872Z step click "button" "Record decision"
+2026-10-11T11:47:32.058Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:32.058Z step expect-text "Decision recorded."
+2026-10-11T11:47:32.093Z net POST http://localhost:37353/api/recommendations/9/decisions -> 201
+2026-10-11T11:47:32.110Z net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:47:32.115Z net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:47:32.117Z net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:47:32.117Z net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:47:32.118Z net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:47:32.121Z net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:47:32.124Z net GET http://localhost:37353/api/decisions/6/directives -> 200
+2026-10-11T11:47:32.132Z net GET http://localhost:37353/api/recommendations/9/notifications/preview -> 200
+2026-10-11T11:47:32.145Z net GET http://localhost:37353/api/decisions/6/notifications -> 200
+2026-10-11T11:47:32.147Z net GET http://localhost:37353/api/decisions/6/verify -> 200
+2026-10-11T11:47:32.242Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:32.242Z step expect "button" "Dispatch notifications"
+2026-10-11T11:47:32.271Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:32.811Z step goto "/facilities/1"
+2026-10-11T11:47:33.957Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:33.957Z step tab "other"
+2026-10-11T11:47:33.987Z [other]   at about:blank
+2026-10-11T11:47:33.987Z [other] step goto "/facilities/1"
+2026-10-11T11:47:35.107Z [other]   at http://localhost:41905/facilities/1
+2026-10-11T11:47:35.107Z [other] step click "button" "Dispatch notifications"
+2026-10-11T11:47:35.179Z [other]   at http://localhost:41905/facilities/1
+2026-10-11T11:47:35.179Z [other] step expect "table" "Dispatched notices"
+2026-10-11T11:47:35.198Z [other] net POST http://localhost:37353/api/decisions/6/dispatch -> 201
+2026-10-11T11:47:35.224Z [other]   at http://localhost:41905/facilities/1
+2026-10-11T11:47:35.225Z [other] step tab "main"
+2026-10-11T11:47:35.225Z [other] net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:47:35.226Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:35.226Z step click "button" "Dispatch notifications"
+2026-10-11T11:47:35.233Z [other] net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:47:35.233Z [other] net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:47:35.234Z [other] net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:47:35.235Z [other] net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:47:35.238Z [other] net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:47:35.240Z [other] net GET http://localhost:37353/api/decisions/6/directives -> 200
+2026-10-11T11:47:35.245Z [other] net GET http://localhost:37353/api/recommendations/9/notifications/preview -> 200
+2026-10-11T11:47:35.263Z [other] net GET http://localhost:37353/api/decisions/6/notifications -> 200
+2026-10-11T11:47:35.278Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:35.278Z step expect-text "This decision was already dispatched"
+2026-10-11T11:47:35.285Z [other] net GET http://localhost:37353/api/decisions/6/verify -> 200
+2026-10-11T11:47:35.290Z console.error Failed to load resource: the server responded with a status of 409 (Conflict)
+2026-10-11T11:47:35.291Z net POST http://localhost:37353/api/decisions/6/dispatch -> 409
+2026-10-11T11:47:35.301Z net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:47:35.307Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:35.307Z step expect "table" "Dispatched notices"
+2026-10-11T11:47:35.311Z net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:47:35.314Z net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:47:35.314Z net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:47:35.318Z net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:47:35.318Z net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:47:35.322Z net GET http://localhost:37353/api/decisions/6/directives -> 200
+2026-10-11T11:47:35.326Z net GET http://localhost:37353/api/recommendations/9/notifications/preview -> 200
+2026-10-11T11:47:35.339Z net GET http://localhost:37353/api/decisions/6/notifications -> 200
+2026-10-11T11:47:35.363Z net GET http://localhost:37353/api/decisions/6/verify -> 200
+2026-10-11T11:47:35.393Z   at http://localhost:41905/facilities/1
+2026-10-11T11:47:35.394Z step snap "decision-screen-dispatch-conflict"
+2026-10-11T11:47:35.612Z   saved decision-screen-dispatch-conflict.aria.yml decision-screen-dispatch-conflict.png
+2026-10-11T11:47:35.612Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:31.173Z step goto "/facilities/1"
+2026-10-11T11:48:32.337Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.337Z step click "button" "Re-evaluate"
+2026-10-11T11:48:32.398Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.398Z step expect-text "New recommendation loaded."
+2026-10-11T11:48:32.535Z net POST http://localhost:37353/api/facilities/1/recommendations -> 201
+2026-10-11T11:48:32.545Z net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:48:32.551Z net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:48:32.554Z net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:48:32.556Z net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:48:32.560Z net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:48:32.560Z net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:48:32.562Z net GET http://localhost:37353/api/decisions/6/directives -> 200
+2026-10-11T11:48:32.568Z net GET http://localhost:37353/api/recommendations/10/notifications/preview -> 200
+2026-10-11T11:48:32.583Z net GET http://localhost:37353/api/decisions/6/notifications -> 200
+2026-10-11T11:48:32.610Z net GET http://localhost:37353/api/decisions/6/verify -> 200
+2026-10-11T11:48:32.613Z net GET http://localhost:37353/api/recommendations/9 -> 200
+2026-10-11T11:48:32.686Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.686Z step click "button" "Override"
+2026-10-11T11:48:32.740Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.741Z step within "form" "Override the recommendation"
+2026-10-11T11:48:32.741Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.741Z step select "Posture instead" "Full closure"
+2026-10-11T11:48:32.753Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.753Z step select "Reason category" "Local conditions"
+2026-10-11T11:48:32.760Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.760Z step fill "Reason" "Water main break on site."
+2026-10-11T11:48:32.768Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.768Z step select "Recorded by" "Dana Whitfield, County Executive Director"
+2026-10-11T11:48:32.773Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.773Z step click "button" "Record override"
+2026-10-11T11:48:32.851Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.851Z step within-page 
+2026-10-11T11:48:32.851Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.851Z step expect "dialog" "Confirm and notify"
+2026-10-11T11:48:32.857Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:32.857Z step click "button" "Record decision"
+2026-10-11T11:48:33.040Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:33.040Z step expect-text "Decision recorded."
+2026-10-11T11:48:33.079Z net POST http://localhost:37353/api/recommendations/10/decisions -> 201
+2026-10-11T11:48:33.093Z net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:48:33.097Z net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:48:33.099Z net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:48:33.100Z net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:48:33.101Z net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:48:33.104Z net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:48:33.107Z net GET http://localhost:37353/api/decisions/7/directives -> 200
+2026-10-11T11:48:33.112Z net GET http://localhost:37353/api/recommendations/10/notifications/preview -> 200
+2026-10-11T11:48:33.129Z net GET http://localhost:37353/api/decisions/7/notifications -> 200
+2026-10-11T11:48:33.130Z net GET http://localhost:37353/api/decisions/7/verify -> 200
+2026-10-11T11:48:33.225Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:33.225Z step expect "button" "Dispatch notifications"
+2026-10-11T11:48:33.254Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:33.802Z step goto "/facilities/1"
+2026-10-11T11:48:34.951Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:34.951Z step tab "other"
+2026-10-11T11:48:34.981Z [other]   at about:blank
+2026-10-11T11:48:34.981Z [other] step goto "/facilities/1"
+2026-10-11T11:48:36.135Z [other]   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.136Z [other] step click "button" "Dispatch notifications"
+2026-10-11T11:48:36.193Z [other]   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.193Z [other] step expect "table" "Dispatched notices"
+2026-10-11T11:48:36.211Z [other] net POST http://localhost:37353/api/decisions/7/dispatch -> 201
+2026-10-11T11:48:36.236Z [other] net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:48:36.236Z [other]   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.236Z [other] step tab "main"
+2026-10-11T11:48:36.236Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.236Z step within "form" "Issue directive"
+2026-10-11T11:48:36.236Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.236Z step select "Applies to" "Annex"
+2026-10-11T11:48:36.246Z [other] net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:48:36.248Z [other] net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:48:36.248Z [other] net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:48:36.249Z [other] net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:48:36.250Z [other] net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:48:36.254Z [other] net GET http://localhost:37353/api/decisions/7/directives -> 200
+2026-10-11T11:48:36.259Z [other] net GET http://localhost:37353/api/recommendations/10/notifications/preview -> 200
+2026-10-11T11:48:36.273Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.273Z step select "Directive" "Excused"
+2026-10-11T11:48:36.275Z [other] net GET http://localhost:37353/api/decisions/7/notifications -> 200
+2026-10-11T11:48:36.280Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.280Z step select "Reason category" "Local conditions"
+2026-10-11T11:48:36.284Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.284Z step fill "Reason" "The Annex has no heat."
+2026-10-11T11:48:36.295Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.295Z step select "Recorded by" "Dana Whitfield, County Executive Director"
+2026-10-11T11:48:36.301Z [other] net GET http://localhost:37353/api/decisions/7/verify -> 200
+2026-10-11T11:48:36.303Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.303Z step click "button" "Issue directive"
+2026-10-11T11:48:36.344Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.344Z step within-page 
+2026-10-11T11:48:36.344Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.344Z step expect-text "This decision's notices were dispatched before your directive arrived, perhaps from another tab. Nothing was saved; the page is reloaded."
+2026-10-11T11:48:36.351Z console.error Failed to load resource: the server responded with a status of 409 (Conflict)
+2026-10-11T11:48:36.351Z net POST http://localhost:37353/api/decisions/7/directives -> 409
+2026-10-11T11:48:36.360Z net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:48:36.367Z net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:48:36.368Z net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:48:36.371Z net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:48:36.371Z net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:48:36.374Z net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:48:36.376Z net GET http://localhost:37353/api/decisions/7/directives -> 200
+2026-10-11T11:48:36.381Z net GET http://localhost:37353/api/recommendations/10/notifications/preview -> 200
+2026-10-11T11:48:36.401Z net GET http://localhost:37353/api/decisions/7/notifications -> 200
+2026-10-11T11:48:36.420Z net GET http://localhost:37353/api/decisions/7/verify -> 200
+2026-10-11T11:48:36.555Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.556Z step expect-focus-text "This decision's notices were dispatched before your directive arrived, perhaps from another tab. Nothing was saved; the page is reloaded."
+2026-10-11T11:48:36.581Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.581Z step expect "table" "Dispatched notices"
+2026-10-11T11:48:36.585Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:36.585Z step snap "decision-screen-directive-after-dispatch"
+2026-10-11T11:48:36.797Z   saved decision-screen-directive-after-dispatch.aria.yml decision-screen-directive-after-dispatch.png
+2026-10-11T11:48:36.797Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:37.387Z step goto "/facilities/1"
+2026-10-11T11:48:38.545Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:38.545Z step click "button" "Re-evaluate"
+2026-10-11T11:48:38.612Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:38.612Z step expect-text "A newer recommendation is available"
+2026-10-11T11:48:38.726Z net POST http://localhost:37353/api/facilities/1/recommendations -> 201
+2026-10-11T11:48:38.735Z net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:48:38.741Z net GET http://localhost:37353/api/facilities/1/decisions -> 200
+2026-10-11T11:48:38.743Z net GET http://localhost:37353/api/facilities/1/recommendations/latest -> 200
+2026-10-11T11:48:38.744Z net GET http://localhost:37353/api/facilities/1/recorders -> 200
+2026-10-11T11:48:38.745Z net GET http://localhost:37353/api/facilities/1/buildings -> 200
+2026-10-11T11:48:38.747Z net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:48:38.751Z net GET http://localhost:37353/api/decisions/7/directives -> 200
+2026-10-11T11:48:38.756Z net GET http://localhost:37353/api/recommendations/11/notifications/preview -> 200
+2026-10-11T11:48:38.769Z net GET http://localhost:37353/api/decisions/7/notifications -> 200
+2026-10-11T11:48:38.792Z net GET http://localhost:37353/api/decisions/7/verify -> 200
+2026-10-11T11:48:38.795Z net GET http://localhost:37353/api/recommendations/10 -> 200
+2026-10-11T11:48:38.898Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:38.898Z step expect "region" "Notifications"
+2026-10-11T11:48:38.903Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:38.903Z step snap "decision-screen-newer-recommendation"
+2026-10-11T11:48:39.139Z   saved decision-screen-newer-recommendation.aria.yml decision-screen-newer-recommendation.png
+2026-10-11T11:48:39.139Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:48.799Z step goto "/facilities/1"
+2026-10-11T11:48:49.962Z   at http://localhost:41905/facilities/1
+2026-10-11T11:48:49.962Z step click "link" "People and status"
+2026-10-11T11:48:50.033Z   at http://localhost:41905/facilities/1/personnel
+2026-10-11T11:48:50.033Z step expect-text "Who's notified and why"
+2026-10-11T11:48:50.035Z net GET http://localhost:37353/api/facilities/1 -> 200
+2026-10-11T11:48:50.105Z net GET http://localhost:37353/api/facilities/1/personnel -> 200
+2026-10-11T11:48:50.112Z net GET http://localhost:37353/api/facilities/1/facility-date -> 200
+2026-10-11T11:48:50.826Z   at http://localhost:41905/facilities/1/personnel
+2026-10-11T11:48:50.826Z step snap "decision-screen-personnel-link"
+2026-10-11T11:48:51.039Z   saved decision-screen-personnel-link.aria.yml decision-screen-personnel-link.png
+2026-10-11T11:48:51.039Z   at http://localhost:41905/facilities/1/personnel

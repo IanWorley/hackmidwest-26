@@ -1,0 +1,80 @@
+# url: http://localhost:41905/facilities/3
+# title: Yakima Service Center · Hack Midwest
+- banner:
+  - navigation "Main":
+    - link "Hack Midwest":
+      - /url: /
+    - link "Conditions":
+      - /url: /conditions
+    - link "Facilities":
+      - /url: /facilities
+- main:
+  - article:
+    - heading "Yakima Service Center" [level=1]
+    - term: Time zone
+    - definition: America/Los_Angeles
+    - term: Hours
+    - definition: 07:30–16:00
+    - term: NWS zone
+    - definition: WAZ027
+    - term: Hazards
+    - definition:
+      - list:
+        - listitem: Winter storm
+        - listitem: Air quality
+    - link "People and status":
+      - /url: /facilities/3/personnel
+    - heading "Recommendation" [level=2]
+    - button "Re-evaluate"
+    - status
+    - paragraph: Decide by Sun, Oct 11, 05:15 PDT
+    - paragraph: 32 min left to decide
+    - text: "Normal operations Confidence: High"
+    - paragraph: Live evaluation, Sun, Oct 11, 04:42 PDT
+    - heading "Rationale" [level=3]
+    - paragraph: No monitored hazard crosses a cutoff, so recommend normal operations on 2026-10-11. Decide by 05:15. Confidence is high.
+    - heading "Thresholds crossed" [level=3]
+    - paragraph: No threshold was crossed.
+    - heading "Inputs" [level=3]
+    - list:
+      - listitem: NWS hourly forecast, as of Sat, Oct 10, 23:46 PDT
+      - listitem: Open-Meteo air quality, as of Sun, Oct 11, 04:00 PDT
+      - listitem: NWS observations, as of Sun, Oct 11, 04:20 PDT
+      - listitem: NWS alerts, as of Sun, Oct 11, 04:42 PDT
+    - region "Decide":
+      - heading "Decide" [level=2]
+      - status
+      - group "Decision actions":
+        - text: Decision actions
+        - button "Accept"
+        - button "Override"
+        - button "Defer" [pressed]
+      - form "Defer the decision":
+        - heading "Defer the decision" [level=3]
+        - text: Re-check in
+        - combobox "Re-check in":
+          - option "Choose…" [disabled]
+          - option "15 min" [selected]
+          - option "30 min"
+        - text: Reason category
+        - combobox "Reason category":
+          - option "Choose…" [disabled]
+          - option "Local conditions"
+          - option "Road reports" [selected]
+          - option "Directive from leadership"
+          - option "Essential operations"
+          - option "Data looks wrong"
+          - option "Other"
+        - text: Reason
+        - textbox "Reason" [invalid]
+        - paragraph: Enter a reason.
+        - text: Recorded by
+        - combobox "Recorded by":
+          - option "Choose…" [disabled]
+          - option "Priya Raman, District Conservationist" [selected]
+          - option "Tomas Ibarra, Facility Operations Manager"
+        - paragraph: "Identity unverified: the record names whoever you pick here without checking it."
+        - button "Record deferral"
+        - button "Cancel"
+    - heading "Decision history" [level=2]
+    - paragraph: No decisions recorded for this facility yet.

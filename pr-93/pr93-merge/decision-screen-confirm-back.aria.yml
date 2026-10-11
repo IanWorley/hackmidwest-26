@@ -1,0 +1,78 @@
+# url: http://localhost:41905/facilities/1
+# title: Kansas City Area Service Center · Hack Midwest
+- banner:
+  - navigation "Main":
+    - link "Hack Midwest":
+      - /url: /
+    - link "Conditions":
+      - /url: /conditions
+    - link "Facilities":
+      - /url: /facilities
+- main:
+  - article:
+    - heading "Kansas City Area Service Center" [level=1]
+    - term: Time zone
+    - definition: America/Chicago
+    - term: Hours
+    - definition: 07:30–16:30
+    - term: NWS zone
+    - definition: MOZ037
+    - term: Hazards
+    - definition:
+      - list:
+        - listitem: Winter storm
+        - listitem: High wind
+        - listitem: Air quality
+        - listitem: Flood
+    - link "People and status":
+      - /url: /facilities/1/personnel
+    - heading "Recommendation" [level=2]
+    - button "Re-evaluate"
+    - status
+    - paragraph: Decide by Sun, Oct 11, 05:00 CDT
+    - paragraph: Decision deadline passed 1 h 46 min ago
+    - text: "Normal operations Confidence: High"
+    - paragraph: Live evaluation, Sun, Oct 11, 06:46 CDT
+    - heading "Rationale" [level=3]
+    - paragraph: No monitored hazard crosses a cutoff, so recommend normal operations on 2026-10-11. The 05:00 decision deadline has passed. Confidence is high.
+    - heading "Thresholds crossed" [level=3]
+    - paragraph: No threshold was crossed.
+    - heading "Inputs" [level=3]
+    - list:
+      - listitem: NWS river gauge, as of Sun, Oct 11, 04:30 CDT
+      - listitem: Open-Meteo air quality, as of Sun, Oct 11, 06:00 CDT
+      - listitem: NWS hourly forecast, as of Sun, Oct 11, 06:01 CDT
+      - listitem: NWS observations, as of Sun, Oct 11, 06:25 CDT
+      - listitem: NWS alerts, as of Sun, Oct 11, 06:46 CDT
+    - region "Decide":
+      - heading "Decide" [level=2]
+      - status
+      - group "Decision actions":
+        - text: Decision actions
+        - button "Accept" [pressed]
+        - button "Override"
+        - button "Defer" [disabled]
+      - paragraph: No re-check time fits before the decision deadline, so this cannot be deferred.
+      - form "Accept the recommendation":
+        - heading "Accept the recommendation" [level=3]
+        - text: Reason category (optional)
+        - combobox "Reason category (optional)":
+          - option "Choose…" [disabled] [selected]
+          - option "Local conditions"
+          - option "Road reports"
+          - option "Directive from leadership"
+          - option "Essential operations"
+          - option "Data looks wrong"
+          - option "Other"
+        - text: Reason (optional)
+        - textbox "Reason (optional)"
+        - text: Recorded by
+        - combobox "Recorded by":
+          - option "Choose…" [disabled]
+          - option "Dana Whitfield, County Executive Director" [selected]
+          - option "Marcus Oyelaran, State Administrative Officer"
+        - paragraph: "Identity unverified: the record names whoever you pick here without checking it."
+        - button "Record acceptance"
+        - button "Cancel"
+    - heading "Decision history" [level=2]
+    - paragraph: No decisions recorded for this facility yet.

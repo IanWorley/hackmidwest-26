@@ -1,0 +1,5 @@
+sql> select r.id, r.evaluated_at, (select count(*) from decisions d where d.recommendation_id = r.id) as decisions from recommendations r where r.facility_id = 3 and r.as_of = r.evaluated_at order by r.evaluated_at
+id|evaluated_at|decisions
+1|2026-10-11T11:42:40.120Z|0
+2|2026-10-11T11:42:54.744Z|1
+3|2026-10-11T11:44:09.555Z|0

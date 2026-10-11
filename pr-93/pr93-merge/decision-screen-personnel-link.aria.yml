@@ -1,0 +1,270 @@
+# url: http://localhost:41905/facilities/1/personnel
+# title: People and status · Kansas City Area Service Center · Hack Midwest
+- banner:
+  - navigation "Main":
+    - link "Hack Midwest":
+      - /url: /
+    - link "Conditions":
+      - /url: /conditions
+    - link "Facilities":
+      - /url: /facilities
+- main:
+  - article:
+    - heading "People and status" [level=1]
+    - paragraph: Kansas City Area Service Center. Status for Sun, Oct 11, as of 06:48 (America/Chicago).
+    - link "Who's notified and why":
+      - /url: /facilities/1
+    - search "Filter people":
+      - text: Building
+      - combobox "Building":
+        - option "All" [selected]
+        - option "Main Office"
+        - option "Annex"
+        - option "Equipment Barn"
+      - text: Effective status
+      - combobox "Effective status":
+        - option "All" [selected]
+        - option "onsite"
+        - option "teleworking"
+        - option "delayed arrival"
+        - option "report required"
+        - option "dismissed"
+        - option "not working"
+      - text: Essential
+      - combobox "Essential":
+        - option "All" [selected]
+        - option "Essential only"
+        - option "Not essential"
+    - region "Status summary":
+      - paragraph: 13 teleworking · 2 report required · 3 dismissed · 2 not working
+    - table "People":
+      - rowgroup:
+        - row "Name Building Essential Baseline Effective status Contact Accessibility":
+          - columnheader "Name"
+          - columnheader "Building"
+          - columnheader "Essential"
+          - columnheader "Baseline"
+          - columnheader "Effective status"
+          - columnheader "Contact"
+          - columnheader "Accessibility"
+      - rowgroup:
+        - row "Avery Calloway Main Office No onsite teleworking, full closure Update status for Avery Calloway Prefers email avery.calloway@usda.example No mobile phone No":
+          - cell "Avery Calloway"
+          - cell "Main Office"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Avery Calloway":
+            - paragraph: teleworking, full closure
+            - button "Update status for Avery Calloway": Update status
+          - cell "Prefers email avery.calloway@usda.example No mobile phone"
+          - cell "No"
+        - row "Bianca Ferraro Main Office Yes onsite report required, full closure Update status for Bianca Ferraro Prefers email bianca.ferraro@usda.example No mobile phone No":
+          - cell "Bianca Ferraro"
+          - cell "Main Office"
+          - cell "Yes"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "report required, full closure Update status for Bianca Ferraro":
+            - paragraph: report required, full closure
+            - button "Update status for Bianca Ferraro": Update status
+          - cell "Prefers email bianca.ferraro@usda.example No mobile phone"
+          - cell "No"
+        - row "Caleb Mendoza Equipment Barn Yes onsite report required, full closure Update status for Caleb Mendoza Prefers text message caleb.mendoza@usda.example +18165550103 No":
+          - cell "Caleb Mendoza"
+          - cell "Equipment Barn"
+          - cell "Yes"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "report required, full closure Update status for Caleb Mendoza":
+            - paragraph: report required, full closure
+            - button "Update status for Caleb Mendoza": Update status
+          - cell "Prefers text message caleb.mendoza@usda.example +18165550103"
+          - cell "No"
+        - row "Delia Okafor Main Office No teleworking teleworking, baseline Update status for Delia Okafor Prefers email delia.okafor@usda.example No mobile phone No":
+          - cell "Delia Okafor"
+          - cell "Main Office"
+          - cell "No"
+          - cell "teleworking":
+            - paragraph: teleworking
+          - cell "teleworking, baseline Update status for Delia Okafor":
+            - paragraph: teleworking, baseline
+            - button "Update status for Delia Okafor": Update status
+          - cell "Prefers email delia.okafor@usda.example No mobile phone"
+          - cell "No"
+        - row "Elliot Brandt Equipment Barn No onsite dismissed, full closure Update status for Elliot Brandt Prefers email elliot.brandt@usda.example No mobile phone No":
+          - cell "Elliot Brandt"
+          - cell "Equipment Barn"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "dismissed, full closure Update status for Elliot Brandt":
+            - paragraph: dismissed, full closure
+            - button "Update status for Elliot Brandt": Update status
+          - cell "Prefers email elliot.brandt@usda.example No mobile phone"
+          - cell "No"
+        - row "Farah Haddad Main Office No not working, On detail to the state office through October 31. not working, On detail to the state office through October 31. Update status for Farah Haddad Prefers email farah.haddad@usda.example No mobile phone No":
+          - cell "Farah Haddad"
+          - cell "Main Office"
+          - cell "No"
+          - cell "not working, On detail to the state office through October 31.":
+            - paragraph: not working, On detail to the state office through October 31.
+          - cell "not working, On detail to the state office through October 31. Update status for Farah Haddad":
+            - paragraph: not working, On detail to the state office through October 31.
+            - button "Update status for Farah Haddad": Update status
+          - cell "Prefers email farah.haddad@usda.example No mobile phone"
+          - cell "No"
+        - row "Gideon Marsh Annex No not working, On annual leave through October 16. not working, On annual leave through October 16. Update status for Gideon Marsh Prefers email gideon.marsh@usda.example No mobile phone No":
+          - cell "Gideon Marsh"
+          - cell "Annex"
+          - cell "No"
+          - cell "not working, On annual leave through October 16.":
+            - paragraph: not working, On annual leave through October 16.
+          - cell "not working, On annual leave through October 16. Update status for Gideon Marsh":
+            - paragraph: not working, On annual leave through October 16.
+            - button "Update status for Gideon Marsh": Update status
+          - cell "Prefers email gideon.marsh@usda.example No mobile phone"
+          - cell "No"
+        - row "Hana Kowalczyk Main Office No onsite teleworking, full closure Update status for Hana Kowalczyk Prefers email hana.kowalczyk@usda.example No mobile phone Yes":
+          - cell "Hana Kowalczyk"
+          - cell "Main Office"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Hana Kowalczyk":
+            - paragraph: teleworking, full closure
+            - button "Update status for Hana Kowalczyk": Update status
+          - cell "Prefers email hana.kowalczyk@usda.example No mobile phone"
+          - cell "Yes"
+        - row "Isaac Thorne Equipment Barn No onsite dismissed, full closure Update status for Isaac Thorne Prefers email isaac.thorne@usda.example No mobile phone No":
+          - cell "Isaac Thorne"
+          - cell "Equipment Barn"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "dismissed, full closure Update status for Isaac Thorne":
+            - paragraph: dismissed, full closure
+            - button "Update status for Isaac Thorne": Update status
+          - cell "Prefers email isaac.thorne@usda.example No mobile phone"
+          - cell "No"
+        - row "Joelle Baptiste Annex No onsite teleworking, full closure Update status for Joelle Baptiste Prefers email joelle.baptiste@usda.example No mobile phone No":
+          - cell "Joelle Baptiste"
+          - cell "Annex"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Joelle Baptiste":
+            - paragraph: teleworking, full closure
+            - button "Update status for Joelle Baptiste": Update status
+          - cell "Prefers email joelle.baptiste@usda.example No mobile phone"
+          - cell "No"
+        - row "Kenji Watanabe Annex No onsite teleworking, full closure Update status for Kenji Watanabe Prefers text message kenji.watanabe@usda.example +18165550111 No":
+          - cell "Kenji Watanabe"
+          - cell "Annex"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Kenji Watanabe":
+            - paragraph: teleworking, full closure
+            - button "Update status for Kenji Watanabe": Update status
+          - cell "Prefers text message kenji.watanabe@usda.example +18165550111"
+          - cell "No"
+        - row "Lena Marchetti Main Office No onsite teleworking, full closure Update status for Lena Marchetti Prefers email lena.marchetti@usda.example No mobile phone No":
+          - cell "Lena Marchetti"
+          - cell "Main Office"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Lena Marchetti":
+            - paragraph: teleworking, full closure
+            - button "Update status for Lena Marchetti": Update status
+          - cell "Prefers email lena.marchetti@usda.example No mobile phone"
+          - cell "No"
+        - row "Mateo Alvarez Main Office No onsite teleworking, full closure Update status for Mateo Alvarez Prefers email mateo.alvarez@usda.example No mobile phone No":
+          - cell "Mateo Alvarez"
+          - cell "Main Office"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Mateo Alvarez":
+            - paragraph: teleworking, full closure
+            - button "Update status for Mateo Alvarez": Update status
+          - cell "Prefers email mateo.alvarez@usda.example No mobile phone"
+          - cell "No"
+        - row "Nadia Petrov Annex No onsite teleworking, full closure Update status for Nadia Petrov Prefers email nadia.petrov@usda.example No mobile phone No":
+          - cell "Nadia Petrov"
+          - cell "Annex"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Nadia Petrov":
+            - paragraph: teleworking, full closure
+            - button "Update status for Nadia Petrov": Update status
+          - cell "Prefers email nadia.petrov@usda.example No mobile phone"
+          - cell "No"
+        - row "Owen Gallagher Main Office No onsite teleworking, full closure Update status for Owen Gallagher Prefers email owen.gallagher@usda.example No mobile phone No":
+          - cell "Owen Gallagher"
+          - cell "Main Office"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Owen Gallagher":
+            - paragraph: teleworking, full closure
+            - button "Update status for Owen Gallagher": Update status
+          - cell "Prefers email owen.gallagher@usda.example No mobile phone"
+          - cell "No"
+        - row "Paloma Reyes Annex No onsite teleworking, full closure Update status for Paloma Reyes Prefers email paloma.reyes@usda.example No mobile phone No":
+          - cell "Paloma Reyes"
+          - cell "Annex"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Paloma Reyes":
+            - paragraph: teleworking, full closure
+            - button "Update status for Paloma Reyes": Update status
+          - cell "Prefers email paloma.reyes@usda.example No mobile phone"
+          - cell "No"
+        - row "Quinn Hartley Equipment Barn No onsite dismissed, full closure Update status for Quinn Hartley Prefers email quinn.hartley@usda.example No mobile phone No":
+          - cell "Quinn Hartley"
+          - cell "Equipment Barn"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "dismissed, full closure Update status for Quinn Hartley":
+            - paragraph: dismissed, full closure
+            - button "Update status for Quinn Hartley": Update status
+          - cell "Prefers email quinn.hartley@usda.example No mobile phone"
+          - cell "No"
+        - row "Rosa Delgado Main Office No onsite teleworking, full closure Update status for Rosa Delgado Prefers email rosa.delgado@usda.example No mobile phone No":
+          - cell "Rosa Delgado"
+          - cell "Main Office"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Rosa Delgado":
+            - paragraph: teleworking, full closure
+            - button "Update status for Rosa Delgado": Update status
+          - cell "Prefers email rosa.delgado@usda.example No mobile phone"
+          - cell "No"
+        - row "Silas Montgomery Annex No onsite teleworking, full closure Update status for Silas Montgomery Prefers email silas.montgomery@usda.example No mobile phone No":
+          - cell "Silas Montgomery"
+          - cell "Annex"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Silas Montgomery":
+            - paragraph: teleworking, full closure
+            - button "Update status for Silas Montgomery": Update status
+          - cell "Prefers email silas.montgomery@usda.example No mobile phone"
+          - cell "No"
+        - row "Tessa Nguyen Main Office No onsite teleworking, full closure Update status for Tessa Nguyen Prefers email tessa.nguyen@usda.example No mobile phone No":
+          - cell "Tessa Nguyen"
+          - cell "Main Office"
+          - cell "No"
+          - cell "onsite":
+            - paragraph: onsite
+          - cell "teleworking, full closure Update status for Tessa Nguyen":
+            - paragraph: teleworking, full closure
+            - button "Update status for Tessa Nguyen": Update status
+          - cell "Prefers email tessa.nguyen@usda.example No mobile phone"
+          - cell "No"

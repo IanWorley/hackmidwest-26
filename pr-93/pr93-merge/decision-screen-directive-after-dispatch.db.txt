@@ -1,0 +1,3 @@
+sql> select d.id, (select count(*) from decision_directives x where x.decision_id = d.id) as directives, (select count(*) from notification_dispatches n where n.decision_id = d.id) as dispatches from decisions d where d.facility_id = 1 order by d.id desc limit 1
+id|directives|dispatches
+7|0|17
