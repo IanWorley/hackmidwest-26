@@ -1,7 +1,13 @@
 import { HAZARDS } from "@hackmidwest/db";
 import { describe, expect, it } from "vitest";
+import type { FloodCategory } from "../../clients/nwps";
 import { POSTURES } from "./postures";
-import { type Cutoff, NWS_SEVERITIES, THRESHOLDS } from "./thresholds";
+import {
+  type Cutoff,
+  NWS_SEVERITIES,
+  type NwsSeverity,
+  THRESHOLDS,
+} from "./thresholds";
 
 interface CitedEntry {
   readonly path: string;
@@ -24,11 +30,23 @@ function collectCitedEntries(node: unknown, path: string): CitedEntry[] {
   return [{ path, source, citation }, ...children];
 }
 
+// Ranks a flood category on the severity scale so a hazard can mix alert and gauge cutoffs.
+const SEVERITY_OF_FLOOD_CATEGORY = {
+  action: "Minor",
+  minor: "Moderate",
+  moderate: "Severe",
+  major: "Extreme",
+} as const satisfies Record<FloodCategory, NwsSeverity>;
+
 function cutoffRank(cutoff: Cutoff): number {
-  if (cutoff.unit === "nws_severity") {
-    return NWS_SEVERITIES.indexOf(cutoff.value);
+  switch (cutoff.unit) {
+    case "nws_severity":
+      return NWS_SEVERITIES.indexOf(cutoff.value);
+    case "nws_flood_category":
+      return NWS_SEVERITIES.indexOf(SEVERITY_OF_FLOOD_CATEGORY[cutoff.value]);
+    default:
+      return cutoff.value;
   }
-  return cutoff.value;
 }
 
 describe("THRESHOLDS", () => {

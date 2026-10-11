@@ -68,6 +68,8 @@ const KANSAS_CITY: DemoFacility = {
   longitude: -94.5786,
   nwsZone: "MOZ037",
   timezone: "America/Chicago",
+  // Missouri River at Kansas City, from api.water.noaa.gov/nwps/v1/gauges/KCDM7.
+  nwpsGaugeId: "KCDM7",
   opensAt: "07:30",
   closesAt: "16:30",
   arrivalWindowStart: "06:30",
@@ -147,6 +149,7 @@ const DEMO_FACILITY_HAZARDS: (typeof facilityHazards.$inferInsert)[] = [
   { facilityId: KANSAS_CITY.id, hazard: "winter" },
   { facilityId: KANSAS_CITY.id, hazard: "wind" },
   { facilityId: KANSAS_CITY.id, hazard: "airQuality" },
+  { facilityId: KANSAS_CITY.id, hazard: "flood" },
   { facilityId: FARGO.id, hazard: "winter" },
   { facilityId: FARGO.id, hazard: "wind" },
   { facilityId: YAKIMA.id, hazard: "airQuality" },

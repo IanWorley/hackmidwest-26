@@ -18,9 +18,12 @@ import {
   nonBlankChecks,
 } from "./checks";
 
+// An NWS location identifier as NWPS lists every river gauge, e.g. KCDM7.
+const NWPS_GAUGE_ID_GLOB = "[A-Z][A-Z][A-Z][A-Z][0-9]";
+
 export const TASK_TITLE_LENGTH = { min: 1, max: 120 } as const;
 
-export const HAZARDS = ["winter", "wind", "airQuality"] as const;
+export const HAZARDS = ["winter", "wind", "airQuality", "flood"] as const;
 export type Hazard = (typeof HAZARDS)[number];
 
 export const EMPLOYEE_STATUSES = [
@@ -74,6 +77,8 @@ export const facilities = sqliteTable(
     longitude: real("longitude").notNull(),
     nwsZone: text("nws_zone").notNull(),
     timezone: text("timezone").notNull(),
+    /** The NWPS river gauge whose flood stages stand for this facility's flood risk, if one is near. */
+    nwpsGaugeId: text("nwps_gauge_id"),
     opensAt: text("opens_at").notNull(),
     closesAt: text("closes_at").notNull(),
     arrivalWindowStart: text("arrival_window_start").notNull(),
@@ -107,6 +112,10 @@ export const facilities = sqliteTable(
         LONGITUDE_RANGE.min,
         LONGITUDE_RANGE.max,
       ).inlineParams(),
+    ),
+    check(
+      "facilities_nwps_gauge_id_format",
+      sql`${table.nwpsGaugeId} is null or ${table.nwpsGaugeId} glob ${NWPS_GAUGE_ID_GLOB}`.inlineParams(),
     ),
     check("facilities_hours", isLocalTimeRange(table.opensAt, table.closesAt)),
     check(
