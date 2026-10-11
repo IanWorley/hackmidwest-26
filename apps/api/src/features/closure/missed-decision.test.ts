@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { openDatabase } from "@hackmidwest/db/connection";
 import { createTestDatabaseWithDemoFacilities } from "@hackmidwest/db/testing";
 import { DateTime, Effect, Option } from "effect";
 import { expect, it } from "vitest";
@@ -81,4 +85,33 @@ it("writes nothing when someone already decided", async () => {
       (await storedDecisions(db)).map(({ action }) => action),
     ]).toEqual([Option.none(), ["accept"]]);
   });
+});
+
+it("records one no_decision row when two connections race, and neither fails", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "missed-decision-"));
+  const path = join(directory, "db.sqlite");
+  const withFileApp = appRunner(() =>
+    createTestDatabaseWithDemoFacilities({ kind: "file", path }),
+  );
+  try {
+    await withFileApp(async ({ db }) => {
+      const other = openDatabase({ kind: "file", path });
+      try {
+        const results = await Promise.all([
+          runMissed(db, AFTER_DECIDE_BY),
+          runMissed(other.db, AFTER_DECIDE_BY),
+        ]);
+
+        expect(results).toContainEqual(Option.some(FIRST_DECISION_ID));
+        expect(results).toContainEqual(Option.none());
+        expect((await storedDecisions(db)).map(({ action }) => action)).toEqual(
+          ["no_decision"],
+        );
+      } finally {
+        other.close();
+      }
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

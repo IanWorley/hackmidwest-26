@@ -4,7 +4,7 @@ import type {
   recommendations,
 } from "@hackmidwest/db";
 import {
-  type ChainBreakReason,
+  CHAIN_BREAK_REASONS,
   type ChainLink,
   type ContentHash,
   isContentHash,
@@ -18,6 +18,13 @@ const CHAIN_RECORDS = [
   "notification_dispatch",
 ] as const;
 type ChainRecord = (typeof CHAIN_RECORDS)[number];
+
+/** A hash break, or a decision that supersedes one the chain no longer holds. */
+const DECISION_CHAIN_BREAK_REASONS = [
+  ...CHAIN_BREAK_REASONS,
+  "missing_predecessor",
+] as const;
+type DecisionChainBreakReason = (typeof DECISION_CHAIN_BREAK_REASONS)[number];
 
 type RecommendationRow = typeof recommendations.$inferSelect;
 type DecisionRow = typeof decisions.$inferSelect;
@@ -36,7 +43,7 @@ interface DecisionChain {
 interface ChainBreak {
   readonly record: ChainRecord;
   readonly id: number;
-  readonly reason: ChainBreakReason;
+  readonly reason: DecisionChainBreakReason;
 }
 
 interface StoredRecord {
@@ -128,6 +135,25 @@ function chainPaths({
   });
 }
 
+/** Each path hashes intact without the decision it supersedes, so its absence is checked by id. */
+function missingPredecessors({
+  decisions: chain,
+}: DecisionChain): ChainBreak[] {
+  const ids = new Set(chain.map(({ id }) => id));
+  return chain
+    .filter(
+      ({ supersedesDecisionId }) =>
+        supersedesDecisionId !== null && !ids.has(supersedesDecisionId),
+    )
+    .map(
+      ({ id }): ChainBreak => ({
+        record: "decision",
+        id,
+        reason: "missing_predecessor",
+      }),
+    );
+}
+
 /** Where each path first breaks, each record reported once. A break hides any later break on the same path, since what follows it is already untrustworthy. */
 function findChainBreaks(chain: DecisionChain): ChainBreak[] {
   const breaks = new Map<string, ChainBreak>();
@@ -137,8 +163,14 @@ function findChainBreaks(chain: DecisionChain): ChainBreak[] {
       breaks.set(`${broken.record}:${broken.id}`, broken);
     }
   }
+  for (const missing of missingPredecessors(chain)) {
+    const key = `${missing.record}:${missing.id}`;
+    if (!breaks.has(key)) {
+      breaks.set(key, missing);
+    }
+  }
   return [...breaks.values()];
 }
 
 export type { DecisionChain, RecordContent };
-export { CHAIN_RECORDS, findChainBreaks };
+export { CHAIN_RECORDS, DECISION_CHAIN_BREAK_REASONS, findChainBreaks };

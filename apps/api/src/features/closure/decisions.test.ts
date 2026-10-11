@@ -136,6 +136,47 @@ it.each([
   },
 );
 
+it.each([
+  { body: { ...ACCEPT, posture: "full_closure" }, property: "/posture" },
+  {
+    body: { ...OVERRIDE, reason: { ...OVERRIDE.reason, severity: "high" } },
+    property: "/reason/severity",
+  },
+  {
+    body: {
+      ...DEFER,
+      humanInputs: [
+        {
+          reportedBy: "Road crew",
+          reportedAt: BEFORE_DECIDED_AT,
+          text: "Highway closed.",
+          source: "radio",
+        },
+      ],
+    },
+    property: "/humanInputs/0/source",
+  },
+])("rejects the unknown field $property", async ({ body, property }) => {
+  await withApp(async ({ db, request }) => {
+    const response = await request(decide(), body);
+
+    expect([
+      response.status,
+      await response.json(),
+      await storedDecisions(db),
+    ]).toEqual([
+      HTTP_UNPROCESSABLE_ENTITY,
+      {
+        type: "validation",
+        on: "body",
+        property,
+        message: "Unexpected property",
+      },
+      [],
+    ]);
+  });
+});
+
 it("rejects an override to the recommended posture", async () => {
   await withApp(async ({ request }) => {
     const response = await request(decide(), {
