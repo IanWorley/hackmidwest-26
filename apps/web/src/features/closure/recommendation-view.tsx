@@ -1,16 +1,19 @@
 import type { JSX } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { Posture, Recommendation } from "./decision-api";
-import { HAZARD_LABELS } from "./facility-fields";
 import { formatFacilityTime } from "./format-time";
-import { POSTURE_CLASSES, POSTURE_LABELS } from "./labels";
+import {
+  HAZARD_LABELS,
+  POSTURE_CLASSES,
+  POSTURE_LABELS,
+  THRESHOLD_UNIT_SUFFIXES,
+} from "./labels";
 
 type Output = Recommendation["snapshot"]["output"];
 type Caveat = Output["caveats"][number];
 type Check = Output["hazards"][number]["checks"][number];
 type CrossedOutcome = Extract<Check["outcome"], { kind: "crossed" }>;
 type CutoffName = Check["cutoff"];
-type ThresholdUnit = Check["threshold"]["unit"];
 type InputKind = Output["inputs"][number]["kind"];
 type Confidence = Output["confidence"];
 
@@ -30,6 +33,13 @@ const RELEASE_LABEL = "Release at";
 const RELEASE_PASSED_TEXT = "release time has passed";
 const DELAY_UNIT = "hour delay";
 
+type EndBasis = Extract<Caveat, { kind: "estimatedEnd" }>["endBasis"];
+
+const END_BASIS_TEXT: Record<EndBasis, string> = {
+  expires: "The hazard's end time is estimated from the alert's expiry.",
+  forecast: "The hazard's end time is estimated from the forecast.",
+};
+
 const CONFIDENCE_LABELS: Record<Confidence, string> = {
   low: "Low",
   medium: "Medium",
@@ -45,12 +55,6 @@ const CUTOFF_LABELS: Record<CutoffName, string> = {
   veryUnhealthy: "Very unhealthy air",
 };
 
-const UNIT_SUFFIXES: Record<ThresholdUnit, string> = {
-  mph: " mph",
-  aqi: " AQI",
-  nws_severity: "",
-};
-
 const INPUT_KIND_LABELS: Record<InputKind, string> = {
   observations: "Observation",
   forecast: "Forecast",
@@ -58,7 +62,7 @@ const INPUT_KIND_LABELS: Record<InputKind, string> = {
   alert: "Alert",
 };
 
-export function PostureBadge({ posture }: { posture: Posture }): JSX.Element {
+function PostureBadge({ posture }: { posture: Posture }): JSX.Element {
   return (
     <Badge className={POSTURE_CLASSES[posture]}>
       {POSTURE_LABELS[posture]}
@@ -97,24 +101,25 @@ function caveatText(caveat: Caveat): string {
     case "missingReading":
       return `No ${CUTOFF_LABELS[caveat.cutoff].toLowerCase()} reading for ${HAZARD_LABELS[caveat.hazard].toLowerCase()}.`;
     case "estimatedEnd":
-      return `The hazard's end time is estimated from the ${caveat.endBasis === "expires" ? "alert's expiry" : "forecast"}.`;
+      return END_BASIS_TEXT[caveat.endBasis];
     default:
       return caveat satisfies never;
   }
 }
 
 function crossedText(check: Check, outcome: CrossedOutcome): string {
-  const suffix = UNIT_SUFFIXES[check.threshold.unit];
+  const suffix = THRESHOLD_UNIT_SUFFIXES[check.threshold.unit];
   return `Observed ${outcome.observed}${suffix} against a ${check.threshold.value}${suffix} cutoff (margin ${outcome.margin}). ${check.threshold.citation}`;
 }
 
 function CrossedThresholds({ output }: { output: Output }): JSX.Element {
   const crossed = output.hazards.flatMap((assessment) =>
-    assessment.checks.flatMap((check) =>
-      check.outcome.kind === "crossed"
-        ? [{ hazard: assessment.hazard, check, outcome: check.outcome }]
-        : [],
-    ),
+    assessment.checks.flatMap((check) => {
+      if (check.outcome.kind !== "crossed") {
+        return [];
+      }
+      return [{ hazard: assessment.hazard, check, outcome: check.outcome }];
+    }),
   );
   if (crossed.length === 0) {
     return <p>{NO_THRESHOLDS_TEXT}</p>;
@@ -166,7 +171,7 @@ function Section({
   );
 }
 
-export function RecommendationView({
+function RecommendationView({
   recommendation,
   timeZone,
   now,
@@ -223,3 +228,5 @@ export function RecommendationView({
     </div>
   );
 }
+
+export { PostureBadge, RecommendationView };

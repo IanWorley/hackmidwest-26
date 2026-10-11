@@ -1,12 +1,13 @@
 import {
   buildings,
+  decisionMakers,
   employees,
   facilities,
   facilityHazards,
   HAZARDS,
   type Hazard,
 } from "@hackmidwest/db";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { createSchemaFactory } from "drizzle-typebox";
 import { Data, Effect, Option } from "effect";
 import { Elysia, status, t } from "elysia";
@@ -23,6 +24,7 @@ import { decimalIdParams, parseDecimalId } from "../decimal-id";
 const FACILITIES_PATH = "/api/facilities";
 const FACILITY_PATH = `${FACILITIES_PATH}/:id`;
 const FACILITY_BUILDINGS_PATH = `${FACILITY_PATH}/buildings`;
+const FACILITY_RECORDERS_PATH = `${FACILITY_PATH}/recorders`;
 const FACILITY_NOT_FOUND_MESSAGE = "Facility not found";
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
@@ -39,6 +41,13 @@ const buildingResponse = t.Object({
   employees: t.Array(t.Object({ id: t.Integer(), name: t.String() })),
 });
 
+/** Someone who may record a decision or directive for the facility; email stays out of this read. */
+const recorderResponse = t.Object({
+  id: t.Integer(),
+  name: t.String(),
+  role: t.String(),
+});
+
 const facilityNotFoundResponse = t.Object({
   message: t.Literal(FACILITY_NOT_FOUND_MESSAGE),
 });
@@ -47,9 +56,10 @@ type FacilityRow = typeof facilities.$inferSelect;
 type FacilityHazardRow = typeof facilityHazards.$inferSelect;
 type Facility = typeof facilityResponse.static;
 type Building = typeof buildingResponse.static;
+type Recorder = typeof recorderResponse.static;
 
 class FacilityStorageError extends Data.TaggedError("FacilityStorageError")<{
-  readonly operation: "list" | "get" | "buildings";
+  readonly operation: "list" | "get" | "buildings" | "recorders";
   readonly cause: unknown;
 }> {}
 
@@ -142,6 +152,38 @@ const listBuildings = Effect.fn("listBuildings")(function* (
   );
 });
 
+/** The facility's decision maker, then its backup: the only people the decision routes accept. */
+const listRecorders = Effect.fn("listRecorders")(function* (
+  facility: Facility,
+) {
+  const db = yield* Database;
+  const order = [facility.decisionMakerId, facility.backupDecisionMakerId];
+  const rows = yield* Effect.tryPromise({
+    try: () =>
+      db
+        .select({
+          id: decisionMakers.id,
+          name: decisionMakers.name,
+          role: decisionMakers.role,
+        })
+        .from(decisionMakers)
+        .where(inArray(decisionMakers.id, order)),
+    catch: (cause) =>
+      new FacilityStorageError({ operation: "recorders", cause }),
+  });
+  return order.flatMap((id): Recorder[] => rows.filter((row) => row.id === id));
+});
+
+const recordersRequest = Effect.fn("recordersRequest")(function* (
+  decimalId: string,
+) {
+  const facility = yield* getFacility(decimalId);
+  if (Option.isNone(facility)) {
+    return status(HTTP_NOT_FOUND, { message: FACILITY_NOT_FOUND_MESSAGE });
+  }
+  return yield* listRecorders(facility.value);
+});
+
 const buildingsRequest = Effect.fn("buildingsRequest")(function* (
   decimalId: string,
 ) {
@@ -162,7 +204,7 @@ export function createFacilitiesModule(runRequest: RunRequest) {
     })
     .get(
       FACILITY_PATH,
-      ({ params, status }) =>
+      ({ params }) =>
         runRequest(
           getFacility(params.id).pipe(
             Effect.map(
@@ -178,6 +220,18 @@ export function createFacilitiesModule(runRequest: RunRequest) {
         params: decimalIdParams,
         response: {
           [HTTP_OK]: facilityResponse,
+          [HTTP_NOT_FOUND]: facilityNotFoundResponse,
+          [HTTP_INTERNAL_SERVER_ERROR]: internalServerErrorResponse,
+        },
+      },
+    )
+    .get(
+      FACILITY_RECORDERS_PATH,
+      ({ params }) => runRequest(recordersRequest(params.id)),
+      {
+        params: decimalIdParams,
+        response: {
+          [HTTP_OK]: t.Array(recorderResponse),
           [HTTP_NOT_FOUND]: facilityNotFoundResponse,
           [HTTP_INTERNAL_SERVER_ERROR]: internalServerErrorResponse,
         },

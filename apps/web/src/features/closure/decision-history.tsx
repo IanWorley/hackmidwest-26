@@ -59,12 +59,12 @@ function reasonText(decision: Decision): string {
 }
 
 /** The API records a missed deadline as a `no_decision` row naming the backup, so the newest such row is who to call. */
-export function BackupNotice({
+function BackupNotice({
   history,
 }: {
   history: readonly Decision[];
 }): JSX.Element | null {
-  const newest = history[0];
+  const [newest] = history;
   if (newest?.action !== "no_decision") {
     return null;
   }
@@ -78,7 +78,7 @@ export function BackupNotice({
   );
 }
 
-export function DecisionHistory({
+function HistoryTable({
   history,
   timeZone,
 }: {
@@ -86,49 +86,61 @@ export function DecisionHistory({
   timeZone: string;
 }): JSX.Element {
   return (
+    <Table aria-label={HISTORY_HEADING}>
+      <TableHeader>
+        <TableRow>
+          <TableHead>{WHEN_COLUMN}</TableHead>
+          <TableHead>{ACTION_COLUMN}</TableHead>
+          <TableHead>{POSTURE_COLUMN}</TableHead>
+          <TableHead>{BY_COLUMN}</TableHead>
+          <TableHead>{REASON_COLUMN}</TableHead>
+          <TableHead>{TIMING_COLUMN}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {history.map((decision) => (
+          <TableRow key={decision.id}>
+            <TableCell>
+              {formatFacilityTime(decision.decidedAt, timeZone)}
+            </TableCell>
+            <TableCell>{ACTION_LABELS[decision.action]}</TableCell>
+            <TableCell>{postureText(decision, timeZone)}</TableCell>
+            <TableCell>
+              {`${decision.decidedByName}, ${decision.decidedByRole} ${UNVERIFIED_SUFFIX}`}
+            </TableCell>
+            <TableCell className="whitespace-normal">
+              <p>{reasonText(decision)}</p>
+              {decision.humanInputs.map((input) => (
+                <p className="text-muted-foreground" key={input.id}>
+                  {`${input.reportedBy} ${REPORTED_LABEL}: ${input.text}`}
+                </p>
+              ))}
+            </TableCell>
+            <TableCell>{timingText(decision.minutesBeforeDecideBy)}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function DecisionHistory({
+  history,
+  timeZone,
+}: {
+  history: readonly Decision[];
+  timeZone: string;
+}): JSX.Element {
+  let content = <HistoryTable history={history} timeZone={timeZone} />;
+  if (history.length === 0) {
+    content = <p className="text-muted-foreground">{EMPTY_TEXT}</p>;
+  }
+  return (
     <section className="space-y-2">
       <h2 className="font-heading font-semibold text-xl">{HISTORY_HEADING}</h2>
-      {history.length === 0 ? (
-        <p className="text-muted-foreground">{EMPTY_TEXT}</p>
-      ) : (
-        <Table aria-label={HISTORY_HEADING}>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{WHEN_COLUMN}</TableHead>
-              <TableHead>{ACTION_COLUMN}</TableHead>
-              <TableHead>{POSTURE_COLUMN}</TableHead>
-              <TableHead>{BY_COLUMN}</TableHead>
-              <TableHead>{REASON_COLUMN}</TableHead>
-              <TableHead>{TIMING_COLUMN}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {history.map((decision) => (
-              <TableRow key={decision.id}>
-                <TableCell>
-                  {formatFacilityTime(decision.decidedAt, timeZone)}
-                </TableCell>
-                <TableCell>{ACTION_LABELS[decision.action]}</TableCell>
-                <TableCell>{postureText(decision, timeZone)}</TableCell>
-                <TableCell>
-                  {`${decision.decidedByName}, ${decision.decidedByRole} ${UNVERIFIED_SUFFIX}`}
-                </TableCell>
-                <TableCell className="whitespace-normal">
-                  <p>{reasonText(decision)}</p>
-                  {decision.humanInputs.map((input) => (
-                    <p className="text-muted-foreground" key={input.id}>
-                      {`${input.reportedBy} ${REPORTED_LABEL}: ${input.text}`}
-                    </p>
-                  ))}
-                </TableCell>
-                <TableCell>
-                  {timingText(decision.minutesBeforeDecideBy)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      {content}
     </section>
   );
 }
+
+export { BackupNotice, DecisionHistory };

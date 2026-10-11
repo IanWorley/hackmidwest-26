@@ -131,3 +131,32 @@ describe(`GET ${FACILITIES_PATH}/:id/buildings`, () => {
     expect(await response.json()).toEqual({ message: "Facility not found" });
   });
 });
+
+describe(`GET ${FACILITIES_PATH}/:id/recorders`, () => {
+  it("returns the facility's decision maker, then its backup", async () => {
+    const response = await getFromSeededApp(`${FACILITIES_PATH}/1/recorders`);
+
+    expect(response.status).toBe(HTTP_OK);
+    expect(await response.json()).toEqual([
+      {
+        id: 1,
+        name: "Dana Whitfield",
+        role: "County Executive Director",
+      },
+      {
+        id: 2,
+        name: "Marcus Oyelaran",
+        role: "State Administrative Officer",
+      },
+    ]);
+  });
+
+  it("returns 404 for an id no facility has", async () => {
+    const response = await getFromSeededApp(
+      `${FACILITIES_PATH}/${UNKNOWN_FACILITY_ID}/recorders`,
+    );
+
+    expect(response.status).toBe(HTTP_NOT_FOUND);
+    expect(await response.json()).toEqual({ message: "Facility not found" });
+  });
+});

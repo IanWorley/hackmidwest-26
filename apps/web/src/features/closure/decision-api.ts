@@ -1,4 +1,5 @@
 import { api } from "../../lib/api";
+import type { FormField } from "./decision-form";
 import { loadFacility } from "./load-facilities";
 
 const HTTP_NOT_FOUND = 404;
@@ -7,25 +8,42 @@ const HTTP_UNPROCESSABLE = 422;
 type DecideCall = ReturnType<typeof api.api.recommendations>["decisions"];
 type DirectivesCall = ReturnType<typeof api.api.decisions>["directives"];
 
-export type DecisionRequest = Parameters<DecideCall["post"]>[0];
-export type DirectiveRequest = Parameters<DirectivesCall["post"]>[0];
-export type HumanAction = DecisionRequest["action"];
+type DecisionRequest = Parameters<DecideCall["post"]>[0];
+type DirectiveRequest = Parameters<DirectivesCall["post"]>[0];
+type HumanAction = DecisionRequest["action"];
+
+/** Why a decision was refused as stale, in the screen's terms rather than the wire's. */
+type Conflict = "newerRecommendation" | "decisionChanged";
 
 /** What a decision submit can come back as, once Eden's envelope is gone. */
-export type DecideOutcome =
+type DecideOutcome =
   | { readonly kind: "recorded" }
-  | { readonly kind: "invalid"; readonly field: string }
-  | {
-      readonly kind: "conflict";
-      readonly conflict: "newer_recommendation" | "decision_changed";
-    }
+  | { readonly kind: "invalid"; readonly field: FormField }
+  | { readonly kind: "conflict"; readonly conflict: Conflict }
   | { readonly kind: "failed" };
 
-export type DirectiveOutcome =
+type DirectiveOutcome =
   | { readonly kind: "issued" }
-  | { readonly kind: "invalid"; readonly field: string }
+  | { readonly kind: "invalid"; readonly field: FormField }
   | { readonly kind: "superseded" }
   | { readonly kind: "failed" };
+
+/** The API names request fields by dotted path; the forms name their controls. */
+const API_FIELD_CONTROLS: ReadonlyMap<string, FormField> = new Map([
+  ["decidedById", "recordedBy"],
+  ["issuedById", "recordedBy"],
+  ["posture", "posture"],
+  ["recheckAt", "recheckIn"],
+  ["reason", "reasonText"],
+  ["reason.category", "reasonCategory"],
+  ["reason.text", "reasonText"],
+  ["scope", "scope"],
+  ["directive", "directive"],
+]);
+
+function controlFor(apiField: string): FormField {
+  return API_FIELD_CONTROLS.get(apiField) ?? "form";
+}
 
 async function loadLatestRecommendation(
   facilityId: number,
@@ -57,10 +75,12 @@ async function loadHistory(facilityId: number, signal: AbortSignal) {
   return result.data;
 }
 
-async function loadDecisionMakers(signal: AbortSignal) {
-  const result = await api.api["decision-makers"].get({ fetch: { signal } });
+async function loadRecorders(facilityId: number, signal: AbortSignal) {
+  const result = await api.api
+    .facilities({ id: facilityId })
+    .recorders.get({ fetch: { signal } });
   if (result.error !== null) {
-    throw new Error("Unable to load decision makers", {
+    throw new Error("Unable to load who may record decisions", {
       cause: result.error.value,
     });
   }
@@ -92,7 +112,7 @@ async function loadDirectives(decisionId: number, signal: AbortSignal) {
 }
 
 /** Everything the decision screen renders, read in one loader so a reload refreshes it together. */
-export async function loadDecisionScreen({
+async function loadDecisionScreen({
   facilityId,
   signal,
 }: {
@@ -100,16 +120,16 @@ export async function loadDecisionScreen({
   signal: AbortSignal;
 }) {
   const facility = await loadFacility({ facilityId, signal });
-  const [recommendation, history, decisionMakers, buildings] =
+  const [latestRecommendation, history, recorders, buildings] =
     await Promise.all([
       loadLatestRecommendation(facility.id, signal),
       loadHistory(facility.id, signal),
-      loadDecisionMakers(signal),
+      loadRecorders(facility.id, signal),
       loadBuildings(facility.id, signal),
     ]);
   const currentDecision =
     history.find(
-      (decision) => decision.recommendationId === recommendation?.id,
+      (decision) => decision.recommendationId === latestRecommendation?.id,
     ) ?? null;
   let directives: Awaited<ReturnType<typeof loadDirectives>> = [];
   if (currentDecision !== null) {
@@ -117,10 +137,10 @@ export async function loadDecisionScreen({
   }
   return {
     facility,
-    recommendation,
+    latestRecommendation,
     history,
     currentDecision,
-    decisionMakers,
+    recorders,
     buildings,
     directives,
     /** The countdown starts here, so the server render and hydration agree. */
@@ -128,14 +148,14 @@ export async function loadDecisionScreen({
   };
 }
 
-export async function evaluateFacility(facilityId: number): Promise<boolean> {
+async function evaluateFacility(facilityId: number): Promise<boolean> {
   const result = await api.api
     .facilities({ id: facilityId })
     .recommendations.post({});
   return result.error === null;
 }
 
-export async function decide(
+async function decide(
   recommendationId: number,
   request: DecisionRequest,
 ): Promise<DecideOutcome> {
@@ -148,15 +168,18 @@ export async function decide(
   const { value } = result.error;
   // Eden does not narrow `value` on `status`, so read the variant from its fields.
   if ("conflict" in value) {
-    return { kind: "conflict", conflict: value.conflict };
+    if (value.conflict === "newer_recommendation") {
+      return { kind: "conflict", conflict: "newerRecommendation" };
+    }
+    return { kind: "conflict", conflict: "decisionChanged" };
   }
   if (result.error.status === HTTP_UNPROCESSABLE && "field" in value) {
-    return { kind: "invalid", field: value.field };
+    return { kind: "invalid", field: controlFor(value.field) };
   }
   return { kind: "failed" };
 }
 
-export async function issueDirective(
+async function issueDirective(
   decisionId: number,
   request: DirectiveRequest,
 ): Promise<DirectiveOutcome> {
@@ -171,18 +194,38 @@ export async function issueDirective(
     return { kind: "superseded" };
   }
   if (result.error.status === HTTP_UNPROCESSABLE && "field" in value) {
-    return { kind: "invalid", field: value.field };
+    return { kind: "invalid", field: controlFor(value.field) };
   }
   return { kind: "failed" };
 }
 
-export type DecisionScreen = Awaited<ReturnType<typeof loadDecisionScreen>>;
-export type Recommendation = NonNullable<DecisionScreen["recommendation"]>;
-export type Decision = DecisionScreen["history"][number];
-export type DecisionMaker = DecisionScreen["decisionMakers"][number];
-export type Building = DecisionScreen["buildings"][number];
-export type Directive = DecisionScreen["directives"][number];
-export type Posture = Recommendation["posture"];
-export type ReasonCategory = DirectiveRequest["reason"]["category"];
-export type DirectiveKind = DirectiveRequest["directive"];
-export type DirectiveScope = DirectiveRequest["scope"];
+type DecisionScreen = Awaited<ReturnType<typeof loadDecisionScreen>>;
+type Recommendation = NonNullable<DecisionScreen["latestRecommendation"]>;
+type Decision = DecisionScreen["history"][number];
+type Recorder = DecisionScreen["recorders"][number];
+type Building = DecisionScreen["buildings"][number];
+type Directive = DecisionScreen["directives"][number];
+type Posture = Recommendation["posture"];
+type ReasonCategory = DirectiveRequest["reason"]["category"];
+type DirectiveKind = DirectiveRequest["directive"];
+type DirectiveScope = DirectiveRequest["scope"];
+
+export type {
+  Building,
+  Conflict,
+  DecideOutcome,
+  Decision,
+  DecisionRequest,
+  DecisionScreen,
+  Directive,
+  DirectiveKind,
+  DirectiveOutcome,
+  DirectiveRequest,
+  DirectiveScope,
+  HumanAction,
+  Posture,
+  ReasonCategory,
+  Recommendation,
+  Recorder,
+};
+export { decide, evaluateFacility, issueDirective, loadDecisionScreen };

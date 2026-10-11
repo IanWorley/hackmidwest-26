@@ -5,113 +5,123 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import type { DecisionMaker } from "./decision-api";
+import type { Recorder } from "./decision-api";
+import {
+  errorId,
+  FIELD_ERRORS,
+  FIELD_NAMES,
+  type FormField,
+} from "./decision-form";
 import { labeledOptions, REASON_CATEGORY_LABELS } from "./labels";
 
 const RECORDED_BY_LABEL = "Recorded by";
 const UNVERIFIED_NOTE =
-  "Identity unverified: the record names who you pick here without checking it.";
+  "Identity unverified: the record names whoever you pick here without checking it.";
 const REASON_CATEGORY_LABEL = "Reason category";
 const REASON_TEXT_LABEL = "Reason";
 const OPTIONAL_SUFFIX = " (optional)";
 const CHOOSE_PLACEHOLDER = "Choose…";
 
-export const FIELD_NAMES = {
-  recordedBy: "recordedBy",
-  reasonCategory: "reasonCategory",
-  reasonText: "reasonText",
-} as const;
+interface FieldProps {
+  readonly formId: string;
+  /** The one field the last submit flagged, if any. */
+  readonly invalidField: FormField | undefined;
+}
 
-/** Ties an error to its control: the control's `aria-describedby` names this id. */
-export function errorId(formId: string, field: string): string {
-  return `${formId}-${field}-error`;
+function controlId(formId: string, field: FormField): string {
+  return `${formId}-${field}`;
+}
+
+/** Space-separated ids for `aria-describedby`, or undefined when there are none. */
+function describedBy(ids: readonly (string | undefined)[]): string | undefined {
+  const present = ids.filter((id) => id !== undefined);
+  if (present.length === 0) {
+    return undefined;
+  }
+  return present.join(" ");
+}
+
+function errorIdIfInvalid(
+  { formId, invalidField }: FieldProps,
+  field: FormField,
+): string | undefined {
+  if (invalidField === field) {
+    return errorId(formId, field);
+  }
+  return undefined;
 }
 
 export function FieldError({
   formId,
+  invalidField,
   field,
-  message,
-}: {
-  formId: string;
-  field: string;
-  message: string | undefined;
-}): JSX.Element | null {
-  if (message === undefined) {
+}: FieldProps & { readonly field: FormField }): JSX.Element | null {
+  if (invalidField !== field) {
     return null;
   }
   return (
     <p className="text-destructive text-sm" id={errorId(formId, field)}>
-      {message}
+      {FIELD_ERRORS[field]}
     </p>
   );
 }
 
 export function SelectField({
-  formId,
-  name,
+  field,
   label,
-  error,
   note,
   children,
-}: {
-  formId: string;
-  name: string;
-  label: string;
-  error: string | undefined;
-  note?: string;
-  children: ReactNode;
+  ...props
+}: FieldProps & {
+  readonly field: FormField;
+  readonly label: string;
+  readonly note?: string;
+  readonly children: ReactNode;
 }): JSX.Element {
-  const controlId = `${formId}-${name}`;
-  const noteId = `${controlId}-note`;
-  const describedBy = [
-    note === undefined ? undefined : noteId,
-    error === undefined ? undefined : errorId(formId, name),
-  ]
-    .filter((id) => id !== undefined)
-    .join(" ");
+  const id = controlId(props.formId, field);
+  let noteId: string | undefined;
+  if (note !== undefined) {
+    noteId = `${id}-note`;
+  }
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={controlId}>{label}</Label>
+      <Label htmlFor={id}>{label}</Label>
       <NativeSelect
-        aria-describedby={describedBy === "" ? undefined : describedBy}
-        aria-invalid={error !== undefined}
+        aria-describedby={describedBy([noteId, errorIdIfInvalid(props, field)])}
+        aria-invalid={props.invalidField === field}
         defaultValue=""
-        id={controlId}
-        name={name}
+        id={id}
+        name={field}
       >
         <NativeSelectOption disabled={true} value="">
           {CHOOSE_PLACEHOLDER}
         </NativeSelectOption>
         {children}
       </NativeSelect>
-      {note !== undefined && (
+      {noteId !== undefined && (
         <p className="text-muted-foreground text-sm" id={noteId}>
           {note}
         </p>
       )}
-      <FieldError field={name} formId={formId} message={error} />
+      <FieldError field={field} {...props} />
     </div>
   );
 }
 
 export function RecordedByField({
-  formId,
-  decisionMakers,
-  error,
-}: {
-  formId: string;
-  decisionMakers: readonly DecisionMaker[];
-  error: string | undefined;
+  recorders,
+  ...props
+}: FieldProps & {
+  readonly recorders: readonly Recorder[];
 }): JSX.Element {
   return (
     <SelectField
-      error={error}
-      formId={formId}
+      field={FIELD_NAMES.recordedBy}
       label={RECORDED_BY_LABEL}
-      name={FIELD_NAMES.recordedBy}
       note={UNVERIFIED_NOTE}
+      {...props}
     >
-      {decisionMakers.map((maker) => (
+      {recorders.map((maker) => (
         <NativeSelectOption key={maker.id} value={maker.id}>
           {`${maker.name}, ${maker.role}`}
         </NativeSelectOption>
@@ -121,25 +131,20 @@ export function RecordedByField({
 }
 
 export function ReasonFields({
-  formId,
   required,
-  categoryError,
-  textError,
-}: {
-  formId: string;
-  required: boolean;
-  categoryError: string | undefined;
-  textError: string | undefined;
-}): JSX.Element {
-  const suffix = required ? "" : OPTIONAL_SUFFIX;
-  const textId = `${formId}-${FIELD_NAMES.reasonText}`;
+  ...props
+}: FieldProps & { readonly required: boolean }): JSX.Element {
+  let suffix = OPTIONAL_SUFFIX;
+  if (required) {
+    suffix = "";
+  }
+  const textId = controlId(props.formId, FIELD_NAMES.reasonText);
   return (
     <>
       <SelectField
-        error={categoryError}
-        formId={formId}
+        field={FIELD_NAMES.reasonCategory}
         label={`${REASON_CATEGORY_LABEL}${suffix}`}
-        name={FIELD_NAMES.reasonCategory}
+        {...props}
       >
         {labeledOptions(REASON_CATEGORY_LABELS).map(({ value, label }) => (
           <NativeSelectOption key={value} value={value}>
@@ -150,20 +155,12 @@ export function ReasonFields({
       <div className="space-y-1.5">
         <Label htmlFor={textId}>{`${REASON_TEXT_LABEL}${suffix}`}</Label>
         <Textarea
-          aria-describedby={
-            textError === undefined
-              ? undefined
-              : errorId(formId, FIELD_NAMES.reasonText)
-          }
-          aria-invalid={textError !== undefined}
+          aria-describedby={errorIdIfInvalid(props, FIELD_NAMES.reasonText)}
+          aria-invalid={props.invalidField === FIELD_NAMES.reasonText}
           id={textId}
           name={FIELD_NAMES.reasonText}
         />
-        <FieldError
-          field={FIELD_NAMES.reasonText}
-          formId={formId}
-          message={textError}
-        />
+        <FieldError field={FIELD_NAMES.reasonText} {...props} />
       </div>
     </>
   );

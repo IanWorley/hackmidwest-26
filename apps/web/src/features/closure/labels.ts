@@ -4,9 +4,20 @@ import type {
   HumanAction,
   Posture,
   ReasonCategory,
+  Recommendation,
 } from "./decision-api";
+import type { Hazard } from "./load-facilities";
 
-export const POSTURE_LABELS: Record<Posture, string> = {
+type ThresholdUnit =
+  Recommendation["snapshot"]["output"]["hazards"][number]["checks"][number]["threshold"]["unit"];
+
+const HAZARD_LABELS: Record<Hazard, string> = {
+  winter: "Winter storm",
+  wind: "High wind",
+  airQuality: "Air quality",
+};
+
+const POSTURE_LABELS: Record<Posture, string> = {
   normal: "Normal operations",
   delayed_arrival: "Delayed arrival",
   early_dismissal: "Early dismissal",
@@ -15,7 +26,7 @@ export const POSTURE_LABELS: Record<Posture, string> = {
 };
 
 /** Theme tokens from styles.css; the label always shows with the color. */
-export const POSTURE_CLASSES: Record<Posture, string> = {
+const POSTURE_CLASSES: Record<Posture, string> = {
   normal: "bg-posture-normal text-posture-normal-foreground",
   delayed_arrival:
     "bg-posture-delayed-arrival text-posture-delayed-arrival-foreground",
@@ -26,20 +37,20 @@ export const POSTURE_CLASSES: Record<Posture, string> = {
   full_closure: "bg-posture-full-closure text-posture-full-closure-foreground",
 };
 
-export const ACTION_LABELS: Record<Decision["action"], string> = {
+const ACTION_LABELS: Record<Decision["action"], string> = {
   accept: "Accepted",
   override: "Overrode",
   defer: "Deferred",
   no_decision: "No decision",
 };
 
-export const ACTION_BUTTON_LABELS: Record<HumanAction, string> = {
+const ACTION_BUTTON_LABELS: Record<HumanAction, string> = {
   accept: "Accept",
   override: "Override",
   defer: "Defer",
 };
 
-export const REASON_CATEGORY_LABELS: Record<ReasonCategory, string> = {
+const REASON_CATEGORY_LABELS: Record<ReasonCategory, string> = {
   local_conditions: "Local conditions",
   road_reports: "Road reports",
   directive: "Directive from leadership",
@@ -48,25 +59,55 @@ export const REASON_CATEGORY_LABELS: Record<ReasonCategory, string> = {
   other: "Other",
 };
 
-export const DIRECTIVE_KIND_LABELS: Record<DirectiveKind, string> = {
+const DIRECTIVE_KIND_LABELS: Record<DirectiveKind, string> = {
   report: "Report on site",
   telework: "Telework",
   dismissed: "Dismissed",
   excused: "Excused",
 };
 
-/** Option lists keep the label map's key type; the map's literal keys are exactly `Key`. */
-export function labeledOptions<Key extends string>(
+const THRESHOLD_UNIT_SUFFIXES: Record<ThresholdUnit, string> = {
+  mph: " mph",
+  aqi: " AQI",
+  nws_severity: "",
+};
+
+function isLabelKey<Key extends string>(
+  labels: Record<Key, string>,
+  key: string,
+): key is Key {
+  return Object.hasOwn(labels, key);
+}
+
+/** Option lists keep the label map's key type, in the map's own order. */
+function labeledOptions<Key extends string>(
   labels: Record<Key, string>,
 ): { readonly value: Key; readonly label: string }[] {
-  const keys = Object.keys(labels) as Key[];
-  return keys.map((value) => ({ value, label: labels[value] }));
+  return Object.keys(labels)
+    .filter((key) => isLabelKey(labels, key))
+    .map((value) => ({ value, label: labels[value] }));
 }
 
 /** Reads a submitted form value back into the label map's key type. */
-export function parseOption<Key extends string>(
+function parseOption<Key extends string>(
   labels: Record<Key, string>,
   value: FormDataEntryValue | null,
 ): Key | undefined {
-  return labeledOptions(labels).find((option) => option.value === value)?.value;
+  if (typeof value === "string" && isLabelKey(labels, value)) {
+    return value;
+  }
+  return undefined;
 }
+
+export {
+  ACTION_BUTTON_LABELS,
+  ACTION_LABELS,
+  DIRECTIVE_KIND_LABELS,
+  HAZARD_LABELS,
+  labeledOptions,
+  POSTURE_CLASSES,
+  POSTURE_LABELS,
+  parseOption,
+  REASON_CATEGORY_LABELS,
+  THRESHOLD_UNIT_SUFFIXES,
+};
