@@ -213,6 +213,16 @@ export const LINT_PROBES: readonly BoundaryProbe[] = [
     violatedRules: ["style/noRestrictedImports"],
   },
   {
+    behavior:
+      "web cannot climb out of src through a traversal nested in an @/ path",
+    files: {
+      ...API_APP_STUB,
+      "apps/web/src/probe.ts":
+        'import type { App } from "@/features/../../../api/src/app";\nexport type Probe = App;\n',
+    },
+    violatedRules: ["style/noRestrictedImports"],
+  },
+  {
     behavior: "API code cannot import database source by relative path",
     files: {
       ...DB_SCHEMA_STUB,

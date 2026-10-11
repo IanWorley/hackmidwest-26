@@ -74,7 +74,7 @@ Biome adds the checks dependency-cruiser cannot see:
 - The root `noRestrictedImports` patterns govern which specifiers any workspace may write, including type imports.
   No workspace may import another workspace's source or a `packages/*` folder by relative path, or anything through
   a `node_modules` path, so package exports are the only way in.
-- The same patterns stop `@/` from climbing out of `apps/web/src` (`@/../…`), so the alias is never a way into
+- The same patterns stop `@/` from climbing out of `apps/web/src` through any `..` segment, even one after a folder (`@/features/../../…`), so the alias is never a way into
   another workspace.
 - `noUndeclaredDependencies` keeps each workspace to its `package.json`. Web does not declare `@hackmidwest/db`, so
   no `@hackmidwest/db` export resolves there, type imports included.

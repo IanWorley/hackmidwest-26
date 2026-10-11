@@ -63,7 +63,7 @@
                 "message": "Import a shared package through its package exports, never from its folder."
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/**/../**"],
                 "message": "The @/ alias reaches only the web app's src; import other workspaces through their package names."
               },
               {
