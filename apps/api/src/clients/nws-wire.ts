@@ -36,7 +36,10 @@ const ForecastPeriodWire = t.Object({
 });
 
 const ForecastResponse = t.Object({
-  properties: t.Object({ periods: t.Array(ForecastPeriodWire) }),
+  properties: t.Object({
+    updateTime: t.String(),
+    periods: t.Array(ForecastPeriodWire),
+  }),
 });
 
 const AlertWire = t.Object({
