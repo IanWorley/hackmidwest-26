@@ -30,6 +30,7 @@ import {
 } from "@/features/closure/posture-fields";
 import { ALERT_SEVERITY_CLASSES } from "./alert-severity";
 import { aqiCategory } from "./aqi";
+import { hazardWindowText } from "./hazard-window";
 import type { MapLayer } from "./layers";
 import type {
   AlertCollection,
@@ -55,7 +56,6 @@ const CONTIGUOUS_US_EAST_LON = -66.9;
 const RECOMMENDED_PREFIX = "Recommended:";
 const AQI_PREFIX = "Modeled AQI";
 const OPEN_FACILITY_PREFIX = "Open";
-const HAZARD_WINDOW_SEPARATOR = " → ";
 const AQI_SEPARATOR = " · ";
 const MARKER_CLASS = "rounded-full border-2 border-white shadow-md";
 const AQI_RING_CLASS = "ring-4";
@@ -63,10 +63,6 @@ const FIT_OPTIONS: FitBoundsOptions = {
   padding: [FIT_PADDING_PX, FIT_PADDING_PX],
   maxZoom: FIT_MAX_ZOOM,
 };
-const HAZARD_TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 /** With no facilities there is nothing to fit, so the map frames the contiguous US. */
 function initialBounds(facilities: readonly MapFacility[]): LatLngBounds {
@@ -226,11 +222,7 @@ function AlertArea({ alert }: { alert: AlertFeature }): JSX.Element | null {
       <Tooltip sticky={true}>
         <div className="flex flex-col">
           <span className="font-medium">{event}</span>
-          <span>
-            {HAZARD_TIME_FORMAT.format(Date.parse(onset))}
-            {HAZARD_WINDOW_SEPARATOR}
-            {HAZARD_TIME_FORMAT.format(Date.parse(ends))}
-          </span>
+          <span>{hazardWindowText(onset, ends)}</span>
         </div>
       </Tooltip>
     </GeoJSON>
