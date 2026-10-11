@@ -71,6 +71,8 @@ Each invocation opens a fresh headless Chromium page (no cookies or state carrie
 | `fill <label> <text>` | Type into the control with that exact label, e.g. `fill "Reason" "County reports ice."`. |
 | `select <label> <option>` | Choose the option with that exact text in the labeled select, e.g. `select "Recorded by" "Dana Whitfield, County Executive Director"`. |
 | `tab <name>` | Switch to the named tab, opening it on first use. Steps start in tab `main`. A second tab acts as a second person, so one run can stage a conflict. Its log lines carry `[<name>]`. |
+| `within <role> <name>` | Narrow `click`, `expect`, `fill`, and `select` to one region, e.g. `within form "Override the recommendation"` when the page has two `Reason` fields. `goto`, `tab`, and `within-page` widen it back to the whole page. |
+| `within-page` | Undo `within`. |
 | `snap <name>` | Write `<name>.aria.yml` (ARIA tree with URL and title header) and `<name>.png` (full page). |
 
 Any failing step exits 1 and saves `failure-<ts>.png`. An unknown step or a missing argument exits 2 with a usage line before the browser starts. Every step, the URL after it, every browser request to the API (`net GET …/api/tasks -> 200`), and every console error are appended to `$ARTIFACTS/browser.log`.
