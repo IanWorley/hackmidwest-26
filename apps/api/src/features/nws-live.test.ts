@@ -38,6 +38,8 @@ const NO_VALUE = { value: null, unitCode: "wmoUnit:km_h-1" };
 
 const quietWeather: NwsClientShape = {
   activeAlerts: () => Effect.succeed([]),
+  activeAlertAreas: () => Effect.succeed([]),
+  zoneGeometry: () => Effect.succeed(null),
   forecast: () =>
     Effect.succeed({
       rawRef: FORECAST_URL,
@@ -71,6 +73,8 @@ const outsideCoverage: NwsClientShape = {
   forecast: () => Effect.fail(notFound),
   hourlyForecast: () => Effect.fail(notFound),
   latestObservation: () => Effect.fail(notFound),
+  activeAlertAreas: () => Effect.fail(notFound),
+  zoneGeometry: () => Effect.fail(notFound),
 };
 
 async function getLive(nws: NwsClientShape, query: string): Promise<Response> {

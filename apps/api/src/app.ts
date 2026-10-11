@@ -4,6 +4,7 @@ import { createDirectivesModule } from "./features/closure/decision-directives";
 import { createDecisionsModule } from "./features/closure/decisions";
 import { createFacilitiesModule } from "./features/closure/facilities";
 import { createFacilityDateModule } from "./features/closure/facility-date";
+import { createMapModule } from "./features/closure/map";
 import { createNotificationsModule } from "./features/closure/notification-routes";
 import { createRecommendationsModule } from "./features/closure/recommendations";
 import { createFloodLiveModule } from "./features/flood-live";
@@ -27,6 +28,7 @@ export function createApp({ runRequest, webOrigin }: AppDependencies) {
     .use(createDecisionsModule(runRequest))
     .use(createDirectivesModule(runRequest))
     .use(createNotificationsModule(runRequest))
+    .use(createMapModule(runRequest))
     .use(createNwsLiveModule(runRequest))
     .use(createFloodLiveModule(runRequest));
 }

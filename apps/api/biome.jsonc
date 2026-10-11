@@ -24,6 +24,7 @@
               "createFacilityDateModule",
               "createFloodLiveModule",
               "createNotificationsModule",
+              "createMapModule",
               "createNwsLiveModule",
               "createRecommendationsModule",
               "createTasksModule"

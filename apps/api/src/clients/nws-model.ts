@@ -97,6 +97,18 @@ const NwsAlertSchema = t.Object(
   CLOSED,
 );
 
+const PolygonSchema = t.Object({
+  type: t.Literal("Polygon"),
+  coordinates: t.Array(t.Array(t.Array(t.Number()))),
+});
+
+const MultiPolygonSchema = t.Object({
+  type: t.Literal("MultiPolygon"),
+  coordinates: t.Array(t.Array(t.Array(t.Array(t.Number())))),
+});
+
+const AreaGeometrySchema = t.Union([PolygonSchema, MultiPolygonSchema]);
+
 const QuantitySchema = t.Object({
   value: NullableNumber,
   unitCode: t.String(),
@@ -108,6 +120,16 @@ type NwsForecast = Static<typeof ForecastSchema>;
 type HazardWindow = Static<typeof HazardWindowSchema>;
 type NwsAlert = Static<typeof NwsAlertSchema>;
 type Quantity = Static<typeof QuantitySchema>;
+type MultiPolygon = Static<typeof MultiPolygonSchema>;
+type AreaGeometry = Static<typeof AreaGeometrySchema>;
+
+/** An alert with where it applies: inline storm-based geometry, else null and the zones it names. */
+interface NwsAlertArea {
+  readonly alert: NwsAlert;
+  readonly geometry: AreaGeometry | null;
+  /** Absolute zone URLs, such as `https://api.weather.gov/zones/forecast/MOZ037`. */
+  readonly affectedZones: readonly string[];
+}
 
 interface NwsObservation {
   readonly stationId: string;
@@ -140,13 +162,23 @@ function hazardWindow({
   return { start, end: ends, endBasis: "ends" };
 }
 
-export type { ForecastPeriod, GeoPoint, NwsAlert, NwsForecast, NwsObservation };
+export type {
+  AreaGeometry,
+  ForecastPeriod,
+  GeoPoint,
+  MultiPolygon,
+  NwsAlert,
+  NwsAlertArea,
+  NwsForecast,
+  NwsObservation,
+};
 export {
   ALERT_URGENCIES,
   AlertCertaintySchema,
   AlertMessageTypeSchema,
   AlertSeveritySchema,
   AlertUrgencySchema,
+  AreaGeometrySchema,
   ForecastPeriodSchema,
   ForecastSchema,
   GeoPointSchema,

@@ -6,6 +6,7 @@ import {
   clientFor,
   KANSAS_CITY,
   pointsResponse,
+  squareRing,
 } from "./nws-test-client";
 
 const HTTP_FORBIDDEN = 403;
@@ -195,4 +196,54 @@ it("keeps the hourly forecast's update time and URL", async () => {
     updateTime: "2026-10-11T01:43:12+00:00",
     periods: [],
   });
+});
+
+it("reads each active alert with its inline geometry and affected zone URLs", async () => {
+  const polygon = { type: "Polygon", coordinates: [squareRing(KANSAS_CITY)] };
+  const { client, sent } = clientFor([
+    Response.json({
+      features: [
+        {
+          geometry: polygon,
+          properties: {
+            ...ALERT,
+            affectedZones: ["http://nws.test/zones/forecast/MOZ037"],
+          },
+        },
+      ],
+    }),
+  ]);
+
+  const [area] = await Effect.runPromise(client.activeAlertAreas(KANSAS_CITY));
+
+  expect([
+    sent.map(({ url }) => url),
+    area?.alert.id,
+    area?.geometry,
+    area?.affectedZones,
+  ]).toEqual([
+    ["http://nws.test/alerts/active?point=39.0997,-94.5786&status=actual"],
+    "urn:oid:alert-2",
+    polygon,
+    ["http://nws.test/zones/forecast/MOZ037"],
+  ]);
+});
+
+it("fetches a zone URL as given and returns its geometry", async () => {
+  const multiPolygon = {
+    type: "MultiPolygon",
+    coordinates: [[squareRing(KANSAS_CITY)]],
+  };
+  const { client, sent } = clientFor([
+    Response.json({ geometry: multiPolygon }),
+  ]);
+
+  const geometry = await Effect.runPromise(
+    client.zoneGeometry("https://zones.test/zones/forecast/MOZ037"),
+  );
+
+  expect([sent.map(({ url }) => url), geometry]).toEqual([
+    ["https://zones.test/zones/forecast/MOZ037"],
+    multiPolygon,
+  ]);
 });
