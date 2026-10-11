@@ -38,6 +38,12 @@ const OPEN_TEXT = "Update status";
 const NO_RECORDER = "";
 const BASELINE_CHANGED_SUFFIX =
   "'s status changed while this form was open. The form now shows the current status.";
+/**
+ * Where the dialog's latest save stands. "unconfirmed" means the request got no answer and may
+ * still have been stored.
+ */
+type SaveState = "idle" | "saving" | "unconfirmed";
+
 /** Keys the form for a person with no recorded status event yet. */
 const NO_BASELINE_EVENT = "none";
 
@@ -99,6 +105,56 @@ function BaselineChangedNotice({
   );
 }
 
+function RecorderField({
+  id,
+  recorders,
+  recorderId,
+  onChange,
+}: {
+  id: string;
+  recorders: readonly Recorder[];
+  recorderId: number | undefined;
+  onChange: (recorderId: number | undefined) => void;
+}): JSX.Element {
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{RECORDER_LABEL}</Label>
+      <NativeSelect
+        aria-describedby={`${id}-identity`}
+        aria-required={true}
+        id={id}
+        onChange={(event): void =>
+          onChange(parseRecorder(recorders, event.target.value))
+        }
+        value={String(recorderId ?? NO_RECORDER)}
+      >
+        <NativeSelectOption value={NO_RECORDER}>
+          {RECORDER_PLACEHOLDER}
+        </NativeSelectOption>
+        {recorders.map((recorder) => (
+          <NativeSelectOption key={recorder.id} value={String(recorder.id)}>
+            {`${recorder.name}, ${recorder.role}`}
+          </NativeSelectOption>
+        ))}
+      </NativeSelect>
+      <p className="text-muted-foreground text-xs" id={`${id}-identity`}>
+        {IDENTITY_NOTE}
+      </p>
+    </div>
+  );
+}
+
+/** A form error wins; an unconfirmed save otherwise keeps its warning up until the next save. */
+function formMessage(
+  error: string | undefined,
+  saveState: SaveState,
+): string | undefined {
+  if (error === undefined && saveState === "unconfirmed") {
+    return SAVE_UNCONFIRMED_MESSAGE;
+  }
+  return error;
+}
+
 /** A person already not working keeps their reason, so saving the same status does not need it retyped. */
 function initialNote(person: Person): string {
   if (person.baseline.status === "not_working") {
@@ -112,17 +168,21 @@ export function StatusForm({
   recorders,
   recordStatus,
   onRecorded,
-  saving,
-  onSavingChange,
+  saveState,
+  onSaveStateChange,
   baselineChanged,
 }: {
   person: Person;
   recorders: readonly Recorder[];
   recordStatus: RecordStatus;
   onRecorded: () => void;
-  /** Owned by the dialog, which must not close while a save is in flight. */
-  saving: boolean;
-  onSavingChange: (saving: boolean) => void;
+  /**
+   * Owned by the dialog, which must not close while a save is in flight. An unconfirmed save
+   * reloads the roster, which can reset this form before its own catch runs, so the warning must
+   * outlive the form that raised it.
+   */
+  saveState: SaveState;
+  onSaveStateChange: (saveState: SaveState) => void;
   /** The person's status changed after the dialog opened, so the form was reset to it. */
   baselineChanged: boolean;
 }): JSX.Element {
@@ -138,24 +198,25 @@ export function StatusForm({
       setError(RECORDER_REQUIRED_MESSAGE);
       return;
     }
-    onSavingChange(true);
+    setError(undefined);
+    onSaveStateChange("saving");
     try {
       const outcome = await recordStatus(
         person.employeeId,
         statusBody(status, note, recorderId),
       );
+      onSaveStateChange("idle");
       if (outcome.kind === "rejected") {
         setError(outcome.message);
         return;
       }
       onRecorded();
     } catch {
-      setError(SAVE_UNCONFIRMED_MESSAGE);
-    } finally {
-      onSavingChange(false);
+      onSaveStateChange("unconfirmed");
     }
   }
 
+  const saving = saveState === "saving";
   return (
     <form className="grid gap-4" noValidate={true} onSubmit={submit}>
       <BaselineChangedNotice name={person.name} shown={baselineChanged} />
@@ -188,31 +249,16 @@ export function StatusForm({
           {NOTE_HINT}
         </p>
       </div>
-      <div className="grid gap-2">
-        <Label htmlFor={`${baseId}-recorder`}>{RECORDER_LABEL}</Label>
-        <NativeSelect
-          aria-describedby={`${baseId}-identity`}
-          aria-required={true}
-          id={`${baseId}-recorder`}
-          onChange={(event): void =>
-            setRecorderId(parseRecorder(recorders, event.target.value))
-          }
-          value={String(recorderId ?? NO_RECORDER)}
-        >
-          <NativeSelectOption value={NO_RECORDER}>
-            {RECORDER_PLACEHOLDER}
-          </NativeSelectOption>
-          {recorders.map((recorder) => (
-            <NativeSelectOption key={recorder.id} value={String(recorder.id)}>
-              {`${recorder.name}, ${recorder.role}`}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-        <p className="text-muted-foreground text-xs" id={`${baseId}-identity`}>
-          {IDENTITY_NOTE}
-        </p>
-      </div>
-      <FormError id={`${baseId}-error`} message={error} />
+      <RecorderField
+        id={`${baseId}-recorder`}
+        onChange={setRecorderId}
+        recorderId={recorderId}
+        recorders={recorders}
+      />
+      <FormError
+        id={`${baseId}-error`}
+        message={formMessage(error, saveState)}
+      />
       <DialogFooter>
         <DialogClose asChild={true}>
           <Button disabled={saving} type="button" variant="outline">
@@ -238,15 +284,16 @@ export function UpdateStatusDialog({
   recordStatus: RecordStatus;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
   const baselineEventId = person.baseline.event?.id ?? NO_BASELINE_EVENT;
   const [openedOn, setOpenedOn] = useState(baselineEventId);
   const title = `${OPEN_TEXT} for ${person.name}`;
   return (
     <Dialog
       onOpenChange={(next): void => {
-        if (saving === false) {
+        if (saveState !== "saving") {
           setOpenedOn(baselineEventId);
+          setSaveState("idle");
           setOpen(next);
         }
       }}
@@ -264,16 +311,17 @@ export function UpdateStatusDialog({
         </DialogHeader>
         {/* A reload under an open form (a status taking effect, the day rolling over) can change the
             person's status; keying by it starts the form over, so a save never builds on an old one.
-            While saving, the change is this save's own and the dialog is about to close. */}
+            Only an idle form names the change: while saving it is this save's own and the dialog is
+            about to close, and after an unconfirmed save the warning already says to check it. */}
         <StatusForm
-          baselineChanged={saving === false && openedOn !== baselineEventId}
+          baselineChanged={saveState === "idle" && openedOn !== baselineEventId}
           key={baselineEventId}
           onRecorded={(): void => setOpen(false)}
-          onSavingChange={setSaving}
+          onSaveStateChange={setSaveState}
           person={person}
           recorders={recorders}
           recordStatus={recordStatus}
-          saving={saving}
+          saveState={saveState}
         />
       </DialogContent>
     </Dialog>

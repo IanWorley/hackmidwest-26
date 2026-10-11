@@ -182,3 +182,43 @@ it("starts over from the person's new status when it changes under an open form"
     "Avery Calloway's status changed while this form was open. The form now shows the current status.",
   );
 });
+
+it("keeps the unconfirmed-save warning when the reload resets the form", async () => {
+  const reloaded = { ...AVERY, baseline: gideonOnLeave().baseline };
+  const { recorders } = personnel([AVERY]);
+  // Mirrors the route: a save whose answer was lost reloads the roster, then rethrows.
+  const recordStatus: RecordStatus = () => {
+    rerender(
+      <UpdateStatusDialog
+        person={reloaded}
+        recorders={recorders}
+        recordStatus={recordStatus}
+      />,
+    );
+    return Promise.reject(new TypeError("Failed to fetch"));
+  };
+  const { rerender } = render(
+    <UpdateStatusDialog
+      person={AVERY}
+      recorders={recorders}
+      recordStatus={recordStatus}
+    />,
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Update status for Avery Calloway" }),
+  );
+  fireEvent.change(screen.getByRole("combobox", { name: "Recorded by" }), {
+    target: { value: "1" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save status" }));
+
+  await waitFor(() => {
+    expect(screen.getByRole("alert").textContent).toBe(
+      "The save could not be confirmed. The table has been refreshed; check this person's status before saving again.",
+    );
+  });
+  expect(
+    screen.getByRole<HTMLSelectElement>("combobox", { name: "Status" }).value,
+  ).toBe("not_working");
+  expect(screen.queryByRole("status")).toBeNull();
+});
