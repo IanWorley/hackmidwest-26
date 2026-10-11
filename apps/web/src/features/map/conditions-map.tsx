@@ -8,7 +8,7 @@ import {
   type LatLngTuple,
   latLngBounds,
 } from "leaflet";
-import type { JSX } from "react";
+import { type JSX, useEffect } from "react";
 import {
   GeoJSON,
   MapContainer,
@@ -16,6 +16,7 @@ import {
   Popup,
   TileLayer,
   Tooltip,
+  useMap,
 } from "react-leaflet";
 import {
   DECISION_STATUSES,
@@ -39,7 +40,7 @@ import type {
   Standing,
   StandingPosture,
 } from "./load-map";
-import { BASE_TILES, RADAR_TILES } from "./tiles";
+import { AQI_ATTRIBUTION, BASE_TILES, RADAR_TILES } from "./tiles";
 
 const MARKER_SIZE_PX = 18;
 const LABEL_OFFSET_PX = 12;
@@ -52,6 +53,7 @@ const CONTIGUOUS_US_WEST_LON = -125;
 const CONTIGUOUS_US_NORTH_LAT = 49.4;
 const CONTIGUOUS_US_EAST_LON = -66.9;
 const RECOMMENDED_PREFIX = "Recommended:";
+const AQI_PREFIX = "Modeled AQI";
 const OPEN_FACILITY_PREFIX = "Open";
 const HAZARD_WINDOW_SEPARATOR = " → ";
 const AQI_SEPARATOR = " · ";
@@ -161,7 +163,7 @@ function AqiText({
   const { value } = facility.aqi;
   return (
     <span className="text-xs">
-      {`AQI ${Math.round(value)}${AQI_SEPARATOR}${aqiCategory(value).label}`}
+      {`${AQI_PREFIX} ${Math.round(value)}${AQI_SEPARATOR}${aqiCategory(value).label}`}
     </span>
   );
 }
@@ -235,6 +237,19 @@ function AlertArea({ alert }: { alert: AlertFeature }): JSX.Element | null {
   );
 }
 
+/** Credits the modeled AQI in the map's attribution while the layer is on. */
+function AqiAttribution(): null {
+  const map = useMap();
+  useEffect(() => {
+    const control = map.attributionControl;
+    control.addAttribution(AQI_ATTRIBUTION);
+    return (): void => {
+      control.removeAttribution(AQI_ATTRIBUTION);
+    };
+  }, [map]);
+  return null;
+}
+
 /** Leaflet reads `window` on import, so routes load this module only in the browser. */
 export function ConditionsMap({
   facilities,
@@ -263,6 +278,7 @@ export function ConditionsMap({
           url={RADAR_TILES.url}
         />
       )}
+      {showAqi && <AqiAttribution />}
       {layers.includes("alerts") &&
         alerts?.features.map((alert) => (
           <AlertArea alert={alert} key={alert.id} />
