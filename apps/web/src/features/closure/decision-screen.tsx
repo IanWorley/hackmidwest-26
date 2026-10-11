@@ -297,10 +297,11 @@ export function DecisionScreenView({
             screen={screen}
           />
         )}
-      {currentDecision !== null && notices.current !== null && (
+      {notices.current !== null && (
         <NotificationsSection
-          decisionId={currentDecision.id}
-          result={notices.current}
+          decisionId={notices.current.decisionId}
+          onReload={onReload}
+          result={notices.current.result}
           timezone={facility.timezone}
         />
       )}

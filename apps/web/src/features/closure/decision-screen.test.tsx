@@ -108,6 +108,7 @@ it("returns focus to Re-evaluate and says nothing changed when it fails", async 
 it("sends an earlier day's recommendation back to Re-evaluate with nothing to decide on", () => {
   render(
     <DecisionScreenView
+      notices={NO_NOTICES}
       onReload={reloadNothing}
       screen={{
         ...SCREEN,
