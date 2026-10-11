@@ -4,6 +4,27 @@
   "extends": "//",
   "overrides": [
     {
+      // t3env keys its schemas by environment variable name, which is CONSTANT_CASE.
+      "includes": ["src/config.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "selector": { "kind": "objectLiteralProperty" },
+                    "formats": ["camelCase", "CONSTANT_CASE"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       // The build-time plugin list shared by vite.config.ts and
       // vitest.config.ts; its imports are build tools.
       "includes": ["react-plugins.ts"],
