@@ -46,6 +46,8 @@
     {
       // Features reach apps/api only through the narrow ports in runtime.ts, so
       // none can call a route the ports leave out, such as decisions or dispatch.
+      // Override options replace the root's, so `patterns` repeats the root
+      // list verbatim; test/module-boundaries.test.ts fails if it drifts.
       "includes": ["src/features/**"],
       "linter": {
         "rules": {
@@ -53,6 +55,24 @@
             "noRestrictedImports": {
               "level": "error",
               "options": {
+                "patterns": [
+                  {
+                    "group": ["../**/*/src/**", "!../**/../src/**"],
+                    "message": "Import another workspace through its package name, not a relative path into its source."
+                  },
+                  {
+                    "group": ["**/packages/*", "**/packages/*/**"],
+                    "message": "Import a shared package through its package exports, never from its folder."
+                  },
+                  {
+                    "group": ["@/**/../**"],
+                    "message": "The @/ alias reaches only the web app's src; import other workspaces through their package names."
+                  },
+                  {
+                    "group": ["**/node_modules/**"],
+                    "message": "Import packages by name, never through a node_modules path."
+                  }
+                ],
                 "paths": {
                   "@elysiajs/eden": "Yield ClosureApi or TasksApi from ../runtime. Only src/api-client.ts holds the Eden client.",
                   "@hackmidwest/api/contract": "Yield ClosureApi or TasksApi from ../runtime. Only src/api-client.ts holds the Eden client."

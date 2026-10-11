@@ -93,6 +93,16 @@ export const AGENT_API_LINT_PROBES: readonly BoundaryProbe[] = [
     violatedRules: ["style/noRestrictedImports"],
   },
   {
+    behavior:
+      "agent API feature code cannot import database source types by relative path",
+    files: {
+      ...DB_SCHEMA_STUB,
+      "apps/agent-api/src/features/probe.ts":
+        'import type { tasks } from "../../../../packages/db/src/schema";\nexport type Probe = typeof tasks;\n',
+    },
+    violatedRules: ["style/noRestrictedImports"],
+  },
+  {
     behavior: "agent API feature code cannot read process.env",
     files: {
       "apps/agent-api/src/features/probe.ts": `${IMPORT_PROCESS}export const probe = process.env.AGENT_API_PORT;\n`,
