@@ -23,6 +23,7 @@ import { TIMING_POLICY } from "./timing-policy";
 import {
   type CalendarDate,
   formatDate,
+  formatTimeOfDay,
   type Instant,
   localInstant,
   parseInstant,
@@ -38,6 +39,7 @@ const END_STRENGTH = {
   ends: "firm",
   expires: "estimated",
   forecast: "estimated",
+  reading: "estimated",
 } as const satisfies Record<EndBasis, EndStrength>;
 
 const CONFIDENCE = {
@@ -67,13 +69,30 @@ function evaluatePosture(input: EngineInput): Recommendation {
 }
 
 function timing(input: EngineInput, exceedance: Exceedance): TimingResult {
-  return evaluateTiming({
+  const result = evaluateTiming({
     now: input.now,
     facility: input.facility,
     hazard: exceedance.hazard,
     crossedPosture: exceedance.cutoff.posture,
     evidence: toEvidence(exceedance.signals),
   });
+  return { ...result, status: releaseNotBeforeNow(result.status, input) };
+}
+
+// evaluateTiming schedules a release even when it has passed; staff can only be released from now on.
+function releaseNotBeforeNow(status: OpmStatus, input: EngineInput): OpmStatus {
+  const now = parseInstant(input.now);
+  if (
+    status.posture !== "early_dismissal" ||
+    parseInstant(status.departAt) >= now
+  ) {
+    return status;
+  }
+  return {
+    posture: "early_dismissal",
+    departAt: toIso(now),
+    departAtLocal: formatTimeOfDay(now, input.facility.timezone),
+  };
 }
 
 /** Posture order first; within a posture, a longer delay or an earlier release is more disruptive. */

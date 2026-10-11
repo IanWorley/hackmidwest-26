@@ -16,6 +16,7 @@ const HOURLY_OBSERVATION_STALE_MINUTES = 90;
 const FORECAST_STALE_MINUTES = 360;
 const CAMS_REFRESH_MINUTES = 720;
 const GAUGE_STAGE_STALE_MINUTES = 360;
+const NWPS_FORECAST_STEP_MINUTES = 360;
 const ONSET_SHIFT_MINUTES = 120;
 
 /** Policy values that turn hazard inputs into an OPM-style status and its confidence. */
@@ -72,6 +73,12 @@ export const TIMING_POLICY = {
     source: CLOSURE_CALL_POLICY_SOURCE,
     citation:
       "Policy choice: NWS stations report hourly, so one wind observation stands for one report cycle. A reading proves a crossing at its timestamp, not how long it lasted.",
+  },
+  gaugeCrossingHoldMinutes: {
+    value: NWPS_FORECAST_STEP_MINUTES,
+    unit: "minutes",
+    source: CLOSURE_CALL_POLICY_SOURCE,
+    citation: `Policy choice: NWPS forecasts river stage in 6-hour steps. A river still at or above a flood stage at its last observed or forecast point has not been shown to fall, so the crossing is held one more step past that point. ${NWPS_GAUGE_URL}`,
   },
   aqiReadingValidMinutes: {
     value: CAMS_GLOBAL_TIME_STEP_MINUTES,

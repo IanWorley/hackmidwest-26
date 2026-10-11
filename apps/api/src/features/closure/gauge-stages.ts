@@ -7,7 +7,13 @@ import {
 import type { EngineInput } from "./engine-input";
 import type { Signal } from "./signals";
 import { TIMING_POLICY } from "./timing-policy";
-import { type IsoInstant, MS_PER_MINUTE, parseInstant } from "./zoned-time";
+import {
+  type IsoInstant,
+  MS_PER_MINUTE,
+  parseInstant,
+  toInstant,
+  toIso,
+} from "./zoned-time";
 
 /** The part of a gauge a crossing reads, so a stored engine input needs no lid or name. */
 type GaugeStages = Pick<RiverGauge, "floodStagesFt" | "observed" | "forecast">;
@@ -129,10 +135,19 @@ function categorySignal(
         ref: rawRef,
         asOf,
         start: crossing.start,
-        end: crossing.end ?? last.validTime,
+        end: crossing.end ?? holdPastHorizon(last.validTime),
       },
     },
   ];
+}
+
+function holdPastHorizon(lastAbove: IsoInstant): IsoInstant {
+  return toIso(
+    toInstant(
+      parseInstant(lastAbove) +
+        TIMING_POLICY.gaugeCrossingHoldMinutes.value * MS_PER_MINUTE,
+    ),
+  );
 }
 
 export type { GaugeCrossing, GaugeStages };

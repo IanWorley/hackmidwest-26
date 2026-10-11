@@ -6,6 +6,7 @@ import {
   CREST_FT,
   crossed,
   input,
+  NOW,
   nwsAlert,
   river,
 } from "./engine-test-fixtures";
@@ -92,4 +93,19 @@ it("lowers confidence when a supplied gauge's observation is stale", () => {
       { kind: "stale", input: "gauge", ageMinutes: 420, limitMinutes: 360 },
     ],
   });
+});
+
+it("holds a river still above major stage at its last point instead of clearing it", () => {
+  const gauge = river(CREST_FT.pastMajor);
+  expect(
+    evaluatePosture(
+      input(["flood"], {
+        gauge: gauge && {
+          ...gauge,
+          observed: { stageFt: CREST_FT.pastMajor, validTime: NOW },
+          forecast: [],
+        },
+      }),
+    ).status,
+  ).toEqual({ posture: "full_closure" });
 });

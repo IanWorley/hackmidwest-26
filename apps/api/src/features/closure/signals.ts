@@ -203,12 +203,25 @@ function forecastSignals(
 function periodOf(origin: Origin): Period {
   switch (origin.source) {
     case "alerts":
+      return {
+        startTime: origin.start,
+        endTime: origin.end,
+        endBasis: origin.endBasis,
+      };
     case "forecast":
     case "gauge":
-      return { startTime: origin.start, endTime: origin.end };
+      return {
+        startTime: origin.start,
+        endTime: origin.end,
+        endBasis: "forecast",
+      };
     case "observations":
     case "airQuality":
-      return { startTime: origin.asOf, endTime: origin.holdsUntil };
+      return {
+        startTime: origin.asOf,
+        endTime: origin.holdsUntil,
+        endBasis: "reading",
+      };
     default:
       return origin satisfies never;
   }

@@ -202,3 +202,32 @@ it("shifts every finding of the deciding hazard together", () => {
     },
   ]);
 });
+
+it("releases now when the scheduled early-dismissal time has already passed", () => {
+  expect(
+    evaluatePosture(
+      input(["wind"], {
+        now: "2026-01-14T21:00:00Z",
+        forecast: forecast([
+          "2026-01-14T21:30:00Z",
+          "2026-01-14T22:30:00Z",
+          "45 mph",
+        ]),
+      }),
+    ).status,
+  ).toEqual({
+    posture: "early_dismissal",
+    departAt: "2026-01-14T21:00:00.000Z",
+    departAtLocal: "15:00",
+  });
+});
+
+it("labels a window built only from readings with a reading end basis", () => {
+  const [finding] = evaluatePosture(
+    input(["airQuality"], {
+      now: AQI_AT,
+      readings: [{ ...AQI_READING, value: 160 }],
+    }),
+  ).findings;
+  expect(finding?.timing.hazardWindow.endBasis).toBe("reading");
+});
