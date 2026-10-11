@@ -17,7 +17,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 - Prefer ARIA roles and exact accessible names. Use `expect-text` only for elements that have no accessible name.
 - Treat every command as literal. Keep quoted names, paths, and JSON unchanged.
 - Run browser actions through `$V browser`, HTTP through `$V api`, stored-state checks through `$V db`, and schema rejections through `$V db-reject`.
-- Mutate data only through `POST /api/tasks`. Never write to SQLite directly. `db-reject` is the one exception: it writes only to a throwaway snapshot.
+- Mutate data only through `POST /api/tasks` and `POST /api/facilities/<id>/recommendations`. Never write to SQLite directly. `db-reject` is the one exception: it writes only to a throwaway snapshot.
 
 ## Proof and skip reporting
 
@@ -48,6 +48,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [Facility list and detail](./facilities-list.md) covers the server-rendered `/facilities` page, the link from each row to `/facilities/<id>`, the not-found page, and `GET /api/facilities` and `GET /api/facilities/:id`.
 - [Create a task](./create-task.md) covers `POST /api/tasks`, its validation, and seeing the new task on `/tasks`.
 - [Agent API](./agent-api.md) covers the separate agent API: its `GET /health` liveness and its `GET /tasks/summary` read of the tasks API over HTTP.
+- [Recommendations](./recommendations.md) covers `POST /api/facilities/:id/recommendations` (live and as-of), the latest and by-id reads, replay, and the stored add-only row.
 - [NWS live pull](./nws-live.md) covers the temporary `GET /api/nws/live` route: a live National Weather Service pull for one point, its range validation, and its 500 outside NWS coverage.
 - [Storage invariants](./storage-invariants.md) covers the add-only triggers and `CHECK` constraints, proven with `db-reject` because no route serves those tables yet.
 - [Task list load failure](./tasks-load-error.md) covers the error alert shown when the API is unreachable or its storage fails, and the API's generic 500.

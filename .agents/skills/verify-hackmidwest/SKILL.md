@@ -1,11 +1,11 @@
 ---
 name: verify-hackmidwest
-description: Launch and drive the Hack Midwest app (TanStack Start web UI on top of an Elysia + SQLite API, plus a separate agent API) in an isolated instance and capture proof that a feature works for a real user. Use when asked to verify, demo, screenshot, or prove a change to the web pages (/, /tasks, /facilities, /facilities/<id>), the /api/tasks or /api/facilities endpoints, the temporary /api/nws/live NWS pull, the agent API, or storage-only schema changes (add-only triggers, CHECK constraints), beyond what unit tests show.
+description: Launch and drive the Hack Midwest app (TanStack Start web UI on top of an Elysia + SQLite API, plus a separate agent API) in an isolated instance and capture proof that a feature works for a real user. Use when asked to verify, demo, screenshot, or prove a change to the web pages (/, /tasks, /facilities, /facilities/<id>), the /api/tasks, /api/facilities, or /api/recommendations endpoints, the temporary /api/nws/live NWS pull, the agent API, or storage-only schema changes (add-only triggers, CHECK constraints), beyond what unit tests show.
 ---
 
 # Verify the Hack Midwest app
 
-The repo is a Bun monorepo: `apps/web` (TanStack Start, React, SSR), `apps/api` (Elysia on Bun, Drizzle, SQLite file), and `apps/agent-api` (Elysia on Bun, for agent and AI callers; it reads tasks from `apps/api` over HTTP and has no storage of its own). The **primary surface is the web UI**; the **secondary surface is the HTTP API** at `/api/tasks` and `/api/facilities` (plus the temporary live NWS pull at `/api/nws/live`), which is currently the only way to create a task (the UI is read-only). The agent API is a third, independent HTTP surface with `GET /health` and `GET /tasks/summary` today. There is no CLI and no auth.
+The repo is a Bun monorepo: `apps/web` (TanStack Start, React, SSR), `apps/api` (Elysia on Bun, Drizzle, SQLite file), and `apps/agent-api` (Elysia on Bun, for agent and AI callers; it reads tasks from `apps/api` over HTTP and has no storage of its own). The **primary surface is the web UI**; the **secondary surface is the HTTP API** at `/api/tasks`, `/api/facilities`, and `/api/recommendations` (plus the temporary live NWS pull at `/api/nws/live`), which is currently the only way to create a task (the UI is read-only). The agent API is a third, independent HTTP surface with `GET /health` and `GET /tasks/summary` today. There is no CLI and no auth.
 
 Everything goes through one helper. Set `V` in each shell command; it works from anywhere inside the repo:
 
@@ -82,7 +82,7 @@ RUN_ID=<id> $V api list GET /api/tasks
 RUN_ID=<id> $V db rows "select id, title, completed from tasks order by id"
 ```
 
-The API has exactly `GET /api/tasks`, `POST /api/tasks` (body `{"title": string 1..120}`), `GET /api/facilities`, `GET /api/facilities/:id` (decimal positive integer id, `422` for `0x1` or `1e0`, `404` past the safe-integer range; `404 {"message":"Facility not found"}` for an unknown one), and the temporary `GET /api/nws/live?lat=&lon=`, which calls api.weather.gov live. The agent API has exactly `GET /health` and `GET /tasks/summary`; drive it with `RUN_ID=<id> $V agent <name> GET <path>`. `db` opens the file with `sqlite3 -readonly`; never write to the database directly. Mutate only through the API.
+The API has exactly `GET /api/tasks`, `POST /api/tasks` (body `{"title": string 1..120}`), `GET /api/facilities`, `GET /api/facilities/:id` (decimal positive integer id, `422` for `0x1` or `1e0`, `404` past the safe-integer range; `404 {"message":"Facility not found"}` for an unknown one), `POST /api/facilities/:id/recommendations` (optional body `{"asOf": ISO timestamp}`; pulls NWS and Open-Meteo live and stores a row), `GET /api/facilities/:id/recommendations/latest`, `GET /api/recommendations/:id`, `GET /api/recommendations/:id/replay`, and the temporary `GET /api/nws/live?lat=&lon=`, which calls api.weather.gov live. The agent API has exactly `GET /health` and `GET /tasks/summary`; drive it with `RUN_ID=<id> $V agent <name> GET <path>`. `db` opens the file with `sqlite3 -readonly`; never write to the database directly. Mutate only through the API.
 
 A storage-only change (a new table, trigger, or `CHECK`) has no web or HTTP path until a route uses it. Prove it with `db-reject`, which pairs the write, the expected error, the exit code, and an unchanged-snapshot check in one `*.db.txt` transcript:
 
