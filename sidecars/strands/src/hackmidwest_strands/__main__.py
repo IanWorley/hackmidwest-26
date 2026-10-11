@@ -9,6 +9,8 @@ EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 # Every run_facility call stores a recommendation, so a runaway loop would flood history and spend.
 ASK_LIMITS: Limits = {"turns": 6}
+# The stop reason Strands reports when the turns cap in ASK_LIMITS ends the loop.
+TURN_LIMIT_STOP_REASON = "limit_turns"
 
 
 def _ask(question: str) -> int:
@@ -19,7 +21,7 @@ def _ask(question: str) -> int:
         return EXIT_FAILURE
 
     result = build_agent(model)(question, limits=ASK_LIMITS)
-    if result.stop_reason == "limit_turns":
+    if result.stop_reason == TURN_LIMIT_STOP_REASON:
         print(f"The agent stopped after {ASK_LIMITS['turns']} turns without an answer.", file=sys.stderr)
         return EXIT_FAILURE
 
