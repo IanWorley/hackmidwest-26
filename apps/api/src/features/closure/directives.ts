@@ -1,27 +1,16 @@
-import type { employees } from "@hackmidwest/db";
+import {
+  DIRECTIVE_SCOPE_KINDS,
+  type DirectiveKind,
+  type DirectiveScope,
+  type DirectiveScopeKind,
+  type employees,
+  type ReasonCategory,
+} from "@hackmidwest/db";
 
 type DirectiveRecipient = Pick<
   typeof employees.$inferSelect,
   "id" | "assignedBuildingId" | "essentialPersonnel"
 >;
-
-const DIRECTIVE_KINDS = ["report", "telework", "dismissed", "excused"] as const;
-type DirectiveKind = (typeof DIRECTIVE_KINDS)[number];
-
-const DIRECTIVE_SCOPES_BY_SPECIFICITY = [
-  "facility",
-  "group",
-  "building",
-  "employee",
-] as const;
-type DirectiveScopeKind = (typeof DIRECTIVE_SCOPES_BY_SPECIFICITY)[number];
-
-/** #41 parses its stored `building:<id>` / `employee:<id>` / `group:essential` text into this at its route. */
-type DirectiveScope =
-  | { readonly kind: "facility" }
-  | { readonly kind: "group"; readonly group: "essential" }
-  | { readonly kind: "building"; readonly buildingId: number }
-  | { readonly kind: "employee"; readonly employeeId: number };
 
 interface Directive {
   readonly id: number;
@@ -29,7 +18,7 @@ interface Directive {
   readonly directive: DirectiveKind;
   /** A `dismissed` directive's own release time, which wins over the posture's. */
   readonly effectiveAt: string | null;
-  readonly reasonCategory: string;
+  readonly reasonCategory: ReasonCategory;
   readonly reasonText: string;
   readonly issuedById: number;
   readonly issuedAt: string;
@@ -63,8 +52,8 @@ function scopeReaches(
 
 function compareDirectives(a: Directive, b: Directive): number {
   return (
-    DIRECTIVE_SCOPES_BY_SPECIFICITY.indexOf(a.scope.kind) -
-      DIRECTIVE_SCOPES_BY_SPECIFICITY.indexOf(b.scope.kind) ||
+    DIRECTIVE_SCOPE_KINDS.indexOf(a.scope.kind) -
+      DIRECTIVE_SCOPE_KINDS.indexOf(b.scope.kind) ||
     Date.parse(a.issuedAt) - Date.parse(b.issuedAt) ||
     a.id - b.id
   );
@@ -97,5 +86,5 @@ function winningDirective(
   return winner;
 }
 
-export type { Directive, DirectiveKind, DirectiveScope, DirectiveScopeKind };
+export type { Directive };
 export { winningDirective };
