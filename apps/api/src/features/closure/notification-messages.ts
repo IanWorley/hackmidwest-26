@@ -112,7 +112,7 @@ const STATUS_TEMPLATES: {
     delayedArrival(delayMinutes, context),
   report_required: (_status, context) => ({
     appliesToYou: "You are required to report in person.",
-    whatToDo: `Report to ${context.facilityName} at ${startTime(context)} as usual.`,
+    whatToDo: reportInPerson(context),
   }),
   dismissed: ({ release }, context) => dismissal(release, context),
   not_working: () => ({
@@ -135,10 +135,28 @@ function delayedArrival(
       whatToDo: `Do not report to ${context.facilityName} today.`,
     };
   }
+  if (arriveAt <= context.now) {
+    return {
+      appliesToYou,
+      whatToDo: `Report to ${context.facilityName} now.`,
+    };
+  }
   return {
     appliesToYou,
     whatToDo: `Arrive by ${localTime(arriveAt, context)} instead of ${startTime(context)}.`,
   };
+}
+
+/** "As usual" only for someone who normally works onsite; anyone else is told when, or now. */
+function reportInPerson(context: PersonContext): string {
+  const { facilityName } = context;
+  if (context.whereabouts === "working_onsite") {
+    return `Report to ${facilityName} at ${startTime(context)} as usual.`;
+  }
+  if (context.workStartsAt <= context.now) {
+    return `Report to ${facilityName} now.`;
+  }
+  return `Report to ${facilityName} by ${startTime(context)}.`;
 }
 
 function dismissal(release: Release, context: PersonContext): Instructions {
@@ -252,7 +270,11 @@ function draftMessage(
     case "all_clear":
       return {
         subject: `All clear: ${context.facilityName}`,
-        whatsHappening: allClearHappening(context, intent.resumesOn),
+        whatsHappening: allClearHappening(
+          context,
+          intent.resumesOn,
+          context.now,
+        ),
         appliesToYou:
           "Your earlier instructions end when normal operations resume.",
         whatToDo: `Return to your usual schedule on ${intent.resumesOn}.`,

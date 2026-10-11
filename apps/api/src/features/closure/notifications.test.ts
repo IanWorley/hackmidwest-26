@@ -10,6 +10,7 @@ import {
   employee,
   FACILITY_NAME,
   NORMAL,
+  NOW,
   type PackageFields,
   PHONE,
   RELEASE_AFTER_START,
@@ -234,3 +235,31 @@ it("tells someone whose shift ends before the delayed arrival not to report", ()
     `Do not report to ${FACILITY_NAME} today.`,
   ]);
 });
+
+it("tells someone whose delayed arrival has passed to report now", () => {
+  const pkg = decidedPackage({
+    posture: { posture: "delayed_arrival", delayMinutes: 120 },
+    now: "2026-10-12T15:00:00.000Z",
+  });
+  expect(pkg.recipients.map(({ message }) => message.whatToDo)).toEqual([
+    `Report to ${FACILITY_NAME} now.`,
+  ]);
+});
+
+it.each<[string, string, string]>([
+  ["by their start before it", NOW, `Report to ${FACILITY_NAME} by 06:30.`],
+  ["now after their start", AT_WORK, `Report to ${FACILITY_NAME} now.`],
+])(
+  "tells a teleworker named in a report directive to report %s",
+  (_case, now, whatToDo) => {
+    const pkg = decidedPackage({
+      posture: NORMAL,
+      now,
+      statusEvents: [statusSince(1, "teleworking", "2026-10-12T03:00:00.000Z")],
+      directives: [directive("report")],
+    });
+    expect(pkg.recipients.map(({ message }) => message.whatToDo)).toEqual([
+      whatToDo,
+    ]);
+  },
+);
