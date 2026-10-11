@@ -1,8 +1,8 @@
 import { api } from "../../lib/api";
+import { SAVE_FAILED_MESSAGE } from "./status-messages";
 
 const HTTP_UNPROCESSABLE_ENTITY = 422;
 const HTTP_NOT_FOUND = 404;
-const SAVE_FAILED_MESSAGE = "The status could not be saved. Try again.";
 
 export type StatusBody = Parameters<
   ReturnType<typeof api.api.employees>["status"]["post"]

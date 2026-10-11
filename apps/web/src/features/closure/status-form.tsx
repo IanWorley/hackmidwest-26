@@ -18,6 +18,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { EmployeeStatus, RecordStatus, StatusBody } from "./record-status";
 import { type Person, type Recorder, STATUS_LABELS } from "./roster-filter";
+import { SAVE_FAILED_MESSAGE } from "./status-messages";
 
 const FORM_STATUSES = [
   "working_onsite",
@@ -76,6 +77,14 @@ function FormError({
   );
 }
 
+/** A person already not working keeps their reason, so saving the same status does not need it retyped. */
+function initialNote(person: Person): string {
+  if (person.baseline.status === "not_working") {
+    return person.baseline.note;
+  }
+  return "";
+}
+
 export function StatusForm({
   person,
   recorders,
@@ -89,7 +98,7 @@ export function StatusForm({
 }): JSX.Element {
   const baseId = useId();
   const [status, setStatus] = useState<EmployeeStatus>(person.baseline.status);
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(initialNote(person));
   const [recorderId, setRecorderId] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
   const [saving, setSaving] = useState(false);
@@ -101,16 +110,21 @@ export function StatusForm({
       return;
     }
     setSaving(true);
-    const outcome = await recordStatus(
-      person.employeeId,
-      statusBody(status, note, recorderId),
-    );
-    setSaving(false);
-    if (outcome.kind === "rejected") {
-      setError(outcome.message);
-      return;
+    try {
+      const outcome = await recordStatus(
+        person.employeeId,
+        statusBody(status, note, recorderId),
+      );
+      if (outcome.kind === "rejected") {
+        setError(outcome.message);
+        return;
+      }
+      onRecorded();
+    } catch {
+      setError(SAVE_FAILED_MESSAGE);
+    } finally {
+      setSaving(false);
     }
-    onRecorded();
   }
 
   return (
