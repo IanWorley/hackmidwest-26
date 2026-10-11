@@ -14,6 +14,7 @@ const DEFAULT_TITLE = "Hack Midwest tasks";
 
 const NAV_ITEMS = [
   { to: "/tasks", label: "Tasks" },
+  { to: "/facilities", label: "Facilities" },
 ] as const satisfies readonly { to: LinkProps["to"]; label: string }[];
 
 function RootDocument(): JSX.Element {
