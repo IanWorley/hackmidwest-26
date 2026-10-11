@@ -6,8 +6,8 @@ import {
   NWS_SEVERITIES,
   postHazardBuffer,
   THRESHOLDS,
-  TIMING_POLICY,
 } from "./thresholds";
+import { TIMING_POLICY } from "./timing-policy";
 
 interface CitedEntry {
   readonly path: string;
