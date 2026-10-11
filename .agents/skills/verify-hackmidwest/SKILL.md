@@ -41,7 +41,7 @@ $V up                         # or RUN_ID=my-check $V up to choose the id
 - `API_PORT`, `AGENT_API_PORT`, `WEB_ORIGIN=http://localhost:<web>`, `VITE_API_BASE_URL=http://localhost:<api>`, `TASKS_API_URL=http://localhost:<api>` use OS-assigned free ports. Shell env takes precedence over the root `.env` for both Bun's `--env-file` and Vite's `loadEnv`, so a developer's `.env` and their own `bun run dev` on 3000/3001 are never touched.
 - `DB_PATH=/tmp/verify-hackmidwest/runs/<RUN_ID>/db.sqlite`, a fresh file seeded with exactly one task (id `1`, `Build the Hack Midwest demo`, not completed) and the demo facility fixture: 4 facilities, 29 employees, one status event each. `GET /api/facilities` and the `/facilities` page serve the facilities; no endpoint serves the rosters yet.
 - With `STORAGE=broken`, `up` skips migrate and seed and writes a one-line text file at `DB_PATH` instead. The API starts, and every query fails with `SQLITE_NOTADB`. Use it only for recipes that need a storage failure. No real database is edited.
-- The dev supervisor runs under `setsid`, so its PID is the process group `down` kills.
+- The dev supervisor starts in its own session (`setsid` on Linux; perl's `POSIX::setsid` on macOS, which ships no `setsid`), so its PID is the process group `down` kills.
 
 **Ready** means `up` printed `ready RUN_ID=…` followed by the state (`API_URL`, `WEB_URL`, `AGENT_API_URL`, `DB_PATH`, `STORAGE`, `EXPECTED_STATUS`, `ARTIFACTS`, `PGID`, `GIT_REV`). It waits until `GET $API_URL/api/tasks` and `GET $WEB_URL/tasks` both answer with `EXPECTED_STATUS` (`200`, or `500` with `STORAGE=broken`) and the page serves `<title>Tasks · Hack Midwest</title>`, and `GET $AGENT_API_URL/health` answers `200` (it has no storage, so `STORAGE=broken` does not change it), up to 90 s. On timeout it prints the dev log tail and tears itself down. The first `up` on a machine takes ~10 s; Vite's first SSR compile is the slow part.
 
@@ -53,7 +53,7 @@ Instances are isolated by port, database file, and process group, so several run
 RUN_ID=<id> $V doctor
 ```
 
-Prints `ok` / `FAIL` per check and exits non-zero on any failure: process group alive, all three ports owned by **this** run's process group (not some other listener), API returns a JSON array, web serves the `/tasks` page title, agent API health answers `200`, database file exists, checkout `HEAD` equals the rev at launch. It also prints how many paths the working tree has changed; the dev server hot-reloads edits, so a running instance reflects uncommitted changes. Run doctor first whenever a step fails unexpectedly. If it fails, `down` and `up` again rather than repairing a half-dead instance.
+Prints `ok` / `FAIL` per check and exits non-zero on any failure: process group alive, all three ports owned by **this** run's process group (not some other listener; found with `ss`, or `lsof` where `ss` is missing), API returns a JSON array, web serves the `/tasks` page title, agent API health answers `200`, database file exists, checkout `HEAD` equals the rev at launch. It also prints how many paths the working tree has changed; the dev server hot-reloads edits, so a running instance reflects uncommitted changes. Run doctor first whenever a step fails unexpectedly. If it fails, `down` and `up` again rather than repairing a half-dead instance.
 
 ## Drive
 
@@ -108,7 +108,7 @@ All proof lands in `/tmp/verify-hackmidwest/artifacts/<RUN_ID>/` and survives `d
 RUN_ID=<id> $V down
 ```
 
-`down` sends SIGTERM to the run's process group, waits up to 10 s, then SIGKILLs it. The API under `bun --watch` releases its port on SIGTERM but its watcher does not exit, so expect `down` to take ~10 s. It copies the logs into the artifacts dir and deletes `/tmp/verify-hackmidwest/runs/<RUN_ID>/` (database, state). It never kills by process name and never touches other runs. Run it after every attempt, including failed ones. `$V list` shows strays. Evidence directories are only removed by hand, and only when the user asks.
+`down` sends SIGTERM to the run's process group, waits up to 10 s, then SIGKILLs it. The API under `bun --watch` releases its port on SIGTERM but its watcher may not exit, so `down` can take up to 10 s. It copies the logs into the artifacts dir and deletes `/tmp/verify-hackmidwest/runs/<RUN_ID>/` (database, state). It never kills by process name and never touches other runs. Run it after every attempt, including failed ones. `$V list` shows strays. Evidence directories are only removed by hand, and only when the user asks.
 
 ## Attach proof to the PR
 
