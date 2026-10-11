@@ -18,9 +18,18 @@ const AS_OF_FORMAT = new Intl.DateTimeFormat("en-US", {
   timeZoneName: "short",
 });
 
+/** Ticks on wall-clock minute boundaries, so the countdown turns over with the clock. */
 function subscribeToMinutes(onMinute: () => void): () => void {
-  const timer = setInterval(onMinute, MS_PER_MINUTE);
-  return (): void => clearInterval(timer);
+  let interval: ReturnType<typeof setInterval> | undefined;
+  const untilNextMinute = MS_PER_MINUTE - (Date.now() % MS_PER_MINUTE);
+  const timeout = setTimeout((): void => {
+    onMinute();
+    interval = setInterval(onMinute, MS_PER_MINUTE);
+  }, untilNextMinute);
+  return (): void => {
+    clearTimeout(timeout);
+    clearInterval(interval);
+  };
 }
 
 /** Floored to the minute, so the snapshot stays stable between ticks. */
