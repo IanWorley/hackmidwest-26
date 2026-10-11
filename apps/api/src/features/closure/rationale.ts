@@ -1,8 +1,10 @@
 import type { ConfidenceLevel, Hazard } from "@hackmidwest/db";
 import type { Caveat } from "./confidence";
 import type { Crossing } from "./cutoff-checks";
+import type { CutoffName } from "./cutoff-names";
 import type { InputKind } from "./freshness";
 import type { EndBasis } from "./hazard-window";
+import type { InputRef } from "./samples";
 import type { Cutoff } from "./thresholds";
 import type { IsoInstant, OpmStatus } from "./timing";
 import { formatTimeOfDay, parseInstant } from "./zoned-time";
@@ -11,6 +13,22 @@ const HAZARD_LABELS: Readonly<Record<Hazard, string>> = {
   winter: "Winter weather",
   wind: "Wind",
   airQuality: "Air quality",
+};
+
+const CUTOFF_LABELS: Readonly<Record<CutoffName, string>> = {
+  stormWarning: "winter storm warning",
+  advisory: "winter weather advisory",
+  sustained: "sustained wind",
+  gust: "wind gust",
+  unhealthy: "unhealthy air quality",
+  veryUnhealthy: "very unhealthy air quality",
+};
+
+const REACHED_BY_INPUT: Readonly<Record<InputRef["kind"], string>> = {
+  forecast: "is forecast to reach",
+  observations: "reached",
+  airQuality: "reached",
+  alert: "reached",
 };
 
 const INPUT_LABELS: Readonly<Record<InputKind, string>> = {
@@ -56,7 +74,7 @@ function crossingSentences(
     const { hazard, cutoff, threshold, outcome } = crossing;
     const unit = unitLabel(threshold.unit);
     const { status } = outcome.timing;
-    const sentence = `${HAZARD_LABELS[hazard]} reached ${outcome.observed} ${unit} against the ${threshold.value} ${unit} ${cutoff} cutoff (${signed(outcome.margin)}), per ${threshold.source}. Timed against the facility day, it calls for ${describeStatus(status)}.`;
+    const sentence = `${HAZARD_LABELS[hazard]} ${REACHED_BY_INPUT[outcome.input.kind]} ${outcome.observed} ${unit} against the ${threshold.value} ${unit} ${CUTOFF_LABELS[cutoff]} cutoff (${signed(outcome.margin)}), per ${threshold.source}. Timed against the facility day, it calls for ${describeStatus(status)}.`;
     if (crossing === driver && status.posture !== "normal") {
       return `${sentence} This drives the recommendation.`;
     }
@@ -108,7 +126,7 @@ function describeCaveat(caveat: Caveat): string {
     case "staleInput":
       return `${INPUT_LABELS[caveat.input]} is ${caveat.ageMinutes} minutes old against a ${caveat.limitMinutes}-minute limit`;
     case "missingReading":
-      return `no reading reached the ${HAZARD_LABELS[caveat.hazard].toLowerCase()} ${caveat.cutoff} cutoff`;
+      return `the reading for the ${CUTOFF_LABELS[caveat.cutoff]} cutoff is missing`;
     case "estimatedEnd":
       return `the hazard's end comes from ${END_BASIS_LABELS[caveat.endBasis]}`;
     default:
