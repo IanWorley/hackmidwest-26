@@ -1,5 +1,6 @@
 import type { Database } from "./client";
 import {
+  decisionDirectives,
   decisions,
   humanInputs,
   notificationDispatches,
@@ -32,6 +33,10 @@ export const DECIDER_NAME = "Dana Whitfield";
 export const DECIDER_ROLE = "County Executive Director";
 export const REPLACEMENT_DECISION_ID = 2;
 export const SECOND_SEEDED_EMPLOYEE_ID = 2;
+export const DIRECTIVE_ID = 1;
+export const DIRECTIVE_HASH =
+  "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+export const ISSUED_AT = "2026-10-02T10:40:00.000Z";
 export const MISMATCHED_HASH =
   "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
 
@@ -79,6 +84,20 @@ export const CORRECTION = {
   contentHash: DECISION_HASH,
 } as const;
 
+export const DIRECTIVE = {
+  id: DIRECTIVE_ID,
+  decisionId: DECISION_ID,
+  decisionHash: DECISION_HASH,
+  scope: "group:essential",
+  directive: "report",
+  effectiveAt: null,
+  reasonCategory: "essential_operations",
+  reasonText: "Plant operators keep the boilers running.",
+  issuedById: SEEDED_DECISION_MAKER_ID,
+  issuedAt: ISSUED_AT,
+  contentHash: DIRECTIVE_HASH,
+} as const;
+
 export async function insertDecisionRecordChain(db: Database): Promise<void> {
   await seedDemoFacilities(db);
   await db.insert(recommendations).values(RECOMMENDATION);
@@ -99,4 +118,5 @@ export async function insertDecisionRecordChain(db: Database): Promise<void> {
     reportedAt: RECORDED_AT,
     text: "The north lot has not been plowed.",
   });
+  await db.insert(decisionDirectives).values(DIRECTIVE);
 }

@@ -1,4 +1,14 @@
 export type { Database, DatabaseLocation } from "./client";
+export {
+  DIRECTIVE_GROUPS,
+  DIRECTIVE_SCOPE_KINDS,
+  type DirectiveGroup,
+  type DirectiveScope,
+  type DirectiveScopeKind,
+  formatDirectiveScope,
+  parseDirectiveScope,
+  type StoredDirectiveScope,
+} from "./directive-scope";
 export { readDatabaseLocation } from "./location";
 export {
   ACTIONS_REQUIRING_REASON,
@@ -9,6 +19,10 @@ export {
   type ConfidenceLevel,
   DECISION_ACTIONS,
   type DecisionAction,
+  DIRECTIVE_KINDS,
+  DIRECTIVES_WITH_EFFECTIVE_AT,
+  type DirectiveKind,
+  decisionDirectives,
   decisionMakers,
   decisions,
   EMPLOYEE_STATUSES,

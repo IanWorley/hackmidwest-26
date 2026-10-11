@@ -1,4 +1,10 @@
 export {
+  DIRECTIVE_KINDS,
+  DIRECTIVES_WITH_EFFECTIVE_AT,
+  type DirectiveKind,
+  decisionDirectives,
+} from "./decision-directives";
+export {
   ACTIONS_REQUIRING_REASON,
   ACTIONS_WITH_CHOSEN_POSTURE,
   CONFIDENCE_LEVELS,
