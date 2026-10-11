@@ -1,5 +1,5 @@
 import type { Database as DrizzleDatabase } from "@hackmidwest/db";
-import { Context, Effect, Layer, ManagedRuntime } from "effect";
+import { Clock, Context, Effect, Layer, ManagedRuntime } from "effect";
 import { type ElysiaCustomStatusResponse, status, t } from "elysia";
 import type { NwpsClientShape } from "./clients/nwps";
 import type { NwsClientShape } from "./clients/nws";
@@ -17,6 +17,11 @@ interface ApiClients {
   readonly openMeteo: OpenMeteoClientShape;
 }
 
+interface ApiRuntimeOptions {
+  /** Replaces the system clock, so tests can pin the time a request records. */
+  readonly clock?: Clock.Clock;
+}
+
 function apiLayer(db: DrizzleDatabase, clients: ApiClients) {
   return Layer.mergeAll(
     Layer.succeed(Database, db),
@@ -24,6 +29,16 @@ function apiLayer(db: DrizzleDatabase, clients: ApiClients) {
     Layer.succeed(NwpsClient, clients.nwps),
     Layer.succeed(OpenMeteoClient, clients.openMeteo),
   );
+}
+
+function withClock(
+  services: Layer.Layer<ApiServices>,
+  clock: Clock.Clock | undefined,
+): Layer.Layer<ApiServices> {
+  if (clock === undefined) {
+    return services;
+  }
+  return Layer.merge(services, Layer.succeed(Clock.Clock, clock));
 }
 
 export class Database extends Context.Service<Database, DrizzleDatabase>()(
@@ -44,7 +59,10 @@ export class OpenMeteoClient extends Context.Service<
 >()("@hackmidwest/api/OpenMeteoClient") {}
 
 export const HTTP_OK = 200;
+export const HTTP_CREATED = 201;
 export const HTTP_NOT_FOUND = 404;
+export const HTTP_CONFLICT = 409;
+export const HTTP_UNPROCESSABLE_ENTITY = 422;
 export const HTTP_INTERNAL_SERVER_ERROR = 500;
 export const INTERNAL_ERROR_MESSAGE = "Internal server error";
 
@@ -67,8 +85,9 @@ export interface ApiRuntime {
 export function createApiRuntime(
   db: DrizzleDatabase,
   clients: ApiClients,
+  { clock }: ApiRuntimeOptions = {},
 ): ApiRuntime {
-  const runtime = ManagedRuntime.make(apiLayer(db, clients));
+  const runtime = ManagedRuntime.make(withClock(apiLayer(db, clients), clock));
   return {
     runRequest: (program) =>
       runtime.runPromise(

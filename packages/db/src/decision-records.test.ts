@@ -3,11 +3,15 @@ import { expect, it } from "vitest";
 import {
   DECISION_HASH,
   DECISION_ID,
+  DEFERRAL,
   DISPATCH_HASH,
   insertDecisionRecordChain,
   MISMATCHED_HASH,
+  RECHECK_AT,
+  RECOMMENDATION,
   RECORDED_AT,
   REPLACEMENT_DISPATCH_ID,
+  ROOT_DECISION,
   SECOND_SEEDED_EMPLOYEE_ID,
   SEEDED_EMPLOYEE_ID,
   SEND_BY,
@@ -18,6 +22,7 @@ import {
   notificationDispatches,
   recommendations,
 } from "./schema";
+import { seedDemoFacilities } from "./seed";
 import { createTestDatabase } from "./testing";
 
 const ADD_ONLY_TABLES = [
@@ -132,6 +137,62 @@ it("rejects a dispatch whose decision hash differs from the decision's content h
       cause: {
         message: expect.stringContaining(
           "notification_dispatches must copy the referenced decision's content hash",
+        ),
+      },
+    });
+  } finally {
+    store.close();
+  }
+});
+
+const RECHECK_AT_WITHOUT_MILLISECONDS = "2026-10-02T10:45:00Z";
+
+const MISPLACED_RECHECKS = [
+  {
+    name: "a deferral without a recheck time",
+    row: { ...DEFERRAL, recheckAt: null },
+  },
+  {
+    name: "an acceptance with a recheck time",
+    row: { ...ROOT_DECISION, recheckAt: RECHECK_AT },
+  },
+];
+
+it.each(MISPLACED_RECHECKS)("rejects $name", async ({ row }) => {
+  const store = await createTestDatabase();
+  try {
+    await seedDemoFacilities(store.db);
+    await store.db.insert(recommendations).values(RECOMMENDATION);
+
+    await expect(
+      store.db.insert(decisions).values(row).execute(),
+    ).rejects.toMatchObject({
+      cause: {
+        message: expect.stringContaining(
+          "CHECK constraint failed: decisions_recheck_at_only_for_defer",
+        ),
+      },
+    });
+  } finally {
+    store.close();
+  }
+});
+
+it("rejects a recheck time that is not a millisecond UTC instant", async () => {
+  const store = await createTestDatabase();
+  try {
+    await seedDemoFacilities(store.db);
+    await store.db.insert(recommendations).values(RECOMMENDATION);
+
+    await expect(
+      store.db
+        .insert(decisions)
+        .values({ ...DEFERRAL, recheckAt: RECHECK_AT_WITHOUT_MILLISECONDS })
+        .execute(),
+    ).rejects.toMatchObject({
+      cause: {
+        message: expect.stringContaining(
+          "CHECK constraint failed: decisions_recheck_at_format",
         ),
       },
     });

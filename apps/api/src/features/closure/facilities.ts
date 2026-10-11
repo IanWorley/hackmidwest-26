@@ -20,8 +20,8 @@ import {
 const FACILITIES_PATH = "/api/facilities";
 const FACILITY_PATH = `${FACILITIES_PATH}/:id`;
 const FACILITY_NOT_FOUND_MESSAGE = "Facility not found";
-/** Decimal digits only, so `0x1` or `1e0` cannot alias facility 1 the way numeric coercion would. */
-const FACILITY_ID_PATTERN = "^[1-9][0-9]*$";
+/** Decimal digits only, so `0x1` or `1e0` cannot alias row 1 the way numeric coercion would. */
+const DECIMAL_ID_PATTERN = "^[1-9][0-9]*$";
 
 const { createSelectSchema } = createSchemaFactory({ typeboxInstance: t });
 
@@ -30,8 +30,8 @@ const facilityResponse = t.Object({
   hazards: t.Array(createSelectSchema(facilityHazards).properties.hazard),
 });
 
-const facilityParams = t.Object({
-  id: t.String({ pattern: FACILITY_ID_PATTERN }),
+const decimalIdParams = t.Object({
+  id: t.String({ pattern: DECIMAL_ID_PATTERN }),
 });
 
 const facilityNotFoundResponse = t.Object({
@@ -79,12 +79,18 @@ const listFacilities = Effect.fn("listFacilities")(function* () {
   return withHazards(rows, hazardRows);
 });
 
-const getFacility = Effect.fn("getFacility")(function* (decimalId: string) {
+/** A matched decimal id as a number. Past the safe range, Number rounds to a different id, so no row matches. */
+function parseDecimalId(decimalId: string): Option.Option<number> {
   const id = Number(decimalId);
-  // Past the safe range, Number rounds to a different id, so no facility matches.
-  if (!Number.isSafeInteger(id)) {
+  return Option.liftPredicate(id, Number.isSafeInteger);
+}
+
+const getFacility = Effect.fn("getFacility")(function* (decimalId: string) {
+  const parsed = parseDecimalId(decimalId);
+  if (Option.isNone(parsed)) {
     return Option.none();
   }
+  const id = parsed.value;
   const db = yield* Database;
   const [rows, hazardRows] = yield* Effect.tryPromise({
     try: () =>
@@ -123,7 +129,7 @@ export function createFacilitiesModule(runRequest: RunRequest) {
           ),
         ),
       {
-        params: facilityParams,
+        params: decimalIdParams,
         response: {
           [HTTP_OK]: facilityResponse,
           [HTTP_NOT_FOUND]: facilityNotFoundResponse,
@@ -133,4 +139,10 @@ export function createFacilitiesModule(runRequest: RunRequest) {
     );
 }
 
-export { FACILITIES_PATH };
+export {
+  decimalIdParams,
+  FACILITIES_PATH,
+  FACILITY_NOT_FOUND_MESSAGE,
+  facilityNotFoundResponse,
+  parseDecimalId,
+};

@@ -3,6 +3,7 @@ export { readDatabaseLocation } from "./location";
 export {
   ACTIONS_REQUIRING_REASON,
   ACTIONS_WITH_CHOSEN_POSTURE,
+  ACTIONS_WITH_RECHECK,
   buildingRosterEntries,
   buildings,
   CONFIDENCE_LEVELS,

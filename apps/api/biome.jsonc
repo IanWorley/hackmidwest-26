@@ -18,6 +18,7 @@
             "allowedNames": [
               "apiLayer",
               "createApp",
+              "createDecisionsModule",
               "createFacilitiesModule",
               "createFloodLiveModule",
               "createNwsLiveModule",
