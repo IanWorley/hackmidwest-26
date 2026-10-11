@@ -17,7 +17,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 - Prefer ARIA roles and exact accessible names. Use `expect-text` only for elements that have no accessible name.
 - Treat every command as literal. Keep quoted names, paths, and JSON unchanged.
 - Run browser actions through `$V browser`, HTTP through `$V api`, stored-state checks through `$V db`, and schema rejections through `$V db-reject`.
-- Mutate data only through `POST /api/tasks`, `POST /api/facilities/:id/recommendations`, and `POST /api/recommendations/:id/decisions`. Never write to SQLite directly. Three exceptions: `db-reject` writes only to a throwaway snapshot, the [decisions](./decisions.md) recipe stages recommendation rows with `sqlite3` because it needs a `decideBy` far in the future, and the [recommendations](./recommendations.md) recipe stages one past-deadline recommendation for its missed-deadline step.
+- Mutate data only through `POST /api/tasks`, `POST /api/facilities/:id/recommendations`, `POST /api/recommendations/:id/decisions`, and `POST /api/decisions/:id/dispatch`. Never write to SQLite directly. Three exceptions: `db-reject` writes only to a throwaway snapshot, the [decisions](./decisions.md) recipe stages recommendation rows with `sqlite3` because it needs a `decideBy` far in the future, and the [recommendations](./recommendations.md) recipe stages one past-deadline recommendation for its missed-deadline step.
 
 ## Proof and skip reporting
 
@@ -51,6 +51,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [NWS live pull](./nws-live.md) covers the temporary `GET /api/nws/live` route: a live National Weather Service pull for one point, its range validation, and its 500 outside NWS coverage.
 - [Recommendations](./recommendations.md) covers `POST /api/facilities/:id/recommendations` (live and as-of evaluation, the stored snapshot and its content hash, and the missed-deadline `no_decision` write), `GET /api/facilities/:id/recommendations/latest`, `GET /api/recommendations/:id`, and `GET /api/recommendations/:id/replay`.
 - [Decisions](./decisions.md) covers `POST /api/recommendations/:id/decisions` (accept, override, defer, superseding, and its `409` and `422` answers), `GET /api/facilities/:id/decisions`, and `GET /api/decisions/:id/verify`.
+- [Notifications](./notifications.md) covers `GET /api/recommendations/:id/notifications/preview`, `GET /api/decisions/:id/notifications`, the once-only `POST /api/decisions/:id/dispatch` with its lead times, its `409` bodies, and the dispatch rows on the verified chain.
 - [Flood live pull](./flood-live.md) covers the temporary `GET /api/flood/live` route: live NWS flood warnings and an optional NWPS river gauge for one point, the flood cutoffs they cross, its gauge validation, and its 500 for an unknown gauge.
 - [Storage invariants](./storage-invariants.md) covers the add-only triggers and `CHECK` constraints, proven with `db-reject` against writes that bypass the routes.
 - [Task list load failure](./tasks-load-error.md) covers the error alert shown when the API is unreachable or its storage fails, and the API's generic 500.
