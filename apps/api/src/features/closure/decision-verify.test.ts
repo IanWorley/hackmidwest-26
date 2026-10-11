@@ -141,6 +141,86 @@ it(`GET ${VERIFY_FIRST_PATH} flags a decision whose copied hash no longer matche
   });
 });
 
+it("GET /api/decisions/2/verify flags a decision whose superseded predecessor is gone from the chain", async () => {
+  await withDecisionApp(async ({ db, evaluate, get, post }) => {
+    await evaluate();
+    const first = await (
+      await post(DECIDE_PATH, {
+        action: "accept",
+        decidedById: DANA_WHITFIELD_ID,
+      })
+    ).json();
+    await post(DECIDE_PATH, {
+      action: "override",
+      posture: "delayed_arrival",
+      reason: ROAD_REPORTS,
+      supersedesDecisionId: first.id,
+      decidedById: DANA_WHITFIELD_ID,
+    });
+    await db.run(sql`pragma foreign_keys = off`);
+    await db.run(sql`drop trigger decisions_reject_delete`);
+    await db.run(sql`delete from decisions where id = ${first.id}`);
+
+    const { ok, links } = await (await get("/api/decisions/2/verify")).json();
+
+    expect({ ok, links }).toEqual({
+      ok: false,
+      links: [
+        { kind: "recommendation", id: 1, ok: true },
+        {
+          kind: "decision",
+          id: 2,
+          ok: false,
+          faults: ["missing_predecessor"],
+        },
+      ],
+    });
+  });
+});
+
+it(`GET ${VERIFY_FIRST_PATH} flags a dispatch whose copied decision hash was rewritten`, async () => {
+  await withDecisionApp(async ({ db, evaluate, get, post }) => {
+    await evaluate();
+    const decision = await (
+      await post(DECIDE_PATH, {
+        action: "accept",
+        decidedById: DANA_WHITFIELD_ID,
+      })
+    ).json();
+    const dispatch = {
+      decisionId: decision.id,
+      decisionHash: decision.contentHash,
+      employeeId: SEEDED_EMPLOYEE_ID,
+      channel: "email",
+      sendBy: SEND_BY,
+      recordedAt: CLOCK,
+    } as const;
+    await db
+      .insert(notificationDispatches)
+      .values({ ...dispatch, contentHash: dispatchHash(dispatch) });
+    await db.run(sql`drop trigger notification_dispatches_reject_update`);
+    await db.run(
+      sql`update notification_dispatches set decision_hash = ${FORGED_HASH}`,
+    );
+
+    const { ok, links } = await (await get(VERIFY_FIRST_PATH)).json();
+
+    expect({ ok, links }).toEqual({
+      ok: false,
+      links: [
+        { kind: "recommendation", id: 1, ok: true },
+        { kind: "decision", id: 1, ok: true },
+        {
+          kind: "notification_dispatch",
+          id: 1,
+          ok: false,
+          faults: ["content_hash_mismatch", "parent_hash_mismatch"],
+        },
+      ],
+    });
+  });
+});
+
 it(`GET ${VERIFY_FIRST_PATH} returns 404 for an unknown decision`, async () => {
   await withDecisionApp(async ({ get }) => {
     const response = await get(`/api/decisions/${UNKNOWN_ID}/verify`);

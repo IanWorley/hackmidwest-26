@@ -14,7 +14,12 @@ const CHAIN_LINK_KINDS = [
   "notification_dispatch",
 ] as const;
 
-const LINK_FAULTS = ["content_hash_mismatch", "parent_hash_mismatch"] as const;
+const LINK_FAULTS = [
+  "content_hash_mismatch",
+  "parent_hash_mismatch",
+  "missing_parent",
+  "missing_predecessor",
+] as const;
 
 type ChainLinkKind = (typeof CHAIN_LINK_KINDS)[number];
 type LinkFault = (typeof LINK_FAULTS)[number];
@@ -53,10 +58,12 @@ interface HashedRow {
   readonly id: number;
   readonly storedHash: string;
   readonly recomputedHash: string;
+  /** `storedHash` is undefined when the parent row is not on the loaded chain. */
   readonly parent?: {
     readonly copiedHash: string;
-    readonly storedHash: string;
+    readonly storedHash: string | undefined;
   };
+  readonly missingPredecessor?: boolean;
 }
 
 function checkLink({
@@ -65,13 +72,21 @@ function checkLink({
   storedHash,
   recomputedHash,
   parent,
+  missingPredecessor,
 }: HashedRow): ChainLink {
   const faults: LinkFault[] = [];
   if (storedHash !== recomputedHash) {
     faults.push("content_hash_mismatch");
   }
-  if (parent !== undefined && parent.copiedHash !== parent.storedHash) {
-    faults.push("parent_hash_mismatch");
+  if (parent !== undefined) {
+    if (parent.storedHash === undefined) {
+      faults.push("missing_parent");
+    } else if (parent.copiedHash !== parent.storedHash) {
+      faults.push("parent_hash_mismatch");
+    }
+  }
+  if (missingPredecessor === true) {
+    faults.push("missing_predecessor");
   }
   const [first, ...rest] = faults;
   if (first === undefined) {
@@ -105,6 +120,9 @@ function verifyChain(
           copiedHash: row.recommendationHash,
           storedHash: recommendation.contentHash,
         },
+        missingPredecessor:
+          row.supersedesDecisionId !== null &&
+          !decisionHashes.has(row.supersedesDecisionId),
       }),
     ),
     ...chain.dispatches.map((dispatch) =>
@@ -115,7 +133,7 @@ function verifyChain(
         recomputedHash: dispatchHash(dispatch),
         parent: {
           copiedHash: dispatch.decisionHash,
-          storedHash: decisionHashes.get(dispatch.decisionId) ?? "",
+          storedHash: decisionHashes.get(dispatch.decisionId),
         },
       }),
     ),
