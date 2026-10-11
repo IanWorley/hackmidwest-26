@@ -22,7 +22,6 @@ type HumanInputContent = Pick<
   "reportedBy" | "reportedAt" | "text"
 >;
 
-/** Everything a decision's hash covers: every stored column plus the human inputs recorded with it. */
 type DecisionContent = Omit<DecisionRow, "id" | "contentHash"> & {
   readonly humanInputs: readonly HumanInputContent[];
 };
@@ -47,7 +46,6 @@ class DecisionStorageError extends Data.TaggedError("DecisionStorageError")<{
   readonly cause: unknown;
 }> {}
 
-/** Hashes only the content columns and input fields, so a stored row with its stored inputs recomputes the hash its insert wrote. */
 function decisionHash({
   recommendationId,
   recommendationHash,
@@ -87,7 +85,6 @@ function decisionHash({
   } satisfies DecisionContent);
 }
 
-/** Hashes only the content columns, so a stored row recomputes the hash its insert wrote. */
 function dispatchHash({
   decisionId,
   decisionHash: copiedDecisionHash,
@@ -131,7 +128,6 @@ function inputsByDecision(
   return grouped;
 }
 
-/** One batch, so a decision is never stored without the inputs its hash covers. */
 const insertDecision = Effect.fn("insertDecision")(function* (
   { humanInputs: inputs, ...row }: DecisionContent,
   decideBy: string,
@@ -175,7 +171,6 @@ const findDecider = Effect.fn("findDecider")(function* (id: number) {
   return Option.fromNullishOr(row);
 });
 
-/** The newest decision on a recommendation; the chain triggers keep that chain linear, so it is the one to supersede. */
 const findChainTip = Effect.fn("findChainTip")(function* (
   recommendationId: number,
 ) {
@@ -194,7 +189,6 @@ const findChainTip = Effect.fn("findChainTip")(function* (
   return Option.fromNullishOr(row?.id);
 });
 
-/** Newest first. */
 const facilityHistory = Effect.fn("facilityHistory")(function* (
   facilityId: number,
 ) {
@@ -229,7 +223,6 @@ const facilityHistory = Effect.fn("facilityHistory")(function* (
   );
 });
 
-/** The recommendation behind a decision with every decision, input, and dispatch on its chain, oldest first. */
 const loadChain = Effect.fn("loadChain")(function* (decisionId: number) {
   const db = yield* Database;
   const [decision] = yield* Effect.tryPromise({

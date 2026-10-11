@@ -1,4 +1,3 @@
-import type { recommendations } from "@hackmidwest/db";
 import { Effect, Option } from "effect";
 import {
   type DecisionContent,
@@ -8,11 +7,11 @@ import {
   insertDecision,
 } from "./decision-store";
 import type { Facility } from "./facilities";
-import { latestRecommendationOf } from "./recommendation-store";
+import type { RecommendationRow } from "./recommendation-store";
 import { parseInstant } from "./zoned-time";
 
 function noDecisionContent(
-  recommendation: typeof recommendations.$inferSelect,
+  recommendation: RecommendationRow,
   backup: DecisionMaker,
   decidedAt: string,
 ): DecisionContent {
@@ -35,12 +34,11 @@ function noDecisionContent(
   };
 }
 
-/** Before a newer recommendation replaces it, a facility's latest recommendation whose `decideBy` passed with no decision gets a `no_decision` row naming the facility's backup decision maker. */
 const recordMissedDeadline = Effect.fn("recordMissedDeadline")(function* (
   facility: Facility,
+  prior: Option.Option<RecommendationRow>,
   evaluatedAt: string,
 ) {
-  const prior = yield* latestRecommendationOf(facility.id);
   if (
     Option.isNone(prior) ||
     parseInstant(prior.value.decideBy) >= parseInstant(evaluatedAt) ||

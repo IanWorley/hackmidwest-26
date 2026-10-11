@@ -33,6 +33,7 @@ import {
   findLatestRecommendation,
   findRecommendation,
   insertRecommendation,
+  latestRecommendationOf,
   RecommendationRecordSchema,
   type RecommendationRow,
   toRecord,
@@ -163,7 +164,11 @@ const evaluateFacility = Effect.fn("evaluateFacility")(function* (
     forecast,
   };
   const snapshot = yield* storableSnapshot(input);
-  yield* recordMissedDeadline(facility, evaluatedAt);
+  yield* recordMissedDeadline(
+    facility,
+    yield* latestRecommendationOf(facility.id),
+    evaluatedAt,
+  );
   return yield* insertRecommendation({
     facilityId: facility.id,
     evaluatedAt,

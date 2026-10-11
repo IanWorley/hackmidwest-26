@@ -22,6 +22,7 @@ import {
   invalidDecision,
   invalidDecisionResponse,
   newerRecommendation,
+  supersedesWithoutReason,
 } from "./decision-request";
 import {
   DecisionRecordSchema,
@@ -52,7 +53,6 @@ const FACILITY_DECISIONS_PATH = `${FACILITIES_PATH}/:id/decisions`;
 const DECISIONS_PATH = "/api/decisions";
 const VERIFY_PATH = `${DECISIONS_PATH}/:id/verify`;
 const DECISION_NOT_FOUND_MESSAGE = "Decision not found";
-/** The field an invalid path parameter is reported as. */
 const ID_FIELD = "id";
 
 const decisionNotFoundResponse = t.Object({
@@ -83,7 +83,7 @@ const decideRequest = Effect.fn("decideRequest")(function* (
   if (tip !== (request.supersedesDecisionId ?? null)) {
     return decisionChanged(tip);
   }
-  if (tip !== null && request.reason === undefined) {
+  if (supersedesWithoutReason(request)) {
     return invalidDecision("reason");
   }
   const decider = yield* findDecider(request.decidedById);

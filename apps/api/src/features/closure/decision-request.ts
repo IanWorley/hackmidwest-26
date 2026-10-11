@@ -14,7 +14,6 @@ const NEWER_RECOMMENDATION_MESSAGE =
   "A newer recommendation exists for this facility";
 const DECISION_CHANGED_MESSAGE =
   "The decision on this recommendation changed since it was loaded";
-/** Matches text with at least one non-space character. */
 const NON_BLANK_PATTERN = "\\S";
 
 type HumanAction = Exclude<DecisionAction, "no_decision">;
@@ -45,7 +44,6 @@ const sharedFields = {
 };
 
 const DECISION_REQUESTS = {
-  /** Takes the recommended posture. A reason is needed only when superseding. */
   accept: t.Object({
     action: t.Literal("accept"),
     reason: t.Optional(reasonSchema),
@@ -57,7 +55,6 @@ const DECISION_REQUESTS = {
     reason: reasonSchema,
     ...sharedFields,
   }),
-  /** `recheckAt` falls after the decision and before the recommendation's `decideBy`. */
   defer: t.Object({
     action: t.Literal("defer"),
     recheckAt: instant,
@@ -146,9 +143,14 @@ function invalidBodyField(body: unknown): string {
   return first.path.slice(1).replaceAll("/", ".");
 }
 
+function supersedesWithoutReason(request: DecisionRequest): boolean {
+  return (
+    request.supersedesDecisionId !== undefined && request.reason === undefined
+  );
+}
+
 type ActionColumns = Pick<DecisionContent, "chosenPosture" | "recheckAt">;
 
-/** The columns each action sets, or the field that breaks a rule the body schema cannot see. */
 function actionColumns(
   request: DecisionRequest,
   recommendation: RecommendationRow,
@@ -193,4 +195,5 @@ export {
   invalidDecision,
   invalidDecisionResponse,
   newerRecommendation,
+  supersedesWithoutReason,
 };

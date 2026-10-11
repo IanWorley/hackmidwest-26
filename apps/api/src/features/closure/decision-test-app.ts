@@ -18,11 +18,9 @@ const ROAD_REPORTS = {
 
 interface DecisionTestApp extends TestApp {
   readonly db: Database;
-  /** Evaluates the storm facility once, so recommendation 1 exists. */
   readonly evaluate: () => Promise<Response>;
 }
 
-/** The storm app on the store `openStore` returns, with its database exposed for reads and tampering. */
 async function withDecisionAppOn(
   openStore: () => Promise<DatabaseStore>,
   run: (app: DecisionTestApp) => Promise<void>,

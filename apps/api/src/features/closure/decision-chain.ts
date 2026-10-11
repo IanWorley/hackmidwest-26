@@ -8,14 +8,12 @@ import { t } from "elysia";
 import { decisionHash, dispatchHash } from "./decision-store";
 import { recommendationHash } from "./recommendation-store";
 
-/** Each kind is one table on the chain, listed parent before child. */
 const CHAIN_LINK_KINDS = [
   "recommendation",
   "decision",
   "notification_dispatch",
 ] as const;
 
-/** A row's stored hash no longer matches its content, or the parent hash it copied no longer matches the parent. */
 const LINK_FAULTS = ["content_hash_mismatch", "parent_hash_mismatch"] as const;
 
 type ChainLinkKind = (typeof CHAIN_LINK_KINDS)[number];
@@ -55,7 +53,6 @@ interface HashedRow {
   readonly id: number;
   readonly storedHash: string;
   readonly recomputedHash: string;
-  /** Absent for the chain's root. */
   readonly parent?: {
     readonly copiedHash: string;
     readonly storedHash: string;
@@ -83,7 +80,6 @@ function checkLink({
   return { kind, id, ok: false, faults: [first, ...rest] };
 }
 
-/** Recomputes every row's hash and compares every copied parent hash, so an edit anywhere on the chain shows up as a broken link. */
 function verifyChain(
   decisionId: number,
   chain: StoredChain,
