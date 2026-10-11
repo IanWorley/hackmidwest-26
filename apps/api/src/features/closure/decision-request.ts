@@ -19,6 +19,8 @@ const NON_BLANK_PATTERN = "\\S";
 type HumanAction = Exclude<DecisionAction, "no_decision">;
 
 const nonBlankText = t.String({ pattern: NON_BLANK_PATTERN });
+/** An unknown field is a 422, so a client that meant to override is not silently accepted. */
+const closedObject = { additionalProperties: false } as const;
 const instant = t.String({ format: "date-time" });
 
 const reasonSchema = t.Object({
@@ -44,23 +46,32 @@ const sharedFields = {
 };
 
 const DECISION_REQUESTS = {
-  accept: t.Object({
-    action: t.Literal("accept"),
-    reason: t.Optional(reasonSchema),
-    ...sharedFields,
-  }),
-  override: t.Object({
-    action: t.Literal("override"),
-    posture: postureSchema,
-    reason: reasonSchema,
-    ...sharedFields,
-  }),
-  defer: t.Object({
-    action: t.Literal("defer"),
-    recheckAt: instant,
-    reason: reasonSchema,
-    ...sharedFields,
-  }),
+  accept: t.Object(
+    {
+      action: t.Literal("accept"),
+      reason: t.Optional(reasonSchema),
+      ...sharedFields,
+    },
+    closedObject,
+  ),
+  override: t.Object(
+    {
+      action: t.Literal("override"),
+      posture: postureSchema,
+      reason: reasonSchema,
+      ...sharedFields,
+    },
+    closedObject,
+  ),
+  defer: t.Object(
+    {
+      action: t.Literal("defer"),
+      recheckAt: instant,
+      reason: reasonSchema,
+      ...sharedFields,
+    },
+    closedObject,
+  ),
 } as const satisfies Record<HumanAction, TObject>;
 
 const decisionRequestSchema = t.Union([

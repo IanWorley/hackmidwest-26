@@ -8,6 +8,7 @@ import {
   internalServerErrorResponse,
   type RunRequest,
 } from "../../runtime";
+import { rejectUnknownFields } from "../closed-body";
 import { decimalIdParams, parseDecimalId } from "../decimal-id";
 import { ChainVerificationSchema, verifyChain } from "./decision-chain";
 import {
@@ -151,6 +152,7 @@ export function createDecisionsModule(runRequest: RunRequest) {
       {
         params: decimalIdParams,
         body: decisionRequestSchema,
+        transform: rejectUnknownFields(decisionRequestSchema),
         error: ({ code, error }) => {
           if (code !== "VALIDATION") {
             return;
