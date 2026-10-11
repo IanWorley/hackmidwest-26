@@ -13,3 +13,7 @@ export const RADAR_TILES: TileSource = {
   url: "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png",
   attribution: "NEXRAD radar: Iowa Environmental Mesonet",
 };
+
+/** Open-Meteo's license requires crediting the modeled AQI wherever it is shown. */
+export const AQI_ATTRIBUTION =
+  "Air quality: modeled US AQI from Open-Meteo (CAMS), CC BY 4.0";
