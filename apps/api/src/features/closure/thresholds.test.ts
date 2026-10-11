@@ -1,7 +1,6 @@
-import { HAZARDS, ROAD_CLASSES } from "@hackmidwest/db";
+import { HAZARDS, POSTURES, ROAD_CLASSES } from "@hackmidwest/db";
 import { KANSAS_CITY, YAKIMA } from "@hackmidwest/db/demo-facilities";
 import { describe, expect, it } from "vitest";
-import { POSTURES } from "./postures";
 import {
   type Cutoff,
   NWS_SEVERITIES,

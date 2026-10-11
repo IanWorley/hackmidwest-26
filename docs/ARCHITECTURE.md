@@ -23,7 +23,7 @@ Four Bun workspaces:
   Biome rejects relative imports into any other workspace's source.
 
 ```
-packages/db/src/schema.ts (Drizzle table + TASK_TITLE_LENGTH)
+packages/db/src/schema/tasks.ts (Drizzle table + TASK_TITLE_LENGTH)
   └─ apps/api features/tasks.ts: createSchemaFactory({ typeboxInstance: t }) → validators, Elysia routes running Effect programs → App = ReturnType<typeof createApp>
        └─ treaty<App>() in web/lib/api.ts
             └─ route loader → Route.useLoaderData() → component props

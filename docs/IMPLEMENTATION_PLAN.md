@@ -59,8 +59,8 @@ packages/db/
 ├── drizzle/
 │   └── 0001_closure_call.sql          # generated tables + hand-added add-only triggers
 └── src/
-    ├── schema.ts                      # facilities, buildings, employees, decision_makers,
-    │                                  # recommendations, decisions, notification_dispatches, human_inputs
+    ├── schema/                        # one file per domain, listed in schema/index.ts:
+    │                                  # facilities.ts, roster.ts, decision-records.ts
     ├── seed.ts                        # seedDemoFacility(): one service center + ~15–25 employees
     └── seed.test.ts                   # seed idempotency for the new fixture keys
 
@@ -152,7 +152,7 @@ thresholds and notification urgency.
 
 ## 4. Facility & Roster Data Model (Task 4)
 
-All tables go in `packages/db/src/schema.ts`, with limits exported as named constants the way
+All tables go in their domain file under `packages/db/src/schema/`, with limits exported as named constants the way
 `TASK_TITLE_LENGTH` is today. Run `bun run db:generate`, inspect the SQL, commit migration + meta in the same
 PR. Validators in `apps/api` are derived with `drizzle-typebox`, not hand-written.
 
@@ -302,8 +302,8 @@ so the record shows both what the system advised and what the person chose.
 - [ ] **Decision actions:** `accept`, `override` (different posture), `defer` (re-check time, must be before
       `decideBy`).
 - [ ] **Decision fields:** `recommendationId` + `recommendationHash` (exactly what the person saw),
-      `facilityId`, `action`, `chosenPosture`, `decidedById`, `decidedAt` (UTC), minutes before/after
-      `decideBy`, `identityVerified` (always `false` in the demo; see below).
+      `facilityId`, `action`, `chosenPosture`, `decidedById`, `decidedAt` (UTC); minutes before/after
+      `decideBy` are derived on read from `decidedAt` and the recommendation's `decideBy`, not stored, `identityVerified` (always `false` in the demo; see below).
 - [ ] **Reasons:** required for `override` and `defer`; a category (`local_conditions`, `road_reports`,
       `directive`, `essential_operations`, `data_looks_wrong`, `other`) plus free text. Enforced twice: a
       TypeBox body schema (so the route returns 422 with the field) and a `CHECK` in the migration.
@@ -444,7 +444,7 @@ there is always a working end-to-end path in the repo.
 Preconditions: Closure Call has its own table and migration (Step 4), API routes with tests (Steps 5–7),
 a web page (Step 7.1), an agent API feature (Step 8), and verify recipes (Step 11).
 
-- [ ] `packages/db`: drop `tasks` and `TASK_TITLE_LENGTH` from `schema.ts`, generate the drop migration,
+- [ ] `packages/db`: delete `schema/tasks.ts` and its `schema/index.ts` exports, generate the drop migration,
       remove `seedDemoTasks` and its tests. Keep `DEMO_TASK_ID`-style reserved fixture keys for the
       facility seed.
 - [ ] `apps/api`: delete `features/tasks.ts` and its test; `createApp` mounts only closure modules.
