@@ -20,7 +20,7 @@ interface NoticeScreen {
   } | null;
   /** The chain check for the newest decision. */
   readonly verification: DecisionVerification | null;
-  /** The recommendation the newest decision was made on, when a newer one has replaced it. */
+  /** The recommendation the current decision was made on, when a newer one has replaced it. */
   readonly decidedRecommendation: Recommendation | null;
 }
 
@@ -28,8 +28,11 @@ interface NoticeScreen {
 interface NoticeSources {
   readonly latestRecommendation: { readonly id: number } | null;
   /** The server's current decision for today's facility day; it can outlive a re-evaluation. */
-  readonly currentDecision: { readonly id: number } | null;
-  /** Newest first. */
+  readonly currentDecision: {
+    readonly id: number;
+    readonly recommendationId: number;
+  } | null;
+  /** Newest first; it feeds only the chain check, since its head may be an earlier facility day's. */
   readonly history: readonly {
     readonly id: number;
     readonly recommendationId: number;
@@ -69,13 +72,14 @@ async function loadNoticeScreen(
   signal: AbortSignal,
 ): Promise<NoticeScreen> {
   const [newest] = history;
+  // Only a decision in force can be "unchanged", so a lapsed one never triggers the banner.
   let replacedRecommendationId: number | null = null;
   if (
-    newest !== undefined &&
+    currentDecision !== null &&
     latestRecommendation !== null &&
-    newest.recommendationId !== latestRecommendation.id
+    currentDecision.recommendationId !== latestRecommendation.id
   ) {
-    replacedRecommendationId = newest.recommendationId;
+    replacedRecommendationId = currentDecision.recommendationId;
   }
   const [preview, current, verification, decidedRecommendation] =
     await Promise.all([

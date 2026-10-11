@@ -24,7 +24,7 @@ it("loads the notices of the current decision, which a re-evaluation leaves stan
   const notices = await loadNoticeScreen(
     {
       latestRecommendation: { id: 2 },
-      currentDecision: { id: 1 },
+      currentDecision: { id: 1, recommendationId: 1 },
       history: [{ id: 1, recommendationId: 1 }],
     },
     signal,
@@ -52,5 +52,21 @@ it("loads no notices when the server reports no current decision, as after the f
   expect([
     notices.current,
     notificationApi.loadDecisionNotifications.mock.calls,
+  ]).toEqual([null, []]);
+});
+
+it("compares no recommendation when the newest decision is from an earlier facility day", async () => {
+  const notices = await loadNoticeScreen(
+    {
+      latestRecommendation: { id: 2 },
+      currentDecision: null,
+      history: [{ id: 1, recommendationId: 1 }],
+    },
+    new AbortController().signal,
+  );
+
+  expect([
+    notices.decidedRecommendation,
+    notificationApi.loadRecommendation.mock.calls,
   ]).toEqual([null, []]);
 });
