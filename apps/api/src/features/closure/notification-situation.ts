@@ -39,7 +39,7 @@ const POSTURE_HEADLINE: { readonly [P in Posture]: Headline<P> } = {
   normal: (_posture, { facilityName }) =>
     `${facilityName} is open on its normal schedule`,
   delayed_arrival: ({ delayMinutes }, { facilityName }) =>
-    `${facilityName} opens ${delayMinutes} minutes late`,
+    `${facilityName} has a ${delayMinutes}-minute delayed arrival`,
   early_dismissal: ({ releaseAt }, situation) =>
     `${situation.facilityName} closes early at ${localTime(parseInstant(releaseAt), situation)}`,
   unscheduled_telework: (_posture, { facilityName }) =>
