@@ -2,14 +2,22 @@ import process from "node:process";
 import { createApp } from "./app";
 import { type LlmConfig, readAgentApiConfig } from "./config";
 import { type LlmClient, templateLlm } from "./llm";
-import { createOpenRouterLlm, OPENROUTER_BASE_URL } from "./openrouter";
+import {
+  createOpenRouterLlm,
+  OPENROUTER_BASE_URL,
+  OPENROUTER_TIMEOUT,
+} from "./openrouter";
 import { createAgentApiRuntime } from "./runtime";
 import { createTasksApiClient } from "./tasks-api";
 
 function createLlm(llm: LlmConfig): LlmClient {
   switch (llm.kind) {
     case "openrouter":
-      return createOpenRouterLlm({ ...llm, baseUrl: OPENROUTER_BASE_URL });
+      return createOpenRouterLlm({
+        ...llm,
+        baseUrl: OPENROUTER_BASE_URL,
+        timeout: OPENROUTER_TIMEOUT,
+      });
     case "template":
       return templateLlm;
     default:

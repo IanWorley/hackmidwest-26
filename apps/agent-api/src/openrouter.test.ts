@@ -3,7 +3,7 @@ import {
   type IncomingHttpHeaders,
   type RequestListener,
 } from "node:http";
-import { Effect } from "effect";
+import { Duration, Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import type { NarrationPrompt } from "./llm";
 import { createOpenRouterLlm } from "./openrouter";
@@ -14,6 +14,10 @@ const HTTP_OK = 200;
 const HTTP_TOO_MANY_REQUESTS = 429;
 const API_KEY = "sk-or-test";
 const MODEL = "openai/gpt-4o-mini";
+const STUB_DEADLINE_MS = 50;
+/** Long enough for the stub deadline to fire, short enough to fail fast if it never does. */
+const NEVER_ANSWERS_TEST_BUDGET_MS = 1000;
+const NEVER_ANSWERS = "never-answers";
 
 const prompt: NarrationPrompt = {
   template: "Recommend normal operations for 2026-01-14.",
@@ -36,7 +40,7 @@ interface OpenRouterReply {
 }
 
 async function withOpenRouter(
-  reply: OpenRouterReply,
+  reply: OpenRouterReply | typeof NEVER_ANSWERS,
   run: (
     narrate: (prompt: NarrationPrompt) => Promise<unknown>,
     received: ReceivedRequest[],
@@ -54,6 +58,9 @@ async function withOpenRouter(
       headers: request.headers,
       body: JSON.parse(Buffer.concat(chunks).toString()),
     });
+    if (reply === NEVER_ANSWERS) {
+      return;
+    }
     response.writeHead(reply.status, { "content-type": "application/json" });
     response.end(JSON.stringify(reply.body));
   };
@@ -69,6 +76,7 @@ async function withOpenRouter(
     baseUrl: `http://${LOOPBACK_HOST}:${address.port}/api/v1`,
     apiKey: API_KEY,
     model: MODEL,
+    timeout: Duration.millis(STUB_DEADLINE_MS),
   });
   function narrate(input: NarrationPrompt): Promise<unknown> {
     return Effect.runPromise(
@@ -83,6 +91,7 @@ async function withOpenRouter(
   try {
     await run(narrate, received);
   } finally {
+    server.closeAllConnections();
     server.close();
   }
 }
@@ -142,4 +151,16 @@ describe("createOpenRouterLlm", () => {
         });
       },
     ));
+
+  it(
+    "fails with LlmError when OpenRouter does not answer within the deadline",
+    () =>
+      withOpenRouter(NEVER_ANSWERS, async (narrate) => {
+        expect(await narrate(prompt)).toEqual({
+          tag: "LlmError",
+          cause: "OpenRouter did not answer in time",
+        });
+      }),
+    NEVER_ANSWERS_TEST_BUDGET_MS,
+  );
 });
