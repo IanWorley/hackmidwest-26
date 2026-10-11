@@ -175,6 +175,7 @@ export {
   decisionBody,
   firstInvalidField,
   invalidBody,
+  nonBlankText,
   reasonBody,
   rejectUnknownFields,
   utcInstant,
