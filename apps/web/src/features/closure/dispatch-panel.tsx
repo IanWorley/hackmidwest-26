@@ -33,6 +33,14 @@ const RECORDED_COLUMN = "Recorded at";
 const LEAD_TIME_COLUMN = "Lead time";
 const AFTER_SEND_BY_TEXT = "After send-by";
 const UNKNOWN_RECIPIENT = "Unknown recipient";
+const READY: PanelState = { kind: "ready" };
+
+/** What this panel did itself, tied to the decision it did it for, so a reloaded decision starts fresh. */
+interface LocalOutcome {
+  readonly decisionId: number;
+  readonly state: PanelState;
+  readonly dispatched: DecisionNotifications | null;
+}
 
 function leadTimeText(minutesBeforeArrivalWindow: number): string {
   if (minutesBeforeArrivalWindow < 0) {
@@ -118,6 +126,17 @@ function StateAlert({ state }: { state: PanelState }): JSX.Element | null {
   }
 }
 
+function shownFor(
+  local: LocalOutcome | null,
+  decisionId: number,
+  initial: DecisionNotifications,
+): { readonly state: PanelState; readonly view: DecisionNotifications } {
+  if (local === null || local.decisionId !== decisionId) {
+    return { state: READY, view: initial };
+  }
+  return { state: local.state, view: local.dispatched ?? initial };
+}
+
 export function DispatchPanel({
   decisionId,
   initial,
@@ -129,30 +148,37 @@ export function DispatchPanel({
   timezone: string;
   dispatch: (decisionId: number) => Promise<DispatchResult>;
 }): JSX.Element {
-  const [view, setView] = useState(initial);
-  const [state, setState] = useState<PanelState>({ kind: "ready" });
+  const [local, setLocal] = useState<LocalOutcome | null>(null);
+  const { state, view } = shownFor(local, decisionId, initial);
 
   const onDispatch = useCallback(async (): Promise<void> => {
-    setState({ kind: "dispatching" });
+    function settle(
+      next: PanelState,
+      dispatched: DecisionNotifications | null = null,
+    ): void {
+      setLocal({ decisionId, state: next, dispatched });
+    }
+    settle({ kind: "dispatching" });
     try {
       const result = await dispatch(decisionId);
       if (result.kind === "conflict") {
-        setState({ kind: "conflict", conflict: result.conflict });
+        settle({ kind: "conflict", conflict: result.conflict });
         return;
       }
-      setView(result.view);
-      setState({ kind: "ready" });
+      settle(READY, result.view);
     } catch {
-      setState({ kind: "failed" });
+      settle({ kind: "failed" });
     }
   }, [dispatch, decisionId]);
 
   let content = (
     <>
       <NotificationRecipients pkg={view.package} timezone={timezone} />
-      <Button disabled={state.kind === "dispatching"} onClick={onDispatch}>
-        {DISPATCH_LABEL}
-      </Button>
+      {view.package.recipients.length > 0 && (
+        <Button disabled={state.kind === "dispatching"} onClick={onDispatch}>
+          {DISPATCH_LABEL}
+        </Button>
+      )}
     </>
   );
   if (view.dispatches.length > 0) {
