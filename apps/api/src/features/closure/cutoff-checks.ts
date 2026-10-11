@@ -1,63 +1,40 @@
 import type { Hazard } from "@hackmidwest/db";
 import type { NwsAlert } from "../../clients/nws-model";
+import {
+  byMargin,
+  candidates,
+  type Measurement,
+  type UntimedCrossing,
+} from "./candidates";
 import { type CutoffName, isCutoffName } from "./cutoff-names";
 import { byDisruption, mostDisruptive } from "./disruption";
-import type { HazardEvidence, Period } from "./hazard-window";
-import { byText, firstBy } from "./order";
+import { firstBy } from "./order";
 import type { Posture } from "./postures";
-import {
-  contiguousRuns,
-  type InputRef,
-  type Sample,
-  type SampleSources,
-  samplesFor,
-} from "./samples";
-import {
-  type AlertCutoff,
-  type Cutoff,
-  NWS_SEVERITIES,
-  type NwsSeverity,
-  THRESHOLDS,
-} from "./thresholds";
+import type { SampleSources } from "./samples";
+import { type Cutoff, THRESHOLDS } from "./thresholds";
 import {
   evaluateTiming,
   type FacilitySchedule,
   type TimingResult,
 } from "./timing";
-import { MS_PER_MINUTE, parseInstant } from "./zoned-time";
-
-const TENTHS = 10;
-const NO_MINIMUM_DURATION_MINUTES = 0;
-
-interface Measurement {
-  readonly observed: number | NwsSeverity;
-  readonly margin: number;
-  readonly input: InputRef;
-}
+import { parseInstant } from "./zoned-time";
 
 type Crossed = {
   readonly kind: "crossed";
-  readonly evidence: HazardEvidence;
   readonly timing: TimingResult;
-} & Measurement;
+} & UntimedCrossing;
 
 type CheckOutcome =
   | { readonly kind: "absent" }
   | ({ readonly kind: "below" } & Measurement)
   | Crossed;
 
-type UntimedCrossing = Omit<Crossed, "kind" | "timing">;
-
-/** Each crossing is a separate hazard window; `peak` is reported when none crosses. */
-interface Candidates {
-  readonly crossings: readonly UntimedCrossing[];
-  readonly peak: Measurement | undefined;
-}
-
 interface CutoffCheck {
   readonly cutoff: CutoffName;
   readonly threshold: Cutoff;
   readonly outcome: CheckOutcome;
+  /** `YYYY-MM-DD` when any window of this cutoff starts after the facility day, even one `outcome` did not keep. */
+  readonly nextDay: string | null;
 }
 
 interface HazardAssessment {
@@ -86,11 +63,7 @@ function assessHazard(hazard: Hazard, context: CheckContext): HazardAssessment {
         return [];
       }
       return [
-        {
-          cutoff,
-          threshold,
-          outcome: assessCutoff(hazard, threshold, context),
-        },
+        { cutoff, threshold, ...assessCutoff(hazard, threshold, context) },
       ];
     },
   );
@@ -126,7 +99,7 @@ function assessCutoff(
   hazard: Hazard,
   threshold: Cutoff,
   context: CheckContext,
-): CheckOutcome {
+): Pick<CutoffCheck, "outcome" | "nextDay"> {
   const { crossings: untimed, peak } = candidates(threshold, context);
   const timed = untimed.map(
     (crossing): Crossed => ({
@@ -141,128 +114,26 @@ function assessCutoff(
       }),
     }),
   );
-  const strongest = firstBy(timed, byStrongest);
-  if (strongest !== undefined) {
-    return strongest;
-  }
+  return {
+    outcome: firstBy(timed, byStrongest) ?? belowOrAbsent(peak),
+    nextDay: nextDayOf(timed),
+  };
+}
+
+function belowOrAbsent(peak: Measurement | undefined): CheckOutcome {
   if (peak === undefined) {
     return { kind: "absent" };
   }
   return { kind: "below", ...peak };
 }
 
-function candidates(threshold: Cutoff, context: CheckContext): Candidates {
-  switch (threshold.unit) {
-    case "nws_severity":
-      return severityCandidates(threshold, context.alertsInForce);
-    case "mph":
-      return numericCandidates(
-        threshold.value,
-        threshold.minDurationMinutes,
-        samplesFor(threshold.metric, context),
-      );
-    case "aqi":
-      return numericCandidates(
-        threshold.value,
-        NO_MINIMUM_DURATION_MINUTES,
-        samplesFor("aqi", context),
-      );
-    default:
-      return threshold satisfies never;
+function nextDayOf(timed: readonly Crossed[]): string | null {
+  for (const { timing } of timed) {
+    if (timing.timingCase.kind === "startsAfterHours") {
+      return timing.timingCase.nextDay;
+    }
   }
-}
-
-function severityCandidates(
-  threshold: AlertCutoff,
-  alertsInForce: readonly NwsAlert[],
-): Candidates {
-  const measured = alertsInForce
-    .filter((alert) => threshold.events.includes(alert.event))
-    .map((alert) => ({
-      alert,
-      measurement: {
-        observed: alert.severity,
-        margin: severityRank(alert.severity) - severityRank(threshold.value),
-        input: {
-          kind: "alert",
-          source: "nws",
-          ref: alert.id,
-          asOf: alert.hazardWindow.start,
-        },
-      } satisfies Measurement,
-    }));
-  return {
-    crossings: measured
-      .filter(({ measurement }) => measurement.margin >= 0)
-      .map(({ alert, measurement }) => ({
-        ...measurement,
-        evidence: {
-          source: "alert",
-          window: alert.hazardWindow,
-          exceedingPeriods: [],
-        },
-      })),
-    peak: highest(measured.map(({ measurement }) => measurement)),
-  };
-}
-
-function numericCandidates(
-  cutoffValue: number,
-  minDurationMinutes: number,
-  samples: readonly Sample[],
-): Candidates {
-  const cutoffTenths = cutoffValue * TENTHS;
-  const measured = samples
-    .filter((sample) => durationMinutes(sample.period) >= minDurationMinutes)
-    .map((sample) => ({
-      period: sample.period,
-      measurement: reportedMeasurement(sample, cutoffTenths),
-    }));
-  const crossingRuns = contiguousRuns(
-    measured.filter(({ measurement }) => measurement.margin >= 0),
-  );
-  return {
-    crossings: crossingRuns.flatMap(([first, ...rest]) => {
-      const peak = highest([first, ...rest].map((run) => run.measurement));
-      if (peak === undefined) {
-        return [];
-      }
-      return [
-        {
-          ...peak,
-          evidence: {
-            source: "forecast",
-            exceedingPeriods: [first.period, ...rest.map((run) => run.period)],
-          },
-        },
-      ];
-    }),
-    peak: highest(measured.map(({ measurement }) => measurement)),
-  };
-}
-
-/** Compared at the reported tenth, so a record never shows a margin that disagrees with its crossing. */
-function reportedMeasurement(
-  sample: Sample,
-  cutoffTenths: number,
-): Measurement {
-  const tenths = Math.round(sample.value * TENTHS);
-  return {
-    observed: tenths / TENTHS,
-    margin: (tenths - cutoffTenths) / TENTHS,
-    input: sample.input,
-  };
-}
-
-function highest(
-  measurements: readonly Measurement[],
-): Measurement | undefined {
-  return firstBy(measurements, byMargin);
-}
-
-/** Largest margin first, then by input ref, so equal alerts resolve the same way in any order. */
-function byMargin(left: Measurement, right: Measurement): number {
-  return right.margin - left.margin || byText(left.input.ref, right.input.ref);
+  return null;
 }
 
 /** Runs from one forecast share a ref, so the earlier window breaks a remaining tie. */
@@ -272,17 +143,6 @@ function byStrongest(left: Crossed, right: Crossed): number {
     byMargin(left, right) ||
     parseInstant(left.timing.hazardWindow.start) -
       parseInstant(right.timing.hazardWindow.start)
-  );
-}
-
-function severityRank(severity: NwsSeverity): number {
-  return NWS_SEVERITIES.indexOf(severity);
-}
-
-function durationMinutes(period: Period): number {
-  return (
-    (parseInstant(period.endTime) - parseInstant(period.startTime)) /
-    MS_PER_MINUTE
   );
 }
 

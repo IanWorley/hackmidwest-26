@@ -55,6 +55,8 @@ interface Recommendation {
     readonly timing: TimingResult;
   } | null;
   readonly inputs: readonly InputRef[];
+  /** `YYYY-MM-DD` when a crossed hazard starts after today's hours, so that day needs its own call. */
+  readonly nextDay: string | null;
   readonly sensitivity: readonly Sensitivity[];
   readonly rationale: string;
 }
@@ -97,6 +99,10 @@ function evaluatePosture(input: EngineInput): Recommendation {
     hazards,
     driver: driverSummary(driver),
     inputs,
+    nextDay:
+      hazards
+        .flatMap(({ checks }) => checks)
+        .find(({ nextDay }) => nextDay !== null)?.nextDay ?? null,
     sensitivity: sensitivityOf(crossed, status, { now, facility }),
     rationale: rationale({
       status,

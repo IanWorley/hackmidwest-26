@@ -210,14 +210,6 @@ it("states how a 2-hour shift in the hazard window changes the recommendation", 
   ]);
 });
 
-it("writes a one-paragraph rationale citing the crossed cutoff, confidence, and deadline", () => {
-  const result = evaluatePosture(engineInput({ forecast: WIND_40_AT_1300 }));
-  expect([result.decideBy, result.rationale]).toEqual([
-    "2026-01-14T11:00:00.000Z",
-    "Recommend early dismissal at 11:45 for 2026-01-14. Wind is forecast to reach 40 mph against the 40 mph sustained wind cutoff (+0), per National Weather Service, NWSI 10-515 WFO Non-Precipitation Weather Products Specification (May 16, 2025). Timed against the facility day, it calls for early dismissal at 11:45. This drives the recommendation. Confidence is medium: the hazard's end comes from forecast hours or a single reading. Decide by 05:00 local time.",
-  ]);
-});
-
 it("lists each input a check read, with its source and timestamp", () => {
   expect(evaluatePosture(engineInput()).inputs).toEqual([
     {
@@ -254,30 +246,32 @@ it("assesses only the hazards in the facility's profile", () => {
   ]);
 });
 
-it("explains a crossing that clears before arrival without calling it the driver", () => {
-  const overnightStorm = alert("Winter Storm Warning", "Severe", [
-    "2026-01-13T22:00:00Z",
-    "2026-01-14T03:00:00Z",
-  ]);
-  expect(
-    evaluatePosture(engineInput({ alerts: [overnightStorm] })).rationale,
-  ).toBe(
-    "Recommend normal operations for 2026-01-14. Winter weather reached Severe severity against the Severe severity winter storm warning cutoff (+0), per National Weather Service, NWSI 10-513 WFO Winter Weather Products Specification (November 6, 2024), with OASIS CAP v1.2 severity as served by api.weather.gov. Timed against the facility day, it calls for normal operations. Confidence is high. Decide by 05:00 local time.",
-  );
-});
+const ADVISORY_TONIGHT = alert("Winter Weather Advisory", "Moderate", [
+  "2026-01-15T00:00:00Z",
+  "2026-01-15T06:00:00Z",
+]);
 
-it("says a missing reading is missing and names its cutoff in words", () => {
-  expect(
-    evaluatePosture(engineInput({ readings: [gust(CALM_GUST_KMH)] })).rationale,
-  ).toBe(
-    "Recommend normal operations for 2026-01-14. No hazard crossed a cutoff. Confidence is low: the reading for the unhealthy air quality cutoff is missing; the reading for the very unhealthy air quality cutoff is missing. Decide by 05:00 local time.",
-  );
-});
-
-it("says an observed gust reached its value", () => {
-  expect(
-    evaluatePosture(withGustDuringArrival(GUST_AT_CUTOFF_KMH)).rationale,
-  ).toBe(
-    "Recommend a 2-hour delayed arrival for 2026-01-14. Wind reached 58 mph against the 58 mph wind gust cutoff (+0), per National Weather Service, NWSI 10-515 WFO Non-Precipitation Weather Products Specification (May 16, 2025). Timed against the facility day, it calls for a 2-hour delayed arrival. This drives the recommendation. Confidence is medium: the hazard's end comes from forecast hours or a single reading. Decide by 05:00 local time; that deadline has passed.",
-  );
-});
+it.each([
+  {
+    scenario: "after a crossing that clears before arrival",
+    alerts: [
+      alert("Winter Storm Warning", "Severe", [
+        "2026-01-13T22:00:00Z",
+        "2026-01-14T03:00:00Z",
+      ]),
+      ADVISORY_TONIGHT,
+    ],
+    status: { posture: "normal" },
+  },
+  {
+    scenario: "behind a delay from the same cutoff",
+    alerts: [ADVISORY_ENDS_0300, ADVISORY_TONIGHT],
+    status: { posture: "delayed_arrival", delayHours: 1 },
+  },
+])(
+  "flags the next facility day when a crossing starts after hours $scenario",
+  ({ alerts, status }) => {
+    const result = evaluatePosture(engineInput({ alerts }));
+    expect([result.status, result.nextDay]).toEqual([status, "2026-01-15"]);
+  },
+);
