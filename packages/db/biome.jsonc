@@ -60,7 +60,10 @@
       "includes": ["src/schema.ts"],
       "linter": {
         "rules": {
-          "suspicious": { "noDeprecatedImports": "off" }
+          "suspicious": { "noDeprecatedImports": "off" },
+          // Every table lives in this one file, which drizzle-kit and the
+          // client both read, so it outgrows the line cap.
+          "style": { "noExcessiveLinesPerFile": "off" }
         }
       }
     },

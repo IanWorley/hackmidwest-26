@@ -15,6 +15,13 @@
       "when": 1791684790638,
       "tag": "0001_facilities_and_rosters",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791685936831,
+      "tag": "0002_decision_records",
+      "breakpoints": true
     }
   ]
 }
