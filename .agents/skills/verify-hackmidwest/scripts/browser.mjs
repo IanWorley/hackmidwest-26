@@ -5,6 +5,7 @@ import process from "node:process";
 
 const { WEB_URL, API_URL, ARTIFACTS, TOOLS_DIR } = process.env;
 const STEP_TIMEOUT_MS = 15_000;
+const MS_PER_SECOND = 1000;
 const EXIT_USAGE = 2;
 const STEP_ARGS = {
   goto: ["path"],
@@ -12,6 +13,7 @@ const STEP_ARGS = {
   expect: ["role", "name"],
   "expect-text": ["text"],
   press: ["key"],
+  wait: ["seconds"],
   "block-api": [],
   snap: ["name"],
 };
@@ -84,6 +86,12 @@ async function runStep(verb, args) {
       await page.keyboard.press(args[0]);
       // Widgets such as Radix roving focus move focus in a timer queued by the key; let it run before the next key, as a person's typing would.
       await page.evaluate(() => new Promise((resolve) => setTimeout(resolve)));
+      return;
+    case "wait":
+      // A real-time hold with the page open, so the app's own timers run as they would for a person.
+      await new Promise((resolve) =>
+        setTimeout(resolve, Number(args[0]) * MS_PER_SECOND),
+      );
       return;
     case "block-api":
       await page.route(`${API_URL}/**`, (route) =>
