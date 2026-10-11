@@ -6,6 +6,7 @@ A recommendation's notification preview shows who would be told what if it were 
 
 - `notifications-preview` returns the package for the recommended posture with `"source":{"kind":"preview",…}` and writes no `notification_dispatches` row.
 - `notifications-decided` returns the decided package with `"source":{"kind":"decided",…}` and an empty `dispatches` list before dispatch.
+- `notifications-directive` applies the decision's stored directives, so an employee a directive excuses moves from the recipients to the exclusions with the directive's reason.
 - `notifications-dispatch` answers `201`, writes one row per recipient, and reports `minutesBeforeArrivalWindow` and `recordedAfterSendBy` for each.
 - `notifications-dispatch-once` answers `409 {"conflict":"already_dispatched",…}` on a second dispatch and writes nothing more.
 - `notifications-verify-after-dispatch` keeps `GET /api/decisions/:id/verify` intact with the dispatch rows on the chain.
@@ -36,6 +37,7 @@ Steps:
 - **Preview wrote nothing.** Run `RUN_ID=<id> $V db notifications-preview-no-rows "select count(*) as dispatches from notification_dispatches"`. `0`.
 - **Decide.** Run `RUN_ID=<id> $V api notifications-decide POST /api/recommendations/1/decisions '{"action":"override","chosenPosture":"full_closure","decidedById":1,"reason":{"category":"local_conditions","text":"Water main break on site"}}'`. `201` with `"id":1`.
 - **Decided package.** Run `RUN_ID=<id> $V api notifications-decided GET /api/decisions/1/notifications`. `200` with `"source":{"kind":"decided","decisionId":1}`, `"posture":{"posture":"full_closure"}`, `"dispatches":[]`, and recipients whose `message.subject` reads `Kansas City Area Service Center is closed on <facilityDate>`.
+- **Directive.** Run `RUN_ID=<id> $V api notifications-excuse POST /api/decisions/1/directives '{"scope":{"kind":"employee","employeeId":1},"directive":"excused","reason":{"category":"other","text":"Approved leave for a family emergency."},"issuedById":1}'` (`201`), then `RUN_ID=<id> $V api notifications-decided-excused GET /api/decisions/1/notifications`. `200` with one recipient fewer than the decided package, and Avery Calloway (employee `1`) listed under `exclusions` as `"kind":"excused"` with the reason text.
 - **Dispatch.** Run `RUN_ID=<id> $V api notifications-dispatch POST /api/decisions/1/dispatch`. `201` with one `dispatches` entry per recipient, each with `plannedAt` equal to the recipient's `sendBy` and a positive `minutesBeforeArrivalWindow`.
 - **Dispatch again.** Run `RUN_ID=<id> $V api notifications-dispatch-again POST /api/decisions/1/dispatch`. `409` with `"conflict":"already_dispatched"` and the first dispatch's `recordedAt`.
 - **Stored dispatches.** Run `RUN_ID=<id> $V db notifications-dispatch-rows "select d.id, d.decision_id, d.decision_hash = (select content_hash from decisions where id = d.decision_id) as hash_matches, d.employee_id, d.channel, d.send_by, d.recorded_at from notification_dispatches d order by d.id"`. One row per recipient from the dispatch, each `hash_matches` `1`, all with the same `recorded_at`.
@@ -52,4 +54,4 @@ Steps:
 - An override must differ from the recommended posture, or the decision is `422`. Read the recommendation first.
 - `sendBy`, `late`, and the message wording depend on the API clock against each employee's start time. Assert their presence and consistency, not fixed values.
 - A dispatch with nobody to notify answers `201` with no rows, and the decision still reads as undispatched.
-- Directives on a decision change who is notified. This recipe issues none.
+- Directives on a decision change who is notified. Issue them before the dispatch; a dispatch records the package as it stood.
