@@ -49,6 +49,35 @@
       }
     },
     {
+      // Policy tables are keyed by posture and employee status names, which
+      // are snake_case domain values from postures.ts and the DB schema.
+      "includes": [
+        "src/features/closure/effective-status.ts",
+        "src/features/closure/roster.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "error",
+              "options": {
+                "conventions": [
+                  {
+                    "selector": { "kind": "objectLiteralProperty" },
+                    "formats": ["camelCase", "snake_case"]
+                  },
+                  {
+                    "selector": { "kind": "typeProperty" },
+                    "formats": ["camelCase", "snake_case"]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["src/**", "!src/index.ts"],
       "linter": {
         "rules": {
