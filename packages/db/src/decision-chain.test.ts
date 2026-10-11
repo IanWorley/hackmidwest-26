@@ -8,6 +8,7 @@ import {
   DECISION_HASH,
   insertDecisionRecordChain,
   MISMATCHED_HASH,
+  NEWER_RECOMMENDATION_ID,
   RECOMMENDATION,
   RECOMMENDATION_HASH,
   RECOMMENDATION_ID,
@@ -68,7 +69,7 @@ it("rejects an INSERT OR REPLACE that adds a second root decision for a recommen
     ).rejects.toMatchObject({
       cause: {
         message: expect.stringContaining(
-          "decisions is add-only: this recommendation already has a decision; supersede it instead",
+          "decisions must extend the chain that already holds this recommendation",
         ),
       },
     });
@@ -215,6 +216,70 @@ it("rejects a decider snapshot that differs from the decision maker's row", asyn
       cause: {
         message: expect.stringContaining(
           "decisions must copy the deciding decision maker's current name and role",
+        ),
+      },
+    });
+  } finally {
+    store.close();
+  }
+});
+
+it("rejects a root decision on a recommendation that another chain already moved onto", async () => {
+  const store = await createTestDatabase();
+  try {
+    await insertDecisionRecordChain(store.db);
+    await store.db
+      .insert(recommendations)
+      .values({ ...RECOMMENDATION, id: NEWER_RECOMMENDATION_ID });
+    await store.db
+      .insert(decisions)
+      .values({ ...CORRECTION, recommendationId: NEWER_RECOMMENDATION_ID });
+
+    await expect(
+      store.db
+        .insert(decisions)
+        .values({
+          ...ROOT_DECISION,
+          id: undefined,
+          recommendationId: NEWER_RECOMMENDATION_ID,
+        })
+        .execute(),
+    ).rejects.toMatchObject({
+      cause: {
+        message: expect.stringContaining(
+          "decisions must extend the chain that already holds this recommendation",
+        ),
+      },
+    });
+  } finally {
+    store.close();
+  }
+});
+
+it("rejects a correction that moves a chain onto a recommendation another chain holds", async () => {
+  const store = await createTestDatabase();
+  try {
+    await insertDecisionRecordChain(store.db);
+    await store.db
+      .insert(recommendations)
+      .values({ ...RECOMMENDATION, id: NEWER_RECOMMENDATION_ID });
+    await store.db
+      .insert(decisions)
+      .values({
+        ...ROOT_DECISION,
+        id: undefined,
+        recommendationId: NEWER_RECOMMENDATION_ID,
+      });
+
+    await expect(
+      store.db
+        .insert(decisions)
+        .values({ ...CORRECTION, recommendationId: NEWER_RECOMMENDATION_ID })
+        .execute(),
+    ).rejects.toMatchObject({
+      cause: {
+        message: expect.stringContaining(
+          "decisions must extend the chain that already holds this recommendation",
         ),
       },
     });

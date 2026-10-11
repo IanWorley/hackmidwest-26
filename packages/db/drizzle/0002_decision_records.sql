@@ -118,11 +118,13 @@ BEGIN
 	SELECT RAISE(IGNORE);
 END;
 --> statement-breakpoint
--- REPLACE resolves the chain's unique indexes by deleting the conflicting decision, so a second root or successor aborts before that can happen.
-CREATE TRIGGER `decisions_reject_second_root` BEFORE INSERT ON `decisions`
-WHEN NEW.`supersedes_decision_id` IS NULL AND EXISTS (SELECT 1 FROM `decisions` WHERE `recommendation_id` = NEW.`recommendation_id` AND `supersedes_decision_id` IS NULL)
+-- REPLACE resolves the chain's unique indexes by deleting the conflicting decision, so these triggers abort first.
+-- Once a recommendation has a decision, it belongs to that chain: a later decision on it must correct a decision on the same recommendation.
+CREATE TRIGGER `decisions_one_chain_per_recommendation` BEFORE INSERT ON `decisions`
+WHEN EXISTS (SELECT 1 FROM `decisions` WHERE `recommendation_id` = NEW.`recommendation_id`)
+	AND NOT EXISTS (SELECT 1 FROM `decisions` WHERE `id` = NEW.`supersedes_decision_id` AND `recommendation_id` = NEW.`recommendation_id`)
 BEGIN
-	SELECT RAISE(ABORT, 'decisions is add-only: this recommendation already has a decision; supersede it instead');
+	SELECT RAISE(ABORT, 'decisions must extend the chain that already holds this recommendation');
 END;
 --> statement-breakpoint
 CREATE TRIGGER `decisions_reject_second_successor` BEFORE INSERT ON `decisions`

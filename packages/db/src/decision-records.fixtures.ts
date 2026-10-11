@@ -12,6 +12,7 @@ export const SECOND_SEEDED_FACILITY_ID = 2;
 export const SEEDED_DECISION_MAKER_ID = 1;
 export const SEEDED_EMPLOYEE_ID = 1;
 export const RECOMMENDATION_ID = 1;
+export const NEWER_RECOMMENDATION_ID = 2;
 export const DECISION_ID = 1;
 export const DISPATCH_ID = 1;
 export const REPLACEMENT_DISPATCH_ID = 2;
