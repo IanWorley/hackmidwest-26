@@ -12,8 +12,18 @@ interface WebConfig {
 /** Vite's `loadEnv` output and `import.meta.env` both satisfy this. */
 type WebEnvironment = Readonly<Record<string, string | boolean | undefined>>;
 
+// This runs in the browser, and URL.parse is newer than Vite's default target
+// (Safari 18, Chrome 126), so parse with the constructor instead.
+function parseUrl(value: string): URL | null {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+
 function isHttpOrigin(value: string): boolean {
-  const url = URL.parse(value);
+  const url = parseUrl(value);
   return (
     url !== null &&
     HTTP_PROTOCOLS.includes(url.protocol) &&
