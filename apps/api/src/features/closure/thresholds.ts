@@ -13,7 +13,6 @@ const RURAL_COMMUTER_BARE_LANE_REGAIN_MINUTES = 540;
 const PRIMARY_BARE_LANE_REGAIN_MINUTES = 720;
 const SECONDARY_BARE_LANE_REGAIN_MINUTES = 2160;
 const WIND_POST_HAZARD_BUFFER_MINUTES = 60;
-const CAMS_GLOBAL_TIME_STEP_MINUTES = 180;
 const OPM_LONGEST_ILLUSTRATED_DELAY_HOURS = 4;
 const OPM_STANDARD_DELAY_HOURS = 2;
 
@@ -37,6 +36,7 @@ export const OPM_SOURCE =
   "U.S. Office of Personnel Management, Governmentwide Dismissal and Closure Procedures (December 2025)";
 export const OPM_URL =
   "https://www.opm.gov/policy-data-oversight/pay-leave/reference-materials/handbooks/dcdismissal.pdf";
+export const CAMS_GLOBAL_TIME_STEP_MINUTES = 180;
 export const OPEN_METEO_AIR_QUALITY_SOURCE =
   "Open-Meteo Air Quality API, CAMS Global Atmospheric Composition Forecasts";
 export const OPEN_METEO_AIR_QUALITY_URL =
