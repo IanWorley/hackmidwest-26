@@ -202,6 +202,29 @@ it("rejects a human input reported after the decision", async () => {
   });
 });
 
+// Date.prototype.toISOString writes years outside 0000-9999 with a sign and six digits.
+it.each(["-000001-01-01T00:00:00.000Z", "+010000-01-01T00:00:00.000Z"])(
+  "rejects the extended-year instant %s as invalid input",
+  async (reportedAt) => {
+    await withApp(async ({ request }) => {
+      const response = await request(decide(), {
+        ...ACCEPT,
+        humanInputs: [{ reportedBy: "Road crew", reportedAt, text: "Clear." }],
+      });
+
+      expect([response.status, await response.json()]).toEqual([
+        HTTP_UNPROCESSABLE_ENTITY,
+        {
+          type: "validation",
+          on: "body",
+          property: "/humanInputs/0/reportedAt",
+          message: "Expected string to match 'utc-instant' format",
+        },
+      ]);
+    });
+  },
+);
+
 // Grace Lindqvist decides for Fargo, not Kansas City, the fixture recommendation's facility.
 const OTHER_FACILITY_DECIDER_ID = 5;
 
