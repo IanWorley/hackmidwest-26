@@ -3,10 +3,10 @@ import type { NwsAlert } from "../../clients/nws-model";
 import type { Employee, FacilityPosture } from "./effective-status";
 import {
   draftMessage,
-  type HazardSpan,
   type MessageDraft,
   type MessageIntent,
 } from "./notification-messages";
+import type { HazardSpan } from "./notification-situation";
 import { releaseTiming } from "./release-timing";
 import {
   type Instant,
@@ -160,8 +160,8 @@ function leadBefore(at: Instant, { facility }: NoticeContext): Instant {
 }
 
 /**
- * Before the commute while that deadline is still ahead, so a dismissal decided early reaches
- * people before they leave home. Once it has passed, a release during their shift is the deadline.
+ * The commute deadline until they start work, even once it is overdue, so a dismissal reaches
+ * people before or during their commute. Once they are at work, a release during their shift is the deadline.
  */
 function anchorFor(
   context: NoticeContext,
@@ -186,11 +186,7 @@ function anchorFor(
     start.at,
     endOf(context, employee),
   );
-  const commuteDeadline = leadBefore(beforeCommute.at, context);
-  if (
-    timing.kind !== "during_shift" ||
-    timelinessOf(commuteDeadline, parseInstant(context.now)) === "on_time"
-  ) {
+  if (timing.kind !== "during_shift" || parseInstant(context.now) < start.at) {
     return beforeCommute;
   }
   return {
@@ -235,6 +231,7 @@ function planNotice(
         hazard: context.hazard,
         workStartsAt: start.at,
         workEndsAt: endOf(context, employee),
+        now: parseInstant(context.now),
       },
       intent,
     ),
