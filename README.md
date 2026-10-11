@@ -95,7 +95,7 @@ Releases are Docker images on GitHub Container Registry, one per app: `ghcr.io/i
 
 1. Set the repository variables `PUBLIC_WEB_ORIGIN` (the web app's public origin) and `PUBLIC_API_BASE_URL` (the API's public origin) under Settings → Secrets and variables → Actions → Variables.
 2. Tag a release: `git tag v1.0.0 && git push origin v1.0.0`. Only `vX.Y.Z` tags publish.
-3. The release workflow builds all three images, then pushes each as `1.0.0`, `1.0`, `1`, and `latest`. If any build fails, it pushes nothing.
+3. The release workflow builds all three images, then pushes each as `1.0.0`. Only after all three uploads succeed does it move `1.0`, `1`, and `latest` to the new images. If any build fails, it pushes nothing.
 
 The web image compiles `PUBLIC_API_BASE_URL` into its bundle, so moving the API to a different origin needs a new release.
 
