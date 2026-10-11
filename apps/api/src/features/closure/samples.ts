@@ -1,14 +1,14 @@
 import type { ForecastPeriod } from "../../clients/nws-model";
 import type { InputKind } from "./freshness";
+import type { Period } from "./hazard-window";
 import { byText, firstBy } from "./order";
 import type { Reading } from "./readings";
 import { TIMING_POLICY, type WindMetric } from "./thresholds";
+import type { IsoInstant } from "./timing";
 import { type Instant, parseInstant, shiftIso } from "./zoned-time";
 
 const KM_PER_MILE = 1.609_344;
 const FORECAST_WIND_PATTERN = /^(?:\d+ to )?(?<upperMph>\d+) mph$/u;
-
-type IsoInstant = string;
 
 interface ForecastInput {
   readonly rawRef: string;
@@ -21,11 +21,6 @@ interface InputRef {
   readonly source: Reading["source"];
   readonly ref: string;
   readonly asOf: IsoInstant;
-}
-
-interface Period {
-  readonly startTime: IsoInstant;
-  readonly endTime: IsoInstant;
 }
 
 interface Sample {
@@ -180,13 +175,5 @@ function byLatest(left: Reading, right: Reading): number {
   );
 }
 
-export type {
-  ForecastInput,
-  InputRef,
-  IsoInstant,
-  NumericMetric,
-  Period,
-  Sample,
-  SampleSources,
-};
+export type { ForecastInput, InputRef, NumericMetric, Sample, SampleSources };
 export { contiguousRuns, samplesFor };

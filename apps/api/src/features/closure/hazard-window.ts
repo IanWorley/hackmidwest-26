@@ -115,5 +115,5 @@ function periodSpan(period: Period): Span {
   };
 }
 
-export type { EndBasis, HazardEvidence, HazardInterval };
+export type { EndBasis, HazardEvidence, HazardInterval, Period };
 export { currentAlerts, hazardInterval };

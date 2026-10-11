@@ -1,4 +1,4 @@
-import type { HazardEvidence } from "./hazard-window";
+import type { HazardEvidence, Period } from "./hazard-window";
 import type { FacilitySchedule, TimingInput } from "./timing";
 
 // 2026-01-14 is CST (UTC-6): arrival opens 13:00Z and the facility closes at 22:30Z.
@@ -12,8 +12,6 @@ const FACILITY: FacilitySchedule = {
   roadClass: "urbanCommuter",
 };
 const NOW = "2026-01-14T09:00:00Z";
-
-type Period = HazardEvidence["exceedingPeriods"][number];
 
 function period(startTime: string, endTime: string): Period {
   return { startTime, endTime };

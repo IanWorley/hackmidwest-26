@@ -1,5 +1,6 @@
 import type { Hazard } from "@hackmidwest/db";
 import { describe, expect, it } from "vitest";
+import type { CutoffName } from "./cutoff-names";
 import { type EngineInput, evaluatePosture } from "./engine";
 import {
   ADVISORY_ENDS_0300,
@@ -28,7 +29,7 @@ import type { OpmStatus } from "./timing";
 interface BoundaryRow {
   readonly scenario: string;
   readonly input: EngineInput;
-  readonly cutoff: readonly [Hazard, string];
+  readonly cutoff: readonly [Hazard, CutoffName];
   readonly margin: number;
   readonly status: OpmStatus;
 }

@@ -230,6 +230,7 @@ function roundDown(value: number, increment: number): Instant {
 
 export type {
   FacilitySchedule,
+  IsoInstant,
   OpmStatus,
   TimingCase,
   TimingInput,

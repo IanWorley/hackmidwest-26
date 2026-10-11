@@ -1,12 +1,12 @@
 import type { Crossing } from "./cutoff-checks";
 import { mostDisruptive, sameStatus } from "./disruption";
-import type { HazardEvidence } from "./hazard-window";
+import type { HazardEvidence, Period } from "./hazard-window";
 import { describeStatus } from "./rationale";
-import type { IsoInstant, Period } from "./samples";
 import { TIMING_POLICY } from "./thresholds";
 import {
   evaluateTiming,
   type FacilitySchedule,
+  type IsoInstant,
   type OpmStatus,
 } from "./timing";
 import { shiftIso } from "./zoned-time";

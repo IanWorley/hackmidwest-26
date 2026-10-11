@@ -13,15 +13,17 @@ import {
   crossings,
   type HazardAssessment,
 } from "./cutoff-checks";
+import type { CutoffName } from "./cutoff-names";
 import { mostDisruptive } from "./disruption";
 import { currentAlerts } from "./hazard-window";
 import { rationale } from "./rationale";
 import type { Reading } from "./readings";
-import type { ForecastInput, InputRef, IsoInstant } from "./samples";
+import type { ForecastInput, InputRef } from "./samples";
 import { type Sensitivity, sensitivityOf } from "./sensitivity";
 import {
   type FacilitySchedule,
   facilityDay,
+  type IsoInstant,
   type OpmStatus,
   type TimingResult,
 } from "./timing";
@@ -49,7 +51,7 @@ interface Recommendation {
   readonly hazards: readonly HazardAssessment[];
   readonly driver: {
     readonly hazard: Hazard;
-    readonly cutoff: string;
+    readonly cutoff: CutoffName;
     readonly timing: TimingResult;
   } | null;
   readonly inputs: readonly InputRef[];

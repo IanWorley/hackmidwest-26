@@ -1,13 +1,13 @@
 import type { Hazard } from "@hackmidwest/db";
 import type { NwsAlert } from "../../clients/nws-model";
+import { type CutoffName, isCutoffName } from "./cutoff-names";
 import { byDisruption, mostDisruptive } from "./disruption";
-import type { HazardEvidence } from "./hazard-window";
+import type { HazardEvidence, Period } from "./hazard-window";
 import { byText, firstBy } from "./order";
 import type { Posture } from "./postures";
 import {
   contiguousRuns,
   type InputRef,
-  type Period,
   type Sample,
   type SampleSources,
   samplesFor,
@@ -15,7 +15,6 @@ import {
 import {
   type AlertCutoff,
   type Cutoff,
-  type HazardThresholds,
   NWS_SEVERITIES,
   type NwsSeverity,
   THRESHOLDS,
@@ -56,7 +55,7 @@ interface Candidates {
 }
 
 interface CutoffCheck {
-  readonly cutoff: string;
+  readonly cutoff: CutoffName;
   readonly threshold: Cutoff;
   readonly outcome: CheckOutcome;
 }
@@ -74,19 +73,26 @@ interface CheckContext extends SampleSources {
 
 interface Crossing {
   readonly hazard: Hazard;
-  readonly cutoff: string;
+  readonly cutoff: CutoffName;
   readonly threshold: Cutoff;
   readonly outcome: Crossed;
 }
 
 function assessHazard(hazard: Hazard, context: CheckContext): HazardAssessment {
-  const cutoffs: HazardThresholds["cutoffs"] = THRESHOLDS[hazard].cutoffs;
-  const checks = Object.entries(cutoffs).map(
-    ([cutoff, threshold]): CutoffCheck => ({
-      cutoff,
-      threshold,
-      outcome: assessCutoff(hazard, threshold, context),
-    }),
+  const cutoffs: Readonly<Record<string, Cutoff>> = THRESHOLDS[hazard].cutoffs;
+  const checks = Object.entries(cutoffs).flatMap(
+    ([cutoff, threshold]): CutoffCheck[] => {
+      if (!isCutoffName(hazard, cutoff)) {
+        return [];
+      }
+      return [
+        {
+          cutoff,
+          threshold,
+          outcome: assessCutoff(hazard, threshold, context),
+        },
+      ];
+    },
   );
   const strongest = mostDisruptive(
     crossingsOf(hazard, checks),

@@ -3,9 +3,8 @@ import type { Caveat } from "./confidence";
 import type { Crossing } from "./cutoff-checks";
 import type { InputKind } from "./freshness";
 import type { EndBasis } from "./hazard-window";
-import type { IsoInstant } from "./samples";
 import type { Cutoff } from "./thresholds";
-import type { OpmStatus } from "./timing";
+import type { IsoInstant, OpmStatus } from "./timing";
 import { formatTimeOfDay, parseInstant } from "./zoned-time";
 
 const HAZARD_LABELS: Readonly<Record<Hazard, string>> = {

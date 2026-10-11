@@ -4,17 +4,18 @@ import {
   type Hazard,
 } from "@hackmidwest/db";
 import type { HazardAssessment } from "./cutoff-checks";
+import type { CutoffName } from "./cutoff-names";
 import { type StaleInput, staleInputs } from "./freshness";
 import type { EndBasis } from "./hazard-window";
-import type { InputRef, IsoInstant } from "./samples";
-import type { TimingResult } from "./timing";
+import type { InputRef } from "./samples";
+import type { IsoInstant, TimingResult } from "./timing";
 
 type Caveat =
   | ({ readonly kind: "staleInput" } & StaleInput)
   | {
       readonly kind: "missingReading";
       readonly hazard: Hazard;
-      readonly cutoff: string;
+      readonly cutoff: CutoffName;
     }
   | {
       readonly kind: "estimatedEnd";
