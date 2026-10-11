@@ -68,6 +68,7 @@ Each invocation opens a fresh headless Chromium page (no cookies or state carrie
 | `expect <role> <name>` | Wait (up to 15 s) until it is visible, e.g. `expect table "Tasks"`. |
 | `expect-text <text>` | Wait until the exact text is visible. Use it for elements without a name, such as the error alert. |
 | `press <key>` | Press one key on whatever has focus, e.g. `press Tab` or `press Space` (Playwright key names). Use it to prove keyboard operation. |
+| `wait <seconds>` | Keep the page open for that long, e.g. `wait 70`. Use it to prove that an open page refreshes on its own; pair it with an API mutation run from another shell during the wait. |
 | `block-api` | Abort every browser request to `$API_URL` from now on (the API is the network boundary). It does **not** affect SSR fetches made by the web server. |
 | `snap <name>` | Write `<name>.aria.yml` (ARIA tree with URL and title header) and `<name>.png` (full page). |
 
