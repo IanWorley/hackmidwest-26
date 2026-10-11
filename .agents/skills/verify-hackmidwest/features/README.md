@@ -43,7 +43,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 
 ## Features
 
-- [Home page](./home-navigation.md) covers the landing links, the header navigation, and client-side navigation to the task list.
+- [Home page](./home-navigation.md) covers the facility standing table on `/`: the `Decisions needed` count, each facility's posture, decide-by countdown, and decision state, the links to `/facilities/<id>` and `/conditions`, the header navigation, and its load-failure alert.
 - [Task list](./tasks-list.md) covers the server-rendered `/tasks` page, its ordering, and completion state.
 - [Facility list and detail](./facilities-list.md) covers the server-rendered `/facilities` page, the link from each row to `/facilities/<id>`, the not-found page, and `GET /api/facilities` and `GET /api/facilities/:id`.
 - [Conditions](./conditions.md) covers the `/conditions` map: posture pins with text labels and decide-by countdowns, the legend, the `Alerts`, `Air quality`, and `Radar` layer toggles kept in `?layers=`, the popup link to `/facilities/<id>`, and its load-failure alert.
