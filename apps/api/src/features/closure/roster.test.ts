@@ -5,9 +5,8 @@ import {
   employees,
 } from "@hackmidwest/db";
 import {
-  createTestDatabase,
+  createTestDatabaseWithDemoFacilities,
   DEMO_ROSTER_CASES,
-  seedDemoFacilities,
 } from "@hackmidwest/db/testing";
 import { eq, inArray } from "drizzle-orm";
 import { expect, it } from "vitest";
@@ -35,9 +34,8 @@ interface Placement {
 async function reconcileKansasCity(
   posture: FacilityPosture,
 ): Promise<RosterReconciliation> {
-  const store = await createTestDatabase();
+  const store = await createTestDatabaseWithDemoFacilities();
   try {
-    await seedDemoFacilities(store.db);
     const facilityBuildings = store.db
       .select({ id: buildings.id })
       .from(buildings)

@@ -36,8 +36,9 @@
       }
     },
     {
-      // The package's public entry points re-export its modules.
-      "includes": ["src/index.ts", "src/testing.ts"],
+      // The package entry points and the schema index re-export their modules;
+      // drizzle-kit and the client read every table through the schema index.
+      "includes": ["src/index.ts", "src/schema/index.ts", "src/testing.ts"],
       "linter": {
         "rules": {
           "performance": { "noBarrelFile": "off" }
@@ -45,8 +46,8 @@
       }
     },
     {
-      // Drizzle needs every table; the namespace import keeps schema.ts the
-      // only list of them.
+      // Drizzle needs every table; the namespace import keeps the schema index
+      // the only list of them.
       "includes": ["src/client.ts"],
       "linter": {
         "rules": {
@@ -57,7 +58,7 @@
     {
       // Drizzle marks only primaryKey's positional overload deprecated; the
       // object form the schema uses is current, but the rule flags the import.
-      "includes": ["src/schema.ts"],
+      "includes": ["src/schema/facilities.ts"],
       "linter": {
         "rules": {
           "suspicious": { "noDeprecatedImports": "off" }

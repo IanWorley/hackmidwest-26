@@ -84,14 +84,14 @@ Open <http://localhost:3000/tasks>. The API serves `GET/POST /api/tasks` on <htt
 | `bun run fix` | Apply all safe Biome fixes (format, lint, import order) |
 | `bun run check` | TypeScript for every workspace (generates the route tree first) |
 | `bun run build` | Production builds of all three apps |
-| `bun run db:generate` | Generate a migration after editing `packages/db/src/schema.ts` |
+| `bun run db:generate` | Generate a migration after editing `packages/db/src/schema/` |
 | `bun run db:migrate` / `db:seed` | Apply migrations / insert demo data (safe to re-run) |
 
 CI runs format, lint, typecheck, build, and tests on every PR. [autofix.ci](https://autofix.ci) runs `bun run fix` on PRs and pushes any changes back to the branch.
 
 ## Where things live
 
-- `packages/db/src/schema.ts` — tables and their shared limits.
+- `packages/db/src/schema/` — tables and their shared limits, one file per domain, listed in `schema/index.ts`.
 - `apps/api/src/features/` — one Elysia module per feature; validators derived from tables, plus queries.
 - `apps/api/src/contract.ts` — the type-only `App` export the web app consumes.
 - `apps/agent-api/src/features/` — agent and AI endpoints, built the same way as the API's features.
