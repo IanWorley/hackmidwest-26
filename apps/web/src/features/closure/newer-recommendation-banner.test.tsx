@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { NewerRecommendationBanner } from "./newer-recommendation-banner";
 import {
@@ -58,4 +58,17 @@ it("shows no banner when the decided recommendation is still the latest", () => 
     />,
   );
   expect(container.innerHTML).toBe("");
+});
+
+it("says the newer recommendation matches when nothing it shows changed", () => {
+  render(
+    <NewerRecommendationBanner
+      decided={DECIDED}
+      latest={{ ...DECIDED, id: 8 }}
+      timezone="America/Chicago"
+    />,
+  );
+  expect(screen.getByRole("status").textContent).toBe(
+    "A newer recommendation is availablePosture, confidence, and hazard window match the recommendation you decided on.Your decision is unchanged. Record a new decision to act on it.",
+  );
 });
