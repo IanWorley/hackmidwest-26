@@ -15,6 +15,8 @@ const STEP_ARGS = {
   fill: ["label", "text"],
   select: ["label", "option"],
   tab: ["name"],
+  within: ["role", "name"],
+  "within-page": [],
   snap: ["name"],
 };
 
@@ -29,6 +31,8 @@ const browser = await chromium.launch();
 const pages = new Map();
 let tabName = "main";
 let page = await openTab(tabName);
+/** Where `click`, `fill`, `select`, and `expect` look; the whole page unless `within` narrowed it. */
+let scope = page;
 
 try {
   for (const [verb, ...args] of steps) {
@@ -56,51 +60,60 @@ async function runStep(verb, args) {
       await page.goto(new URL(args[0], WEB_URL).href, {
         waitUntil: "networkidle",
       });
+      scope = page;
       return;
     case "click":
-      await page.getByRole(args[0], { name: args[1], exact: true }).click();
+      await scope.getByRole(args[0], { name: args[1], exact: true }).click();
       return;
     case "expect":
-      await page.getByRole(args[0], { name: args[1], exact: true }).waitFor();
+      await scope.getByRole(args[0], { name: args[1], exact: true }).waitFor();
       return;
     case "expect-text":
       await page.getByText(args[0], { exact: true }).waitFor();
       return;
     case "fill":
-      await page.getByLabel(args[0], { exact: true }).fill(args[1]);
+      await scope.getByLabel(args[0], { exact: true }).fill(args[1]);
       return;
     case "select":
-      await page
+      await scope
         .getByLabel(args[0], { exact: true })
         .selectOption({ label: args[1] });
       return;
     case "tab":
       [tabName] = args;
       page = pages.get(tabName) ?? (await openTab(tabName));
+      scope = page;
       await page.bringToFront();
+      return;
+    case "within":
+      scope = page.getByRole(args[0], { name: args[1], exact: true });
+      return;
+    case "within-page":
+      scope = page;
       return;
     case "block-api":
       await page.route(`${API_URL}/**`, (route) =>
         route.abort("connectionrefused"),
       );
       return;
-    case "snap": {
-      const aria = await page.locator("body").ariaSnapshot();
-      const header = `# url: ${page.url()}\n# title: ${await page.title()}\n`;
-      writeFileSync(
-        join(ARTIFACTS, `${args[0]}.aria.yml`),
-        `${header}${aria}\n`,
-      );
-      await page.screenshot({
-        path: join(ARTIFACTS, `${args[0]}.png`),
-        fullPage: true,
-      });
-      log(`  saved ${args[0]}.aria.yml ${args[0]}.png`);
+    case "snap":
+      await snap(args[0]);
       return;
-    }
     default:
       throw new Error(`unhandled step '${verb}'`);
   }
+}
+
+/** @param {string} name */
+async function snap(name) {
+  const aria = await page.locator("body").ariaSnapshot();
+  const header = `# url: ${page.url()}\n# title: ${await page.title()}\n`;
+  writeFileSync(join(ARTIFACTS, `${name}.aria.yml`), `${header}${aria}\n`);
+  await page.screenshot({
+    path: join(ARTIFACTS, `${name}.png`),
+    fullPage: true,
+  });
+  log(`  saved ${name}.aria.yml ${name}.png`);
 }
 
 /**
