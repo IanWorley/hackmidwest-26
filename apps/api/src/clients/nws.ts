@@ -1,6 +1,6 @@
 import type { Static, TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
-import { Clock, Data, Duration, Effect, Schedule } from "effect";
+import { Cache, Data, Duration, Effect, Exit, Schedule } from "effect";
 import type {
   ForecastPeriod,
   GeoPoint,
@@ -30,7 +30,8 @@ const MAX_RETRIES = 3;
 const HTTP_FORBIDDEN = 403;
 const HTTP_TOO_MANY_REQUESTS = 429;
 /** Matches the s-maxage NWS sends on /points; grid mappings occasionally change. */
-const GRID_POINT_TTL_MILLIS = Duration.toMillis(Duration.hours(24));
+const GRID_POINT_TTL = Duration.hours(24);
+const GRID_POINT_CACHE_CAPACITY = 1000;
 const HTTP_SERVER_ERROR_MIN = 500;
 
 type NwsErrorReason =
@@ -208,35 +209,37 @@ function latestObservation(
   });
 }
 
+function gridPointTimeToLive(
+  exit: Exit.Exit<GridPoint, NwsError>,
+): Duration.Duration {
+  if (Exit.isSuccess(exit)) {
+    return GRID_POINT_TTL;
+  }
+  return Duration.zero;
+}
+
 function makeNwsClient({
   userAgent,
   fetch = globalThis.fetch,
   baseUrl = DEFAULT_BASE_URL,
 }: NwsClientOptions): NwsClientShape {
   const getJson = makeGetJson(fetch, userAgent);
-  const gridPoints = new Map<
-    string,
-    { readonly grid: GridPoint; readonly expiresAt: number }
-  >();
+  // Concurrent lookups of one point share a single /points request; failures are not kept.
+  const gridPoints = Effect.runSync(
+    Cache.makeWith(
+      (path: string) =>
+        getJson(`${baseUrl}/points/${path}`, PointsResponse).pipe(
+          Effect.map(({ properties }) => properties),
+        ),
+      {
+        capacity: GRID_POINT_CACHE_CAPACITY,
+        timeToLive: gridPointTimeToLive,
+      },
+    ),
+  );
 
   function gridPoint(point: GeoPoint): Effect.Effect<GridPoint, NwsError> {
-    return Effect.gen(function* () {
-      const path = pointPath(point);
-      const now = yield* Clock.currentTimeMillis;
-      const cached = gridPoints.get(path);
-      if (cached !== undefined && now < cached.expiresAt) {
-        return cached.grid;
-      }
-      const { properties } = yield* getJson(
-        `${baseUrl}/points/${path}`,
-        PointsResponse,
-      );
-      gridPoints.set(path, {
-        grid: properties,
-        expiresAt: now + GRID_POINT_TTL_MILLIS,
-      });
-      return properties;
-    });
+    return Cache.get(gridPoints, pointPath(point));
   }
 
   return {
