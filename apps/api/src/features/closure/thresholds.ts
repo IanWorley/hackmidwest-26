@@ -15,7 +15,6 @@ const OPM_STANDARD_DELAY_HOURS = 2;
 const OPM_WHOLE_HOUR_DELAY_MINUTES = 60;
 const QUARTER_HOUR_MINUTES = 15;
 const DISMISSAL_MARGIN_MINUTES = 30;
-const NOTIFICATION_DELIVERY_MINUTES = 15;
 const HOURLY_OBSERVATION_STALE_MINUTES = 90;
 const FORECAST_STALE_MINUTES = 360;
 const CAMS_REFRESH_MINUTES = 720;
@@ -194,7 +193,7 @@ export const THRESHOLDS = {
   },
 } as const satisfies Record<Hazard, HazardThresholds>;
 
-/** Policy values that turn a hazard window into an OPM-style status and a decide-by time. */
+/** Policy values that turn a hazard window into an OPM-style status. */
 export const TIMING_POLICY = {
   delayIncrementMinutes: {
     value: OPM_WHOLE_HOUR_DELAY_MINUTES,
@@ -215,13 +214,6 @@ export const TIMING_POLICY = {
     source: CLOSURE_CALL_POLICY_SOURCE,
     citation:
       "Policy choice: employees released early should be home 30 minutes before hazard onset, to absorb error in the forecast onset time. This is separate from the post-hazard buffer, which measures road recovery after the event ends.",
-  },
-  notificationDeliveryMinutes: {
-    value: NOTIFICATION_DELIVERY_MINUTES,
-    unit: "minutes",
-    source: CLOSURE_CALL_POLICY_SOURCE,
-    citation:
-      "Policy choice: 15 minutes for an email and SMS fan-out to reach every recipient, counted before the facility's notification lead time.",
   },
   observationStaleMinutes: {
     value: HOURLY_OBSERVATION_STALE_MINUTES,

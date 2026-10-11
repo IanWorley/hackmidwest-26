@@ -8,7 +8,7 @@ import {
   type TimingInput,
 } from "./timing";
 
-// 2026-01-14 is CST (UTC-6): arrival opens 13:00Z, closes 22:30Z, decide-by 11:45Z.
+// 2026-01-14 is CST (UTC-6): arrival opens 13:00Z and the facility closes at 22:30Z.
 const FACILITY: FacilitySchedule = {
   timezone: "America/Chicago",
   opensAt: "07:30",
@@ -16,7 +16,6 @@ const FACILITY: FacilitySchedule = {
   arrivalWindowStart: "07:00",
   arrivalWindowEnd: "09:00",
   typicalCommuteMinutes: 35,
-  notificationLeadMinutes: 60,
 };
 const NOW = "2026-01-14T09:00:00Z";
 
@@ -181,33 +180,6 @@ it("teleworks when the release time would fall before opening", () => {
   expect(result.status).toEqual({ posture: "unscheduled_telework" });
 });
 
-it("counts the decide-by time back from arrival", () => {
-  const result = evaluateTiming(timing({}));
-  expect(result.deadline).toEqual({
-    kind: "open",
-    decideBy: "2026-01-14T11:45:00.000Z",
-    minutesLeft: 165,
-  });
-});
-
-it("counts an early dismissal's decide-by time back from the release time", () => {
-  const result = evaluateTiming(ROW_CASES.startsDuringHours.input);
-  expect(result.deadline).toEqual({
-    kind: "open",
-    decideBy: "2026-01-14T16:30:00.000Z",
-    minutesLeft: 450,
-  });
-});
-
-it("reports how late an evaluation after decide-by is", () => {
-  const result = evaluateTiming(timing({ now: "2026-01-14T11:50:00Z" }));
-  expect(result.deadline).toEqual({
-    kind: "passed",
-    decideBy: "2026-01-14T11:45:00.000Z",
-    minutesLate: 5,
-  });
-});
-
 it("marks an end that fell back to the alert's expires time", () => {
   const result = evaluateTiming(
     timing({
@@ -267,11 +239,6 @@ describe("DST transition days", () => {
       posture: "delayed_arrival",
       delayHours: 3,
     });
-    expect(result.deadline).toEqual({
-      kind: "open",
-      decideBy: "2026-03-08T10:45:00.000Z",
-      minutesLeft: 285,
-    });
   });
 
   it("places arrival at 13:00Z on the fall-back day", () => {
@@ -285,11 +252,6 @@ describe("DST transition days", () => {
     expect(result.status).toEqual({
       posture: "delayed_arrival",
       delayHours: 3,
-    });
-    expect(result.deadline).toEqual({
-      kind: "open",
-      decideBy: "2026-11-01T11:45:00.000Z",
-      minutesLeft: 345,
     });
   });
 });

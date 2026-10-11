@@ -35,7 +35,6 @@ type FacilitySchedule = Pick<
   | "arrivalWindowStart"
   | "arrivalWindowEnd"
   | "typicalCommuteMinutes"
-  | "notificationLeadMinutes"
 >;
 
 interface TimingInput {
@@ -69,18 +68,6 @@ type OpmStatus =
   | { readonly posture: "unscheduled_telework" }
   | { readonly posture: "full_closure" };
 
-type DecisionDeadline =
-  | {
-      readonly kind: "open";
-      readonly decideBy: IsoInstant;
-      readonly minutesLeft: number;
-    }
-  | {
-      readonly kind: "passed";
-      readonly decideBy: IsoInstant;
-      readonly minutesLate: number;
-    };
-
 interface TimingResult {
   /** `YYYY-MM-DD` in the facility's zone. */
   readonly facilityDate: string;
@@ -93,7 +80,6 @@ interface TimingResult {
   };
   readonly timingCase: TimingCase;
   readonly status: OpmStatus;
-  readonly deadline: DecisionDeadline;
 }
 
 interface FacilityDay {
@@ -110,11 +96,6 @@ function evaluateTiming(input: TimingInput): TimingResult {
   const day = facilityDay(input.facility, now);
   const hazard = hazardInterval(input.evidence, input.hazard);
   const timingCase = classify(hazard, day, input.facility, input.hazard);
-  // An early dismissal is announced against its release time, everything else against arrival.
-  let actionAt = day.arrivalStart;
-  if (timingCase.kind === "startsDuringHours") {
-    actionAt = parseInstant(timingCase.releaseAt);
-  }
   return {
     facilityDate: formatDate(day.date),
     hazardWindow: {
@@ -125,7 +106,6 @@ function evaluateTiming(input: TimingInput): TimingResult {
     },
     timingCase,
     status: toStatus(timingCase, input.crossedPosture, zone),
-    deadline: deadline(actionAt, input.facility, now),
   };
 }
 
@@ -208,31 +188,6 @@ function toStatus(
   }
 }
 
-function deadline(
-  actionAt: Instant,
-  facility: FacilitySchedule,
-  now: Instant,
-): DecisionDeadline {
-  const decideBy = toInstant(
-    actionAt -
-      (facility.notificationLeadMinutes +
-        TIMING_POLICY.notificationDeliveryMinutes.value) *
-        MS_PER_MINUTE,
-  );
-  if (now > decideBy) {
-    return {
-      kind: "passed",
-      decideBy: toIso(decideBy),
-      minutesLate: Math.floor((now - decideBy) / MS_PER_MINUTE),
-    };
-  }
-  return {
-    kind: "open",
-    decideBy: toIso(decideBy),
-    minutesLeft: Math.floor((decideBy - now) / MS_PER_MINUTE),
-  };
-}
-
 /**
  * The facility day a decision made at `now` is about: today in the facility's zone until today's
  * closing time, then tomorrow. Weekends and holidays are not modeled.
@@ -262,7 +217,6 @@ function roundDown(value: number, increment: number): Instant {
 }
 
 export type {
-  DecisionDeadline,
   FacilitySchedule,
   OpmStatus,
   TimingCase,
