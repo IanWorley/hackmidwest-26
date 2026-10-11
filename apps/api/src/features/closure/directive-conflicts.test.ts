@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   decisionDirectives,
   decisions,
@@ -182,4 +185,35 @@ it("records a directive on the standing decision after an undecided same-day re-
       FIRST_DECISION_ID,
     ]);
   });
+});
+
+it("serializes a directive with a racing decision write, so neither fails", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "directive-race-"));
+  const path = join(directory, "db.sqlite");
+  const withFileApp = appRunner(() =>
+    createTestDatabaseWithDemoFacilities({ kind: "file", path }),
+  );
+  try {
+    await withFileApp(async ({ db, request }) => {
+      await request(decide(), ACCEPT);
+
+      const [directive, decision] = await Promise.all([
+        request(DIRECTIVES_PATH, ESSENTIAL_REPORT),
+        request(decide(), {
+          ...OVERRIDE,
+          supersedesDecisionId: FIRST_DECISION_ID,
+        }),
+      ]);
+
+      const directiveFirst = [HTTP_CREATED, HTTP_CREATED, 1];
+      const decisionFirst = [HTTP_CONFLICT, HTTP_CREATED, 0];
+      expect([directiveFirst, decisionFirst]).toContainEqual([
+        directive.status,
+        decision.status,
+        (await db.select().from(decisionDirectives)).length,
+      ]);
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

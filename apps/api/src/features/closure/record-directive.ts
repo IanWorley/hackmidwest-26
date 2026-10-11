@@ -9,7 +9,7 @@ import {
   formatDirectiveScope,
 } from "@hackmidwest/db";
 import { and, eq } from "drizzle-orm";
-import { DateTime, Effect, Option } from "effect";
+import { DateTime, Effect, Option, Semaphore } from "effect";
 import { t } from "elysia";
 import { Database } from "../../runtime";
 import {
@@ -27,6 +27,7 @@ import {
 import { parseDecimalId } from "./facilities";
 import {
   DecisionWriteError,
+  decisionChainWrites,
   eligibleDecider,
   type Transaction,
 } from "./record-decision";
@@ -202,15 +203,18 @@ const recordDirective = Effect.fn("recordDirective")(function* (
   if (Option.isNone(decisionId)) {
     return DECISION_NOT_FOUND;
   }
-  const issuedAt = yield* DateTime.now;
   const db = yield* Database;
-  return yield* Effect.tryPromise({
-    try: () =>
-      db.transaction((tx) =>
-        issueInTransaction(tx, decisionId.value, body, issuedAt),
-      ),
-    catch: (cause) => new DecisionWriteError({ cause }),
-  });
+  // The clock is read inside the permit, so a decision written while this waited is not after `issuedAt`.
+  return yield* Effect.gen(function* () {
+    const issuedAt = yield* DateTime.now;
+    return yield* Effect.tryPromise({
+      try: () =>
+        db.transaction((tx) =>
+          issueInTransaction(tx, decisionId.value, body, issuedAt),
+        ),
+      catch: (cause) => new DecisionWriteError({ cause }),
+    });
+  }).pipe(Semaphore.withPermit(decisionChainWrites));
 });
 
 export type { DirectiveOutcome };
