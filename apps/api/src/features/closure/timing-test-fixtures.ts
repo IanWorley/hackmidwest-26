@@ -16,7 +16,7 @@ const NOW = "2026-01-14T09:00:00Z";
 type Period = HazardEvidence["exceedingPeriods"][number];
 
 function period(startTime: string, endTime: string): Period {
-  return { startTime, endTime };
+  return { startTime, endTime, endBasis: "forecast" };
 }
 
 function alert(

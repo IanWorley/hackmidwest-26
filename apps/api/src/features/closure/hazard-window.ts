@@ -6,7 +6,11 @@ import {
   toInstant,
 } from "./zoned-time";
 
-type Period = Pick<ForecastPeriod, "startTime" | "endTime">;
+type EndBasis = NwsAlert["hazardWindow"]["endBasis"] | "forecast" | "reading";
+
+type Period = Pick<ForecastPeriod, "startTime" | "endTime"> & {
+  readonly endBasis: EndBasis;
+};
 
 /**
  * Where the hazard window comes from. The engine decides which forecast hours exceed its
@@ -22,8 +26,6 @@ type HazardEvidence =
       readonly source: "forecast";
       readonly exceedingPeriods: readonly [Period, ...Period[]];
     };
-
-type EndBasis = NwsAlert["hazardWindow"]["endBasis"] | "forecast";
 
 interface Span {
   readonly start: Instant;
@@ -111,7 +113,7 @@ function periodSpan(period: Period): Span {
   return {
     start: parseInstant(period.startTime),
     end: parseInstant(period.endTime),
-    endBasis: "forecast",
+    endBasis: period.endBasis,
   };
 }
 

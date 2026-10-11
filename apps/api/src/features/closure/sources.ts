@@ -28,6 +28,8 @@ const OPM_SOURCE =
   "U.S. Office of Personnel Management, Governmentwide Dismissal and Closure Procedures (December 2025)";
 const OPM_URL =
   "https://www.opm.gov/policy-data-oversight/pay-leave/reference-materials/handbooks/dcdismissal.pdf";
+const OPEN_METEO_AIR_QUALITY_SOURCE =
+  "Open-Meteo Air Quality API, CAMS Global Atmospheric Composition Forecasts";
 const OPEN_METEO_AIR_QUALITY_URL =
   "https://open-meteo.com/en/docs/air-quality-api";
 const CLOSURE_CALL_POLICY_SOURCE = "Closure Call policy";
@@ -49,6 +51,7 @@ export {
   NWSI_10_922_URL,
   NWSM_10_950_SOURCE,
   NWSM_10_950_URL,
+  OPEN_METEO_AIR_QUALITY_SOURCE,
   OPEN_METEO_AIR_QUALITY_URL,
   OPM_SOURCE,
   OPM_URL,

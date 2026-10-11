@@ -17,6 +17,7 @@ import {
   NWSI_10_922_URL,
   NWSM_10_950_SOURCE,
   NWSM_10_950_URL,
+  OPEN_METEO_AIR_QUALITY_SOURCE,
   OPEN_METEO_AIR_QUALITY_URL,
   OPM_SOURCE,
   OPM_URL,
@@ -34,10 +35,11 @@ const RURAL_COMMUTER_BARE_LANE_REGAIN_MINUTES = 540;
 const PRIMARY_BARE_LANE_REGAIN_MINUTES = 720;
 const SECONDARY_BARE_LANE_REGAIN_MINUTES = 2160;
 const WIND_POST_HAZARD_BUFFER_MINUTES = 60;
-const CAMS_GLOBAL_TIME_STEP_MINUTES = 180;
 const OPM_LONGEST_ILLUSTRATED_DELAY_HOURS = 4;
 const OPM_STANDARD_DELAY_HOURS = 2;
 const NWPS_FORECAST_STEP_MINUTES = 360;
+
+export const CAMS_GLOBAL_TIME_STEP_MINUTES = 180;
 
 // CAP v1.2 lists these most severe first; ascending order lets an index
 // comparison rank severity, with Unknown lowest.
@@ -214,8 +216,7 @@ export const THRESHOLDS = {
     postHazardBufferMinutes: {
       value: CAMS_GLOBAL_TIME_STEP_MINUTES,
       unit: "minutes",
-      source:
-        "Open-Meteo Air Quality API, CAMS Global Atmospheric Composition Forecasts",
+      source: OPEN_METEO_AIR_QUALITY_SOURCE,
       citation: `US AQI comes from the CAMS global model at 3-hourly resolution, refreshed every 12 hours. The buffer waits one 3-hour model step to confirm AQI stays below the cutoff. ${OPEN_METEO_AIR_QUALITY_URL}`,
     },
     maxDelayHours: {

@@ -16,12 +16,8 @@ import {
 import type { NwsClientShape } from "../../clients/nws";
 import type { NwsAlert } from "../../clients/nws-model";
 import { NwpsClient, NwsClient } from "../../runtime";
-import {
-  crossedFloodCutoffs,
-  gaugeCrossing,
-  pullFloodSignals,
-  withCurrentStages,
-} from "./flood";
+import { crossedFloodCutoffs, pullFloodSignals } from "./flood";
+import { gaugeCrossing, withCurrentStages } from "./gauge-stages";
 
 const KANSAS_CITY = { lat: 39.0997, lon: -94.5786 };
 // Above KCDM7's 35 ft moderate stage, below its 49 ft major stage.

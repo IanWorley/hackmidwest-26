@@ -15,6 +15,7 @@ import {
   formatDate,
   formatTimeOfDay,
   type Instant,
+  type IsoInstant,
   localInstant,
   MS_PER_MINUTE,
   parseInstant,
@@ -23,9 +24,6 @@ import {
 } from "./zoned-time";
 
 const MS_PER_HOUR = 3_600_000;
-
-/** ISO-8601 instant, as produced by `Date#toISOString`. */
-type IsoInstant = string;
 
 /** Exactly the facility columns timing reads; the engine passes the row unchanged. */
 type FacilitySchedule = Pick<
@@ -204,13 +202,21 @@ function toStatus(
  * The facility day a decision made at `now` is about: today in the facility's zone until today's
  * closing time, then tomorrow. Weekends and holidays are not modeled.
  */
-function facilityDay(facility: FacilitySchedule, now: Instant): FacilityDay {
+function facilityDate(
+  facility: Pick<FacilitySchedule, "timezone" | "closesAt">,
+  now: Instant,
+): CalendarDate {
   const zone = facility.timezone;
   const today = calendarDate(now, zone);
-  let date = today;
   if (now >= localInstant(today, facility.closesAt, zone)) {
-    date = addDays(today, 1);
+    return addDays(today, 1);
   }
+  return today;
+}
+
+function facilityDay(facility: FacilitySchedule, now: Instant): FacilityDay {
+  const zone = facility.timezone;
+  const date = facilityDate(facility, now);
   return {
     date,
     opensAt: localInstant(date, facility.opensAt, zone),
@@ -236,4 +242,4 @@ export type {
   TimingInput,
   TimingResult,
 };
-export { evaluateTiming };
+export { evaluateTiming, facilityDate };

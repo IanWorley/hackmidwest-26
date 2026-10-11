@@ -20,11 +20,8 @@ import {
   internalServerErrorResponse,
   type RunRequest,
 } from "../runtime";
-import {
-  crossedFloodCutoffs,
-  gaugeCrossing,
-  pullFloodSignals,
-} from "./closure/flood";
+import { crossedFloodCutoffs, pullFloodSignals } from "./closure/flood";
+import { gaugeCrossing } from "./closure/gauge-stages";
 
 const FLOOD_LIVE_PATH = "/api/flood/live";
 

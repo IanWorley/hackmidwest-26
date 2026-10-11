@@ -1,21 +1,25 @@
 import {
   CLOSURE_CALL_POLICY_SOURCE,
   NWPS_GAUGE_URL,
+  OPEN_METEO_AIR_QUALITY_SOURCE,
   OPEN_METEO_AIR_QUALITY_URL,
   OPM_SOURCE,
   OPM_URL,
 } from "./sources";
-import type { CitedValue } from "./thresholds";
+import { CAMS_GLOBAL_TIME_STEP_MINUTES, type CitedValue } from "./thresholds";
 
 const OPM_WHOLE_HOUR_DELAY_MINUTES = 60;
 const QUARTER_HOUR_MINUTES = 15;
 const DISMISSAL_MARGIN_MINUTES = 30;
+const HOURLY_OBSERVATION_INTERVAL_MINUTES = 60;
 const HOURLY_OBSERVATION_STALE_MINUTES = 90;
 const FORECAST_STALE_MINUTES = 360;
 const CAMS_REFRESH_MINUTES = 720;
 const GAUGE_STAGE_STALE_MINUTES = 360;
+const NWPS_FORECAST_STEP_MINUTES = 360;
+const ONSET_SHIFT_MINUTES = 120;
 
-/** Policy values that turn a hazard window into an OPM-style status. */
+/** Policy values that turn hazard inputs into an OPM-style status and its confidence. */
 export const TIMING_POLICY = {
   delayIncrementMinutes: {
     value: OPM_WHOLE_HOUR_DELAY_MINUTES,
@@ -54,8 +58,7 @@ export const TIMING_POLICY = {
   airQualityStaleMinutes: {
     value: CAMS_REFRESH_MINUTES,
     unit: "minutes",
-    source:
-      "Open-Meteo Air Quality API, CAMS Global Atmospheric Composition Forecasts",
+    source: OPEN_METEO_AIR_QUALITY_SOURCE,
     citation: `The CAMS global model behind US AQI is refreshed every 12 hours, so an AQI value older than one refresh has missed an update. ${OPEN_METEO_AIR_QUALITY_URL}`,
   },
   gaugeStageStaleMinutes: {
@@ -63,5 +66,31 @@ export const TIMING_POLICY = {
     unit: "minutes",
     source: CLOSURE_CALL_POLICY_SOURCE,
     citation: `Policy choice: NWPS forecasts river stage in 6-hour steps, so a gauge stage older than one step predates the forecast meant to replace it. A gauge that stopped reporting above a flood stage no longer says where the river is, so its old stages are dropped rather than read as an ongoing flood. ${NWPS_GAUGE_URL}`,
+  },
+  observationValidMinutes: {
+    value: HOURLY_OBSERVATION_INTERVAL_MINUTES,
+    unit: "minutes",
+    source: CLOSURE_CALL_POLICY_SOURCE,
+    citation:
+      "Policy choice: NWS stations report hourly, so one wind observation stands for one report cycle. A reading proves a crossing at its timestamp, not how long it lasted.",
+  },
+  gaugeCrossingHoldMinutes: {
+    value: NWPS_FORECAST_STEP_MINUTES,
+    unit: "minutes",
+    source: CLOSURE_CALL_POLICY_SOURCE,
+    citation: `Policy choice: NWPS forecasts river stage in 6-hour steps. A river still at or above a flood stage at its last observed or forecast point has not been shown to fall, so the crossing is held one more step past that point. ${NWPS_GAUGE_URL}`,
+  },
+  aqiReadingValidMinutes: {
+    value: CAMS_GLOBAL_TIME_STEP_MINUTES,
+    unit: "minutes",
+    source: OPEN_METEO_AIR_QUALITY_SOURCE,
+    citation: `US AQI comes from the CAMS global model at 3-hourly resolution, so one AQI value stands for one 3-hour model step. ${OPEN_METEO_AIR_QUALITY_URL}`,
+  },
+  sensitivityShiftMinutes: {
+    value: ONSET_SHIFT_MINUTES,
+    unit: "minutes",
+    source: CLOSURE_CALL_POLICY_SOURCE,
+    citation:
+      'Policy choice: the what-if moves the deciding hazard 2 hours earlier and 2 hours later, the onset error issue #23 asks a recommendation to report ("if onset moves 2 hours earlier").',
   },
 } as const satisfies Record<string, CitedValue<"minutes">>;
