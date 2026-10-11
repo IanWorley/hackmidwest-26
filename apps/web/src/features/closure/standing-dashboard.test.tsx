@@ -39,6 +39,7 @@ const OVERRIDDEN: MapFacility = {
       action: "override",
       chosenPosture: "normal",
       decidedAt: "2026-10-11T08:30:00.000Z",
+      recheckAt: null,
     },
   },
 };
@@ -58,6 +59,7 @@ const DEFERRED: MapFacility = {
       action: "defer",
       chosenPosture: null,
       decidedAt: "2026-10-11T08:30:00.000Z",
+      recheckAt: "2026-10-11T09:15:00.000Z",
     },
   },
 };
