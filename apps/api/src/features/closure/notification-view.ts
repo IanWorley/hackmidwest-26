@@ -114,8 +114,8 @@ const NO_POSTURE_MESSAGE =
 const UNTIMED_POSTURE_MESSAGE =
   "The recommendation never timed this posture, so there is no delay or release to announce";
 const ALREADY_DISPATCHED_MESSAGE = "This decision was already dispatched";
-const DECISION_SUPERSEDED_MESSAGE =
-  "A later decision supersedes this one, so only the latest can be dispatched";
+const NOT_CURRENT_DECISION_MESSAGE =
+  "Only the facility's current decision can be dispatched";
 
 const notificationConflictResponse = t.Union([
   t.Object({
@@ -134,9 +134,9 @@ const notificationConflictResponse = t.Union([
     recordedAt: t.String(),
   }),
   t.Object({
-    conflict: t.Literal("decision_superseded"),
-    message: t.Literal(DECISION_SUPERSEDED_MESSAGE),
-    latestDecisionId: t.Integer(),
+    conflict: t.Literal("not_current_decision"),
+    message: t.Literal(NOT_CURRENT_DECISION_MESSAGE),
+    currentDecisionId: t.Nullable(t.Integer()),
   }),
 ]);
 type NotificationConflict = typeof notificationConflictResponse.static;
@@ -239,9 +239,9 @@ export type {
 };
 export {
   ALREADY_DISPATCHED_MESSAGE,
-  DECISION_SUPERSEDED_MESSAGE,
   decisionNotificationsView,
   NO_POSTURE_MESSAGE,
+  NOT_CURRENT_DECISION_MESSAGE,
   notificationConflictResponse,
   notificationPackageView,
   toDecisionNotificationsView,

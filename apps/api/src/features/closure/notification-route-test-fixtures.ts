@@ -11,8 +11,9 @@ import type { EngineInput } from "./engine-input";
 import { input, nwsAlert } from "./engine-test-fixtures";
 import { contentHash, type JsonValue } from "./records";
 
-// 2026-10-02 is CDT (UTC-5): evaluated just before the 05:00 local decision deadline.
-const EVALUATED_AT = "2026-10-02T09:55:00.000Z";
+// After the fixture placeholder's 10:00Z evaluation, so each stored here is the latest, and before
+// the 10:30Z decisions and 11:00Z decideBy.
+const EVALUATED_AT = "2026-10-02T10:05:00.000Z";
 const STORM: EngineInput["alerts"] = {
   asOf: EVALUATED_AT,
   items: [

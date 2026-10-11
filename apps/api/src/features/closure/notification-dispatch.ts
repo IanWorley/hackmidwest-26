@@ -14,14 +14,14 @@ import {
 } from "./notification-facts";
 import {
   ALREADY_DISPATCHED_MESSAGE,
-  DECISION_SUPERSEDED_MESSAGE,
   type DecisionNotificationsView,
+  NOT_CURRENT_DECISION_MESSAGE,
   type NotificationConflict,
   toDecisionNotificationsView,
   toNotificationView,
 } from "./notification-view";
 import { type DecidedPackage, dispatchTimeline } from "./notifications";
-import type { Transaction } from "./record-decision";
+import { decisionChainWrites, type Transaction } from "./record-decision";
 import { contentHash } from "./records";
 import { localInstant, parseCalendarDate, toIso } from "./zoned-time";
 
@@ -36,11 +36,6 @@ class NotificationStoreError extends Data.TaggedError(
   readonly operation: "preview" | "read" | "dispatch";
   readonly cause: unknown;
 }> {}
-
-// As with missed-decision writes in decisions.ts: libsql gives each transaction its own connection
-// with no busy timeout, so a second concurrent dispatch would fail on the write lock with a 500
-// instead of reading the first one's rows and answering already_dispatched.
-const dispatchWrites = Semaphore.makeUnsafe(1);
 
 const DECISION_NOT_FOUND: DecisionNotificationsOutcome = {
   kind: "decision_not_found",
@@ -83,10 +78,10 @@ function dispatchContent(
   }));
 }
 
-/** Already dispatched wins over superseded, so retrying a dispatch that landed always reads the same. */
+/** Already dispatched wins over not current, so retrying a dispatch that landed always reads the same. */
 function dispatchRefusal({
   decision,
-  latestDecisionId,
+  currentDecisionId,
   dispatches: [first],
 }: DecisionFacts): NotificationConflict | undefined {
   if (first !== undefined) {
@@ -96,11 +91,11 @@ function dispatchRefusal({
       recordedAt: first.recordedAt,
     };
   }
-  if (latestDecisionId !== decision.id) {
+  if (currentDecisionId !== decision.id) {
     return {
-      conflict: "decision_superseded",
-      message: DECISION_SUPERSEDED_MESSAGE,
-      latestDecisionId,
+      conflict: "not_current_decision",
+      message: NOT_CURRENT_DECISION_MESSAGE,
+      currentDecisionId,
     };
   }
   return undefined;
@@ -111,7 +106,7 @@ async function dispatchInTransaction(
   decisionId: number,
   now: string,
 ): Promise<DecisionNotificationsOutcome> {
-  const facts = await loadDecisionFacts(tx, decisionId);
+  const facts = await loadDecisionFacts(tx, decisionId, now);
   if (facts === undefined) {
     return DECISION_NOT_FOUND;
   }
@@ -173,7 +168,7 @@ const decisionNotifications = Effect.fn("decisionNotifications")(function* (
   const now = DateTime.formatIso(yield* DateTime.now);
   const db = yield* Database;
   const facts = yield* Effect.tryPromise({
-    try: () => loadDecisionFacts(db, decisionId.value),
+    try: () => loadDecisionFacts(db, decisionId.value, now),
     catch: (cause) => new NotificationStoreError({ operation: "read", cause }),
   });
   if (facts === undefined) {
@@ -205,7 +200,7 @@ const dispatchNotifications = Effect.fn("dispatchNotifications")(function* (
       db.transaction((tx) => dispatchInTransaction(tx, decisionId.value, now)),
     catch: (cause) =>
       new NotificationStoreError({ operation: "dispatch", cause }),
-  }).pipe(Semaphore.withPermit(dispatchWrites));
+  }).pipe(Semaphore.withPermit(decisionChainWrites));
 });
 
 export type { DecisionNotificationsOutcome };
