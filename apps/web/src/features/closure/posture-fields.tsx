@@ -1,6 +1,6 @@
 import { type JSX, useSyncExternalStore } from "react";
 import { Badge } from "@/components/ui/badge";
-import type { EvaluationMode, StandingPosture } from "@/features/map/load-map";
+import type { StandingPosture } from "@/features/map/load-map";
 import { POSTURE_CLASSES, POSTURE_LABELS } from "./posture";
 
 const MS_PER_MINUTE = 60_000;
@@ -68,17 +68,8 @@ function DecideByCountdown({ decideBy }: { decideBy: string }): JSX.Element {
   );
 }
 
-/** A live evaluation is about now, so only a replayed (as-of) one names its instant. */
-function AsOfMarker({
-  mode,
-  asOf,
-}: {
-  mode: EvaluationMode;
-  asOf: string;
-}): JSX.Element | null {
-  if (mode !== "as_of") {
-    return null;
-  }
+/** When the standing was evaluated, so a reader can judge how fresh it is. */
+function AsOfMarker({ asOf }: { asOf: string }): JSX.Element {
   return (
     <p className="text-muted-foreground text-xs">
       {AS_OF_PREFIX}{" "}
