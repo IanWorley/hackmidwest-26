@@ -58,7 +58,12 @@ export interface AlertCutoff extends CitedValue<"nws_severity", NwsSeverity> {
   readonly events: readonly [string, ...string[]];
 }
 
+export const WIND_METRICS = ["wind_sustained", "wind_gust"] as const;
+
+export type WindMetric = (typeof WIND_METRICS)[number];
+
 export interface WindCutoff extends CitedValue<"mph"> {
+  readonly metric: WindMetric;
   readonly minDurationMinutes: number;
 }
 
@@ -118,6 +123,7 @@ export const THRESHOLDS = {
       sustained: {
         value: HIGH_WIND_SUSTAINED_MPH,
         unit: "mph",
+        metric: "wind_sustained",
         minDurationMinutes: HIGH_WIND_SUSTAINED_DURATION_MINUTES,
         posture: "early_dismissal",
         source: NWSI_10_515_SOURCE,
@@ -126,6 +132,7 @@ export const THRESHOLDS = {
       gust: {
         value: HIGH_WIND_GUST_MPH,
         unit: "mph",
+        metric: "wind_gust",
         minDurationMinutes: HIGH_WIND_GUST_DURATION_MINUTES,
         posture: "full_closure",
         source: NWSI_10_515_SOURCE,
