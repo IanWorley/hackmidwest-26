@@ -1,0 +1,52 @@
+# Facility personnel
+
+The `/facilities/<id>/personnel` page lists everyone assigned to a facility's buildings in the `People` table, with their building, essential flag, baseline status, effective status with its reason, contact channels, and accessibility flag. A summary above the table counts people per effective status, and three filters narrow the table and the summary together. Each row's `Update status` button opens a dialog that records a new status for that person through `POST /api/employees/:id/status`, then reloads the page data. When the facility has a decision, a `Who's notified and why` link leads to the facility page. When an override chose a delayed arrival or early dismissal that no recommendation timed, an alert replaces the summary and every effective status reads `Not resolved`.
+
+## Sub-features
+
+- `personnel-entry` follows `People and status` on `/facilities/<id>` to the personnel page.
+- `personnel-ssr` renders the page on a direct load, with the data fetched by the web server.
+- `personnel-summary` shows counts per effective status, such as `17 onsite · 1 teleworking · 2 not working`.
+- `personnel-reason` explains each effective status in text, such as `onsite, baseline` or `not working, <note>`. Status is never shown by color alone.
+- `personnel-filters` narrows the table and the summary by building, effective status, and essential flag.
+- `personnel-recorder-required` keeps the status form from sending anything until `Recorded by` is chosen.
+- `personnel-api-422` shows the API's `422` message inline in the dialog, such as `A not_working status needs a note`.
+- `personnel-recorded` records a status, closes the dialog, and reloads the table and summary in place.
+- `personnel-decision-link` shows `Who's notified and why` only when the facility has a decision, and it leads to `/facilities/<id>`.
+- `personnel-untimed` shows the alert `Effective status can't be resolved` naming the posture, hides the `Effective status` filter, and reads `Not resolved` in every row.
+- `personnel-not-found` shows `Facility not found.` for an unknown or malformed id.
+- `personnel-load-error` shows the alert `Personnel could not be loaded.` with a matching title when the API fails.
+
+## How to get to it (user POV)
+
+- Choose `People and status` on a facility page (`/facilities/<id>`, see [facilities-list](./facilities-list.md)).
+- Open `$WEB_URL/facilities/<id>/personnel` directly.
+
+Stable handles on the page: heading `People and status`; search landmark `Filter people` with comboboxes `Building`, `Effective status`, and `Essential` (each starts at `All`); region `Status summary`; table `People` with columns `Name`, `Building`, `Essential`, `Baseline`, `Effective status`, `Contact`, `Accessibility`; one button `Update status for <name>` per row; dialog `Update status for <name>` with combobox `Status` (`onsite`, `teleworking`, `not working`), textbox `Note`, combobox `Recorded by` (`Choose who is recording` then `<name>, <role>` per recorder), the text `Identity is not verified.`, and buttons `Cancel`, `Save status`, `Close`; link `Who's notified and why`.
+
+## Driving it with verify.sh
+
+Preconditions:
+
+- Baseline state from the index. Kansas City (facility 1) has 20 people in `Main Office`, `Annex`, and `Equipment Barn`, and recorders `Dana Whitfield, County Executive Director` and `Marcus Oyelaran, State Administrative Officer`.
+
+- **Entry link.** Run `RUN_ID=<id> $V browser goto /facilities/1 click link "People and status" expect table "People" snap personnel-entry-link`. Header `# url: …/facilities/1/personnel` and title `People and status · Kansas City Area Service Center · Hack Midwest`.
+- **Direct load.** Run `RUN_ID=<id> $V browser goto /facilities/1/personnel expect table "People" snap personnel-direct`. Region `Status summary` reads `17 onsite · 1 teleworking · 2 not working`. Row `Avery Calloway` reads `Main Office`, `No`, `onsite`, `onsite, baseline`, `Prefers email`, `avery.calloway@usda.example`, `No mobile phone`, `No`. `browser.log` has no `net GET` line between `step goto` and `step snap`, which proves SSR served the data.
+- **Filters.** Run `RUN_ID=<id> $V browser goto /facilities/1/personnel select "Building" "Annex" select "Essential" "Not essential" snap personnel-filter-building-essential select "Building" "All" select "Essential" "All" select "Effective status" "not working" snap personnel-filter-status`. The first snapshot shows only `Annex` rows, all `No` under `Essential`, and a summary counting only them. The second shows exactly `Farah Haddad` and `Gideon Marsh` and the summary `2 not working`.
+- **Recorder required.** Run `RUN_ID=<id> $V browser goto /facilities/1/personnel click button "Update status for Avery Calloway" expect dialog "Update status for Avery Calloway" click button "Save status" expect-text "Choose who is recording this status." snap personnel-form-no-recorder`. `browser.log` has no `net POST` line.
+- **API 422 inline.** Run `RUN_ID=<id> $V browser goto /facilities/1/personnel click button "Update status for Avery Calloway" select "Status" "not working" select "Recorded by" "Dana Whitfield, County Executive Director" click button "Save status" expect-text "A not_working status needs a note" snap personnel-form-note-422`. `browser.log` has `net POST <API_URL>/api/employees/1/status -> 422`, and the dialog stays open with the alert.
+- **Record a status.** Run `RUN_ID=<id> $V browser goto /facilities/1/personnel click button "Update status for Caleb Mendoza" select "Status" "teleworking" select "Recorded by" "Dana Whitfield, County Executive Director" click button "Save status" expect button "Update status for Caleb Mendoza" expect-text "16 onsite · 2 teleworking · 2 not working" snap personnel-form-recorded-in-page`. `browser.log` has `net POST …/api/employees/3/status -> 201` followed by `net GET …/api/facilities/1` and `net GET …/api/facilities/1/personnel`, and the snapshot has no dialog. Then run `RUN_ID=<id> $V db personnel-status-events "select id, employee_id, status, note, reported_by_id from employee_status_events where employee_id = 3 order by id"` for the stored row `…|3|teleworking||1`.
+- **Decided posture and directive reasons.** Create a live recommendation with `RUN_ID=<id> $V api personnel-recommendation POST /api/facilities/1/recommendations '{}'` (`201`, `"id":1`). Override it to a full closure with `RUN_ID=<id> $V api personnel-decide-closure POST /api/recommendations/1/decisions '{"action":"override","chosenPosture":"full_closure","decidedById":1,"reason":{"category":"road_reports","text":"County reports the highway closed."}}'` (`201`). Excuse the Annex with `RUN_ID=<id> $V api personnel-directive-annex POST /api/decisions/1/directives '{"scope":{"kind":"building","buildingId":2},"directive":"excused","reason":{"category":"road_reports","text":"County reports the highway closed."},"issuedById":1}'` (`201`). Run `RUN_ID=<id> $V browser goto /facilities/1/personnel expect link "Who's notified and why" snap personnel-decided`. Row `Bianca Ferraro` reads `report required, full closure`. Row `Elliot Brandt` reads `dismissed, full closure`. Row `Joelle Baptiste` reads `not working, directive: County reports the highway closed.`. Row `Gideon Marsh` keeps `not working, On annual leave through October 16.`, with no directive.
+- **Decision link.** Run `RUN_ID=<id> $V browser goto /facilities/1/personnel click link "Who's notified and why" expect heading "Kansas City Area Service Center" snap personnel-decision-link-followed`. Header `# url: …/facilities/1`.
+- **Untimed posture.** Override to an early dismissal that nothing timed with `RUN_ID=<id> $V api personnel-decision-override-untimed POST /api/recommendations/1/decisions '{"action":"override","chosenPosture":"early_dismissal","decidedById":1,"supersedesDecisionId":1,"reason":{"category":"road_reports","text":"County reports the highway closed."}}'` (`201`), and run `RUN_ID=<id> $V browser goto /facilities/1/personnel expect-text "Effective status can't be resolved" snap personnel-untimed`. The alert reads `Today's posture is early dismissal, but no time was recorded for it, so effective status can't be resolved.`, the search has no `Effective status` combobox, and every row reads `Not resolved`.
+- **Unknown id.** Run `RUN_ID=<id> $V browser goto /facilities/999/personnel expect-text "Facility not found." snap personnel-not-found`. Title `Facility not found · Hack Midwest`.
+- **Load error.** On a `STORAGE=broken` instance, run `RUN_ID=<id> $V browser goto /facilities/1/personnel expect-text "Personnel could not be loaded." snap personnel-load-error`. Title `Personnel could not be loaded · Hack Midwest`.
+
+## Gotchas
+
+- Taking a `snap` right after `Save status` can catch the dialog's closing animation. Wait with `expect button "Update status for <name>"` first; the row's button is hidden from the accessibility tree while the dialog is open.
+- A not-working person's note appears in both `Baseline` and `Effective status`, so `expect-text` on the note matches two elements and fails strict mode. Assert on the summary instead.
+- `POST /api/facilities/1/recommendations` pulls live weather. If its posture is already `full_closure`, override to `unscheduled_telework` instead. If it times an early dismissal, the untimed step shows a decided posture. Report that, and don't count it as untimed proof.
+- Recording a status and recording a decision both mutate data. `down` and `up` before running a recipe that expects the baseline.
+- `Recorded by` lists only the facility's decision maker and backup, so the UI cannot send an ineligible recorder. The `/reportedById` `422` is reachable only through `POST /api/employees/:id/status` directly.
+- `Identity is not verified.` is literal: nothing checks that the chosen recorder is the person using the browser.

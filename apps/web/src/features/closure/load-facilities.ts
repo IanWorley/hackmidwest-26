@@ -37,6 +37,33 @@ export async function loadFacility({
   });
 }
 
+/** The personnel page reads the facility for its name and time zone beside the roster itself. */
+export async function loadFacilityPersonnel({
+  facilityId,
+  signal,
+}: {
+  facilityId: string;
+  signal: AbortSignal;
+}) {
+  const id = parseFacilityId(facilityId);
+  if (id === undefined) {
+    throw notFound();
+  }
+  const [facility, result] = await Promise.all([
+    loadFacility({ facilityId, signal }),
+    api.api.facilities({ id }).personnel.get({ fetch: { signal } }),
+  ]);
+  if (result.error === null) {
+    return { facility, personnel: result.data };
+  }
+  if (result.error.status === HTTP_NOT_FOUND) {
+    throw notFound();
+  }
+  throw new Error("Unable to load the facility's personnel", {
+    cause: result.error.value,
+  });
+}
+
 export type Facilities = Awaited<ReturnType<typeof loadFacilities>>;
 export type Facility = Facilities[number];
 export type Hazard = Facility["hazards"][number];
