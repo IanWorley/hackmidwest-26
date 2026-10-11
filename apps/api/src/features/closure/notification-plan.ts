@@ -6,8 +6,8 @@ import {
   type HazardSpan,
   type MessageDraft,
   type MessageIntent,
-  releaseAfterStart,
 } from "./notification-messages";
+import { releaseTiming } from "./release-timing";
 import {
   type Instant,
   localInstant,
@@ -73,7 +73,7 @@ type ChannelRule = "fastest" | "preferred";
 interface Delivery {
   readonly anchor: SendAnchor;
   readonly sendBy: string;
-  /** sendBy is at or before `now`. */
+  /** sendBy is before `now`. */
   readonly late: boolean;
   readonly rule: ChannelRule;
   readonly channel: NotificationChannel;
@@ -141,34 +141,66 @@ function commuteOf(
   return { minutes: facility.typicalCommuteMinutes, source: "facility" };
 }
 
+function endOf(
+  { facility, facilityDate }: NoticeContext,
+  { shiftEnd }: Employee,
+): Instant | null {
+  if (shiftEnd === null) {
+    return null;
+  }
+  return localInstant(
+    parseCalendarDate(facilityDate),
+    shiftEnd,
+    facility.timezone,
+  );
+}
+
+function leadBefore(at: Instant, { facility }: NoticeContext): Instant {
+  return toInstant(at - facility.notificationLeadMinutes * MS_PER_MINUTE);
+}
+
+/**
+ * Before the commute while that deadline is still ahead, so a dismissal decided early reaches
+ * people before they leave home. Once it has passed, a release during their shift is the deadline.
+ */
 function anchorFor(
   context: NoticeContext,
   employee: Employee,
   start: Start,
   intent: MessageIntent,
 ): { readonly anchor: SendAnchor; readonly at: Instant } {
-  if ("status" in intent && intent.status.kind === "dismissed") {
-    const releaseAt = releaseAfterStart(intent.status.release, start.at);
-    if (releaseAt !== null) {
-      return {
-        anchor: { kind: "release", releaseAt: toIso(releaseAt) },
-        at: releaseAt,
-      };
-    }
-  }
   const commute = commuteOf(context, employee);
-  return {
+  const beforeCommute = {
     anchor: {
       kind: "before_commute",
       start: { at: toIso(start.at), source: start.source },
       commute,
     },
     at: toInstant(start.at - commute.minutes * MS_PER_MINUTE),
+  } as const;
+  if (!("status" in intent) || intent.status.effective.kind !== "dismissed") {
+    return beforeCommute;
+  }
+  const timing = releaseTiming(
+    intent.status.effective.release,
+    start.at,
+    endOf(context, employee),
+  );
+  const commuteDeadline = leadBefore(beforeCommute.at, context);
+  if (
+    timing.kind !== "during_shift" ||
+    timelinessOf(commuteDeadline, parseInstant(context.now)) === "on_time"
+  ) {
+    return beforeCommute;
+  }
+  return {
+    anchor: { kind: "release", releaseAt: toIso(timing.at) },
+    at: timing.at,
   };
 }
 
 function timelinessOf(sendBy: Instant, now: Instant): Timeliness {
-  if (sendBy <= now) {
+  if (sendBy < now) {
     return "late";
   }
   return "on_time";
@@ -183,9 +215,7 @@ function planNotice(
   const { facility } = context;
   const start = startOf(context, employee);
   const { anchor, at } = anchorFor(context, employee, start, intent);
-  const sendBy = toInstant(
-    at - facility.notificationLeadMinutes * MS_PER_MINUTE,
-  );
+  const sendBy = leadBefore(at, context);
   const timeliness = timelinessOf(sendBy, parseInstant(context.now));
   const rule = CHANNEL_POLICY[context.urgency][timeliness];
   return {
@@ -204,6 +234,7 @@ function planNotice(
         posture: context.posture,
         hazard: context.hazard,
         workStartsAt: start.at,
+        workEndsAt: endOf(context, employee),
       },
       intent,
     ),

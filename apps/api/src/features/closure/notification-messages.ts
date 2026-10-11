@@ -5,9 +5,11 @@ import type {
   EffectiveStatus,
   EffectiveStatusKind,
   FacilityPosture,
+  PersonnelStatus,
   Release,
 } from "./effective-status";
 import type { Posture } from "./postures";
+import { releaseTiming } from "./release-timing";
 import {
   formatTimeOfDay,
   type Instant,
@@ -32,8 +34,8 @@ interface MessageDraft {
 
 /** Why a message exists. Follow-ups are intents over the same planner, not separate pipelines. */
 type MessageIntent =
-  | { readonly kind: "initial"; readonly status: EffectiveStatus }
-  | { readonly kind: "update"; readonly status: EffectiveStatus }
+  | { readonly kind: "initial"; readonly status: PersonnelStatus }
+  | { readonly kind: "update"; readonly status: PersonnelStatus }
   | { readonly kind: "withdrawn" }
   | { readonly kind: "all_clear"; readonly resumesOn: string };
 
@@ -44,6 +46,13 @@ interface MessageContext {
   readonly hazard: HazardSpan | null;
   /** This person's shift start, else the arrival window start, on the facility date. */
   readonly workStartsAt: Instant;
+  /** Null when they have no shift of their own. */
+  readonly workEndsAt: Instant | null;
+}
+
+/** A teleworker is never told to travel to or leave the building. */
+interface PersonContext extends MessageContext {
+  readonly remote: boolean;
 }
 
 interface Instructions {
@@ -53,7 +62,7 @@ interface Instructions {
 
 type StatusTemplate<K extends EffectiveStatusKind> = (
   status: Extract<EffectiveStatus, { readonly kind: K }>,
-  context: MessageContext,
+  context: PersonContext,
 ) => Instructions;
 
 type Headline<P extends Posture> = (
@@ -126,44 +135,58 @@ const STATUS_TEMPLATES: {
   }),
 };
 
-/**
- * A timed release strictly after this person's start, when they are already at work.
- * The planner anchors sendBy on it and the dismissal wording says "leave at", so both share this rule.
- */
-function releaseAfterStart(release: Release, start: Instant): Instant | null {
-  if (release === "all_day") {
-    return null;
+function stayHome({ facilityName, remote }: PersonContext): string {
+  if (remote) {
+    return "Do not work today.";
   }
-  const at = parseInstant(release.at);
-  if (at > start) {
-    return at;
-  }
-  return null;
+  return `Do not report to ${facilityName} today.`;
 }
 
-function dismissal(release: Release, context: MessageContext): Instructions {
-  const { facilityName, zone } = context;
-  if (release === "all_day") {
-    return {
-      appliesToYou: "You are dismissed for the day.",
-      whatToDo: `Do not report to ${facilityName} today.`,
-    };
+function stopAt(time: string, { facilityName, remote }: PersonContext): string {
+  if (remote) {
+    return `Stop work at ${time}.`;
   }
-  const releaseTime = formatTimeOfDay(parseInstant(release.at), zone);
-  if (releaseAfterStart(release, context.workStartsAt) === null) {
-    return {
-      appliesToYou: `You are released at ${releaseTime}, before your ${startTime(context)} start.`,
-      whatToDo: "Do not report today.",
-    };
-  }
-  return {
-    appliesToYou: `You are released early at ${releaseTime}.`,
-    whatToDo: `Leave ${facilityName} at ${releaseTime}.`,
-  };
+  return `Leave ${facilityName} at ${time}.`;
 }
 
-function startTime({ workStartsAt, zone }: MessageContext): string {
-  return formatTimeOfDay(workStartsAt, zone);
+function dismissal(release: Release, context: PersonContext): Instructions {
+  const timing = releaseTiming(
+    release,
+    context.workStartsAt,
+    context.workEndsAt,
+  );
+  switch (timing.kind) {
+    case "all_day":
+      return {
+        appliesToYou: "You are dismissed for the day.",
+        whatToDo: stayHome(context),
+      };
+    case "before_start":
+      return {
+        appliesToYou: `Your release time, ${localTime(timing.at, context)}, is no later than your ${startTime(context)} start.`,
+        whatToDo: stayHome(context),
+      };
+    case "during_shift":
+      return {
+        appliesToYou: `You are released early at ${localTime(timing.at, context)}.`,
+        whatToDo: stopAt(localTime(timing.at, context), context),
+      };
+    case "after_shift":
+      return {
+        appliesToYou: `The ${localTime(timing.at, context)} release comes after your shift ends at ${localTime(timing.endsAt, context)}.`,
+        whatToDo: "Work your normal hours.",
+      };
+    default:
+      return timing satisfies never;
+  }
+}
+
+function localTime(at: Instant, { zone }: MessageContext): string {
+  return formatTimeOfDay(at, zone);
+}
+
+function startTime(context: MessageContext): string {
+  return localTime(context.workStartsAt, context);
 }
 
 function headline<P extends Posture>(
@@ -175,7 +198,7 @@ function headline<P extends Posture>(
 
 function template<K extends EffectiveStatusKind>(
   status: Extract<EffectiveStatus, { readonly kind: K }>,
-  context: MessageContext,
+  context: PersonContext,
 ): Instructions {
   return STATUS_TEMPLATES[status.kind](status, context);
 }
@@ -189,11 +212,15 @@ function withCause(text: string, cause: Cause): string {
 }
 
 function instructionsFor(
-  status: EffectiveStatus,
+  { baseline, effective }: PersonnelStatus,
   context: MessageContext,
 ): Instructions {
-  const { appliesToYou, whatToDo } = template(status, context);
-  return { appliesToYou: withCause(appliesToYou, status.cause), whatToDo };
+  const remote = baseline.status === "teleworking";
+  const { appliesToYou, whatToDo } = template(effective, {
+    ...context,
+    remote,
+  });
+  return { appliesToYou: withCause(appliesToYou, effective.cause), whatToDo };
 }
 
 function happening(context: MessageContext): string {
@@ -250,4 +277,4 @@ function draftMessage(
 }
 
 export type { HazardSpan, MessageDraft, MessageIntent };
-export { draftMessage, releaseAfterStart };
+export { draftMessage };

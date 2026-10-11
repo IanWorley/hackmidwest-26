@@ -122,14 +122,16 @@ function formatDate({ year, month, day }: CalendarDate): string {
 /** The inverse of formatDate. */
 function parseCalendarDate(text: string): CalendarDate {
   const parts = CALENDAR_DATE_PATTERN.exec(text)?.groups;
-  if (parts === undefined) {
-    throw new RangeError(`Not a YYYY-MM-DD date: ${text}`);
-  }
-  return {
-    year: Number(parts.year),
-    month: Number(parts.month),
-    day: Number(parts.day),
+  const date = {
+    year: Number(parts?.year),
+    month: Number(parts?.month),
+    day: Number(parts?.day),
   };
+  // Date.UTC rolls 2026-02-30 over to March 2, so a real date survives the round trip unchanged.
+  if (parts === undefined || formatDate(addDays(date, 0)) !== text) {
+    throw new RangeError(`Not a YYYY-MM-DD calendar date: ${text}`);
+  }
+  return date;
 }
 
 /** `HH:MM` on `zone`'s wall clock. */
