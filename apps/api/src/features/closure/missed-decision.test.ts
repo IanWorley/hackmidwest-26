@@ -14,12 +14,14 @@ import {
   BACKUP_ID,
   type Db,
   DECIDE_BY,
+  DEFER,
   decide,
   FACILITY_ID,
   FIRST_DECISION_ID,
   RECOMMENDATION,
   RECOMMENDATION_HASH,
   RECOMMENDATION_ID,
+  SECOND_DECISION_ID,
   SHA256_HEX,
   storedDecisions,
 } from "./decision-test-fixtures";
@@ -94,6 +96,52 @@ it("writes nothing when someone already decided", async () => {
       result,
       (await storedDecisions(db)).map(({ action }) => action),
     ]).toEqual([Option.none(), ["accept"]]);
+  });
+});
+
+it("records a lapsed deferral as a no_decision by the backup that supersedes it, however often it runs", async () => {
+  await withApp(async ({ db, request }) => {
+    await request(decide(), DEFER);
+
+    const first = await runMissed(db, AFTER_DECIDE_BY);
+    const second = await runMissed(db, AFTER_DECIDE_BY);
+
+    const [, missed] = await storedDecisions(db);
+    expect([first, second, missed]).toEqual([
+      Option.some(SECOND_DECISION_ID),
+      Option.none(),
+      {
+        id: SECOND_DECISION_ID,
+        recommendationId: RECOMMENDATION_ID,
+        recommendationHash: RECOMMENDATION_HASH,
+        facilityId: FACILITY_ID,
+        action: "no_decision",
+        chosenPosture: null,
+        recheckAt: null,
+        decidedById: BACKUP_ID,
+        decidedByName: "Marcus Oyelaran",
+        decidedByRole: "State Administrative Officer",
+        decidedAt: AFTER_DECIDE_BY,
+        identityVerified: false,
+        reasonCategory: "other",
+        reasonText: "Deferred, then no decision before decideBy",
+        supersedesDecisionId: FIRST_DECISION_ID,
+        contentHash: expect.stringMatching(SHA256_HEX),
+      },
+    ]);
+  });
+});
+
+it("writes nothing for a deferral whose decideBy has not passed", async () => {
+  await withApp(async ({ db, request }) => {
+    await request(decide(), DEFER);
+
+    const result = await runMissed(db, DECIDE_BY);
+
+    expect([
+      result,
+      (await storedDecisions(db)).map(({ action }) => action),
+    ]).toEqual([Option.none(), ["defer"]]);
   });
 });
 

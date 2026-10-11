@@ -4,7 +4,7 @@ import {
   facilities,
   recommendations,
 } from "@hackmidwest/db";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { DateTime, Effect, Option, Semaphore } from "effect";
 import { Elysia, type ElysiaCustomStatusResponse, status, t } from "elysia";
 import {
@@ -31,6 +31,7 @@ import {
 } from "./decision-history";
 import {
   conflictResponse,
+  type DecisionContent,
   type DecisionOutcome,
   decisionBasis,
 } from "./decision-plan";
@@ -131,7 +132,30 @@ function toHttpResponse(outcome: DecisionOutcome): RecordDecisionResponse {
   }
 }
 
-/** The no_decision row to write, or undefined when the recommendation is a preview, a decision exists, or decideBy has not passed. */
+/** A deferral promised a recheck before decideBy, so one still at the chain's tip when decideBy passes was never decided. */
+const LAPSED_DEFERRAL_REASON = {
+  reasonCategory: "other",
+  reasonText: "Deferred, then no decision before decideBy",
+} as const satisfies Pick<DecisionContent, "reasonCategory" | "reasonText">;
+
+/** A missed decision starts the chain, or supersedes the lapsed deferral at its tip. */
+function supersededBy(
+  tip: { readonly id: number } | undefined,
+): Pick<
+  DecisionContent,
+  "reasonCategory" | "reasonText" | "supersedesDecisionId"
+> {
+  if (tip === undefined) {
+    return {
+      reasonCategory: null,
+      reasonText: null,
+      supersedesDecisionId: null,
+    };
+  }
+  return { ...LAPSED_DEFERRAL_REASON, supersedesDecisionId: tip.id };
+}
+
+/** The no_decision row to write, or undefined when the recommendation is a preview, decideBy has not passed, or its chain ends in anything but a deferral. */
 async function missedDecisionInTransaction(
   tx: Transaction,
   recommendationId: number,
@@ -146,14 +170,15 @@ async function missedDecisionInTransaction(
       eq(decisionMakers.id, facilities.backupDecisionMakerId),
     )
     .where(and(eq(recommendations.id, recommendationId), LIVE_RECOMMENDATION));
-  const [existing] = await tx
-    .select({ id: decisions.id })
+  const [tip] = await tx
+    .select({ id: decisions.id, action: decisions.action })
     .from(decisions)
     .where(eq(decisions.recommendationId, recommendationId))
+    .orderBy(desc(decisions.id))
     .limit(1);
   if (
     target === undefined ||
-    existing !== undefined ||
+    (tip !== undefined && tip.action !== "defer") ||
     DateTime.toEpochMillis(now) <= Date.parse(target.recommendation.decideBy)
   ) {
     return undefined;
@@ -165,9 +190,7 @@ async function missedDecisionInTransaction(
       action: "no_decision",
       chosenPosture: null,
       recheckAt: null,
-      reasonCategory: null,
-      reasonText: null,
-      supersedesDecisionId: null,
+      ...supersededBy(tip),
     },
     [],
   );
@@ -175,9 +198,9 @@ async function missedDecisionInTransaction(
 }
 
 /**
- * When decideBy has passed on a live recommendation and nobody decided, record a no_decision row naming the facility's
- * backup decision maker. Returns none when a decision exists or decideBy has not passed, so a
- * second run writes nothing, even when both run at once.
+ * When decideBy has passed on a live recommendation and nobody decided, or the last word was a
+ * deferral, record a no_decision row naming the facility's backup decision maker. Returns none
+ * otherwise, so a second run writes nothing, even when both run at once.
  */
 const recordMissedDecision = Effect.fn("recordMissedDecision")(function* (
   recommendationId: number,
