@@ -133,6 +133,27 @@ describe("gaugeCrossing", () => {
       major: undefined,
     });
   });
+
+  it("keeps a crossing open through a dip below the stage and a second crest", () => {
+    const gauge: RiverGauge = {
+      lid: KCDM7,
+      name: "Missouri River at Kansas City",
+      rawRef: GAUGE_URL,
+      floodStagesFt: { moderate: 35 },
+      observed: undefined,
+      forecast: [
+        { stageFt: 36, validTime: "2026-10-11T06:00:00Z" },
+        { stageFt: 34, validTime: "2026-10-11T12:00:00Z" },
+        { stageFt: 36, validTime: "2026-10-11T18:00:00Z" },
+        { stageFt: 30, validTime: "2026-10-12T00:00:00Z" },
+      ],
+    };
+
+    expect(gaugeCrossing(gauge, "moderate")).toEqual({
+      start: "2026-10-11T06:00:00Z",
+      end: "2026-10-12T00:00:00Z",
+    });
+  });
 });
 
 describe("pullFloodSignals", () => {

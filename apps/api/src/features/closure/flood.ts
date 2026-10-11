@@ -23,7 +23,7 @@ interface FloodSignals {
   readonly gauge: RiverGauge | undefined;
 }
 
-/** When a gauge is at or above a category's stage. `end` is undefined if still above at the forecast horizon. */
+/** From the first stage at or above a category to the first point after the last one. `end` is undefined if still above at the forecast horizon. */
 interface GaugeCrossing {
   readonly start: string;
   readonly end: string | undefined;
@@ -78,10 +78,17 @@ function gaugeCrossing(
   if (start === undefined) {
     return undefined;
   }
-  const end = timeline
-    .slice(timeline.indexOf(start) + 1)
-    .find((point) => point.stageFt < floodStageFt);
-  return { start: start.validTime, end: end?.validTime };
+  // A dip below the stage followed by another crest is one flood, so the crossing ends after the last crest.
+  const pointsAfterLastCrest = [...timeline]
+    .reverse()
+    .findIndex((point) => point.stageFt >= floodStageFt);
+  if (pointsAfterLastCrest === 0) {
+    return { start: start.validTime, end: undefined };
+  }
+  return {
+    start: start.validTime,
+    end: timeline.at(-pointsAfterLastCrest)?.validTime,
+  };
 }
 
 function crosses(
