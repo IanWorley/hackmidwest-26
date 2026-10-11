@@ -55,11 +55,17 @@ function PersonnelPage(): JSX.Element {
     employeeId: number,
     body: StatusBody,
   ): Promise<RecordOutcome> {
-    const outcome = await recordEmployeeStatus(employeeId, body);
-    if (outcome.kind === "recorded") {
+    try {
+      const outcome = await recordEmployeeStatus(employeeId, body);
+      if (outcome.kind === "recorded") {
+        await router.invalidate({ sync: true });
+      }
+      return outcome;
+    } catch (cause) {
+      // The request may have been saved before the connection failed, so show what was stored.
       await router.invalidate({ sync: true });
+      throw cause;
     }
-    return outcome;
   }
 
   return (

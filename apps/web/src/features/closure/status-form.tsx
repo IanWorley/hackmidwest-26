@@ -18,7 +18,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { EmployeeStatus, RecordStatus, StatusBody } from "./record-status";
 import { type Person, type Recorder, STATUS_LABELS } from "./roster-filter";
-import { SAVE_FAILED_MESSAGE } from "./status-messages";
+import { SAVE_UNCONFIRMED_MESSAGE } from "./status-messages";
 
 const FORM_STATUSES = [
   "working_onsite",
@@ -54,7 +54,8 @@ function statusBody(
   note: string,
   reportedById: number,
 ): StatusBody {
-  if (note.trim() === "") {
+  // Only a not_working status carries a reason; a working status must not keep the old one.
+  if (status !== "not_working" || note.trim() === "") {
     return { status, reportedById };
   }
   return { status, note, reportedById };
@@ -125,7 +126,7 @@ export function StatusForm({
       }
       onRecorded();
     } catch {
-      setError(SAVE_FAILED_MESSAGE);
+      setError(SAVE_UNCONFIRMED_MESSAGE);
     } finally {
       onSavingChange(false);
     }

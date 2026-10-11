@@ -54,7 +54,7 @@ function openDialog(person: ResolvedPerson, recordStatus: RecordStatus): void {
   );
 }
 
-it("lets the manager retry after the request fails to reach the API", async () => {
+it("asks the manager to check, not retry, when a save cannot be confirmed", async () => {
   openDialog(
     AVERY,
     vi.fn<RecordStatus>().mockRejectedValue(new TypeError("Failed to fetch")),
@@ -66,7 +66,7 @@ it("lets the manager retry after the request fails to reach the API", async () =
 
   await waitFor(() => {
     expect(screen.getByRole("alert").textContent).toBe(
-      "The status could not be saved. Try again.",
+      "The save could not be confirmed. The table has been refreshed; check this person's status before saving again.",
     );
   });
   expect(
@@ -75,8 +75,8 @@ it("lets the manager retry after the request fails to reach the API", async () =
   ).toBe(false);
 });
 
-it("starts a not-working person's note from their current reason", () => {
-  const onLeave: ResolvedPerson = {
+function gideonOnLeave(): ResolvedPerson {
+  return {
     ...resolvedPerson(GIDEON_ID, "Gideon Marsh", {
       building: MAIN_OFFICE,
       essential: false,
@@ -96,7 +96,10 @@ it("starts a not-working person's note from their current reason", () => {
       },
     },
   };
-  openDialog(onLeave, vi.fn<RecordStatus>());
+}
+
+it("starts a not-working person's note from their current reason", () => {
+  openDialog(gideonOnLeave(), vi.fn<RecordStatus>());
 
   expect(
     screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Note" }).value,
@@ -124,4 +127,25 @@ it("stays open while a save is in flight", async () => {
   expect(
     screen.getByRole("dialog", { name: "Update status for Avery Calloway" }),
   ).toBeTruthy();
+});
+
+it("drops a not-working reason when the person is recorded as working again", async () => {
+  const recordStatus = vi.fn<RecordStatus>(() =>
+    Promise.resolve({ kind: "recorded" }),
+  );
+  openDialog(gideonOnLeave(), recordStatus);
+  fireEvent.change(screen.getByRole("combobox", { name: "Status" }), {
+    target: { value: "working_onsite" },
+  });
+  fireEvent.change(screen.getByRole("combobox", { name: "Recorded by" }), {
+    target: { value: "1" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save status" }));
+
+  await waitFor(() => {
+    expect(recordStatus).toHaveBeenCalledWith(GIDEON_ID, {
+      status: "working_onsite",
+      reportedById: 1,
+    });
+  });
 });

@@ -80,24 +80,13 @@ export function formatFacilityDay(facilityDate: string): string {
   }).format(new Date(`${facilityDate}T00:00:00Z`));
 }
 
-/**
- * The status a person is scheduled to move to, such as `then not working from Fri, Oct 16, 2026 14:00`.
- * The baseline is the newest event already in effect, so a reported event that starts after it
- * has not started yet.
- */
+/** The status a person is scheduled to move to next, such as `then not working from Fri, Oct 16, 2026 14:00`. */
 export function formatScheduled(
   person: Person,
   timeZone: string,
 ): string | undefined {
-  const { latestEvent, baseline } = person;
-  if (latestEvent === null || latestEvent.id === baseline.event?.id) {
-    return undefined;
-  }
-  const startsAfterBaseline =
-    baseline.event === null ||
-    Date.parse(latestEvent.effectiveFrom) >
-      Date.parse(baseline.event.effectiveFrom);
-  if (!startsAfterBaseline) {
+  const { nextEvent } = person;
+  if (nextEvent === null) {
     return undefined;
   }
   const day = new Intl.DateTimeFormat(CLOCK_LOCALE, {
@@ -106,6 +95,6 @@ export function formatScheduled(
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(new Date(latestEvent.effectiveFrom));
-  return `${SCHEDULED_PREFIX} ${STATUS_LABELS[latestEvent.status]} from ${day} ${formatClock(latestEvent.effectiveFrom, timeZone)}`;
+  }).format(new Date(nextEvent.effectiveFrom));
+  return `${SCHEDULED_PREFIX} ${STATUS_LABELS[nextEvent.status]} from ${day} ${formatClock(nextEvent.effectiveFrom, timeZone)}`;
 }

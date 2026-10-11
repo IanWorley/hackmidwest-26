@@ -54,6 +54,7 @@ export function resolvedPerson(
     hasAccessibilityNeeds: false,
     baseline: ONSITE_BASELINE,
     latestEvent: null,
+    nextEvent: null,
     effective,
   };
 }

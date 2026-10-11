@@ -98,7 +98,7 @@ const SCHEDULED_LEAVE = {
 } as const;
 
 function averyWith(
-  latestEvent: typeof SEED_EVENT | typeof SCHEDULED_LEAVE,
+  nextEvent: typeof SCHEDULED_LEAVE | null,
 ): ReturnType<typeof resolvedPerson> {
   return {
     ...resolvedPerson(1, "Avery Calloway", {
@@ -107,7 +107,8 @@ function averyWith(
       effective: ONSITE,
     }),
     baseline: { status: "working_onsite", event: SEED_EVENT },
-    latestEvent,
+    latestEvent: SEED_EVENT,
+    nextEvent,
   };
 }
 
@@ -117,8 +118,8 @@ it("names a scheduled status that has not started yet", () => {
   );
 });
 
-it("names nothing when the newest event is the one in effect", () => {
-  expect(formatScheduled(averyWith(SEED_EVENT), CHICAGO)).toBeUndefined();
+it("names nothing when nothing is scheduled", () => {
+  expect(formatScheduled(averyWith(null), CHICAGO)).toBeUndefined();
 });
 
 it("writes a facility date as its calendar day", () => {
