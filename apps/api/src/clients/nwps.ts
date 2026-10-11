@@ -83,10 +83,25 @@ type NwpsErrorReason =
   | { readonly kind: "status"; readonly status: number }
   | { readonly kind: "schema"; readonly detail: string };
 
+function describeReason(reason: NwpsErrorReason): string {
+  switch (reason.kind) {
+    case "status":
+      return `HTTP ${reason.status}`;
+    case "schema":
+      return `unexpected payload: ${reason.detail}`;
+    default:
+      return reason.kind;
+  }
+}
+
 class NwpsError extends Data.TaggedError("NwpsError")<{
   readonly url: string;
   readonly reason: NwpsErrorReason;
-}> {}
+}> {
+  override get message(): string {
+    return `NWPS request failed (${describeReason(this.reason)}): ${this.url}`;
+  }
+}
 
 interface NwpsClientShape {
   /** Flood stages, latest observation, and forecast stages for one river gauge. */
