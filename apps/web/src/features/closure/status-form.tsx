@@ -82,6 +82,23 @@ function FormError({
   );
 }
 
+function BaselineChangedNotice({
+  name,
+  shown,
+}: {
+  name: string;
+  shown: boolean;
+}): JSX.Element | null {
+  if (!shown) {
+    return null;
+  }
+  return (
+    <p className="text-sm" role="status">
+      {`${name}${BASELINE_CHANGED_SUFFIX}`}
+    </p>
+  );
+}
+
 /** A person already not working keeps their reason, so saving the same status does not need it retyped. */
 function initialNote(person: Person): string {
   if (person.baseline.status === "not_working") {
@@ -141,11 +158,7 @@ export function StatusForm({
 
   return (
     <form className="grid gap-4" noValidate={true} onSubmit={submit}>
-      {baselineChanged && (
-        <p className="text-sm" role="status">
-          {`${person.name}${BASELINE_CHANGED_SUFFIX}`}
-        </p>
-      )}
+      <BaselineChangedNotice name={person.name} shown={baselineChanged} />
       <div className="grid gap-2">
         <Label htmlFor={`${baseId}-status`}>{STATUS_LABEL}</Label>
         <NativeSelect

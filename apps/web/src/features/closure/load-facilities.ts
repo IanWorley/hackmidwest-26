@@ -9,6 +9,69 @@ type FacilityDay = NonNullable<
   Awaited<ReturnType<FacilityDayCall["get"]>>["data"]
 >;
 
+type PersonnelCall = ReturnType<typeof api.api.facilities>["personnel"];
+type FacilityPersonnel = NonNullable<
+  Awaited<ReturnType<PersonnelCall["get"]>>["data"]
+>;
+
+/** A roster with the instant its facility day rolls over. */
+interface RosterDay {
+  readonly personnel: FacilityPersonnel;
+  readonly rollsOverAt: string;
+}
+
+async function loadPersonnel(
+  facilityId: number,
+  signal: AbortSignal,
+): Promise<FacilityPersonnel> {
+  const result = await api.api
+    .facilities({ id: facilityId })
+    .personnel.get({ fetch: { signal } });
+  if (result.error === null) {
+    return result.data;
+  }
+  if (result.error.status === HTTP_NOT_FOUND) {
+    throw notFound();
+  }
+  throw new Error("Unable to load the facility's personnel", {
+    cause: result.error.value,
+  });
+}
+
+async function readRosterDay(
+  facilityId: number,
+  signal: AbortSignal,
+): Promise<RosterDay & { readonly sameDay: boolean }> {
+  const [personnel, facilityDay] = await Promise.all([
+    loadPersonnel(facilityId, signal),
+    loadFacilityDay(facilityId, signal),
+  ]);
+  return {
+    personnel,
+    rollsOverAt: facilityDay.rollsOverAt,
+    sameDay: personnel.facilityDate === facilityDay.facilityDate,
+  };
+}
+
+/**
+ * The roster and its rollover must describe the same facility day, or the page would wait for
+ * tomorrow's rollover while showing today's statuses. Two reads in flight across closing time can
+ * disagree; a second read starts after the boundary, so it agrees unless something is wrong.
+ */
+async function loadRosterDay(
+  facilityId: number,
+  signal: AbortSignal,
+): Promise<RosterDay> {
+  let read = await readRosterDay(facilityId, signal);
+  if (!read.sameDay) {
+    read = await readRosterDay(facilityId, signal);
+  }
+  if (!read.sameDay) {
+    throw new Error("The roster and the facility day disagree");
+  }
+  return { personnel: read.personnel, rollsOverAt: read.rollsOverAt };
+}
+
 /** Routes receive successful domain data; Eden error envelopes stop at this boundary. */
 export async function loadFacilities({ signal }: { signal: AbortSignal }) {
   const result = await api.api.facilities.get({ fetch: { signal } });
@@ -59,49 +122,6 @@ export async function loadFacilityDay(
   throw new Error("Unable to load the facility's current day", {
     cause: result.error.value,
   });
-}
-
-async function loadPersonnel(facilityId: number, signal: AbortSignal) {
-  const result = await api.api
-    .facilities({ id: facilityId })
-    .personnel.get({ fetch: { signal } });
-  if (result.error === null) {
-    return result.data;
-  }
-  if (result.error.status === HTTP_NOT_FOUND) {
-    throw notFound();
-  }
-  throw new Error("Unable to load the facility's personnel", {
-    cause: result.error.value,
-  });
-}
-
-async function readRosterDay(facilityId: number, signal: AbortSignal) {
-  const [personnel, facilityDay] = await Promise.all([
-    loadPersonnel(facilityId, signal),
-    loadFacilityDay(facilityId, signal),
-  ]);
-  return {
-    personnel,
-    rollsOverAt: facilityDay.rollsOverAt,
-    sameDay: personnel.facilityDate === facilityDay.facilityDate,
-  };
-}
-
-/**
- * The roster and its rollover must describe the same facility day, or the page would wait for
- * tomorrow's rollover while showing today's statuses. Two reads in flight across closing time can
- * disagree; a second read starts after the boundary, so it agrees unless something is wrong.
- */
-async function loadRosterDay(facilityId: number, signal: AbortSignal) {
-  let read = await readRosterDay(facilityId, signal);
-  if (!read.sameDay) {
-    read = await readRosterDay(facilityId, signal);
-  }
-  if (!read.sameDay) {
-    throw new Error("The roster and the facility day disagree");
-  }
-  return { personnel: read.personnel, rollsOverAt: read.rollsOverAt };
 }
 
 /** The personnel page reads the facility for its name and time zone, and its day's rollover, beside the roster itself. */
