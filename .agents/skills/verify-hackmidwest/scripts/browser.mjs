@@ -12,6 +12,9 @@ const STEP_ARGS = {
   expect: ["role", "name"],
   "expect-text": ["text"],
   "block-api": [],
+  fill: ["label", "text"],
+  select: ["label", "option"],
+  tab: ["name"],
   snap: ["name"],
 };
 
@@ -23,25 +26,9 @@ const logFile = join(ARTIFACTS, "browser.log");
 
 const steps = parseSteps(process.argv.slice(2));
 const browser = await chromium.launch();
-const page = await browser.newPage();
-page.setDefaultTimeout(STEP_TIMEOUT_MS);
-page.on("console", (message) => {
-  if (message.type() === "error") {
-    log(`console.error ${message.text()}`);
-  }
-});
-page.on("requestfinished", async (request) => {
-  if (!request.url().startsWith(API_URL)) {
-    return;
-  }
-  const response = await request.response();
-  log(`net ${request.method()} ${request.url()} -> ${response?.status()}`);
-});
-page.on("requestfailed", (request) => {
-  log(
-    `net ${request.method()} ${request.url()} -> FAILED ${request.failure()?.errorText}`,
-  );
-});
+const pages = new Map();
+let tabName = "main";
+let page = await openTab(tabName);
 
 try {
   for (const [verb, ...args] of steps) {
@@ -78,6 +65,19 @@ async function runStep(verb, args) {
       return;
     case "expect-text":
       await page.getByText(args[0], { exact: true }).waitFor();
+      return;
+    case "fill":
+      await page.getByLabel(args[0], { exact: true }).fill(args[1]);
+      return;
+    case "select":
+      await page
+        .getByLabel(args[0], { exact: true })
+        .selectOption({ label: args[1] });
+      return;
+    case "tab":
+      [tabName] = args;
+      page = pages.get(tabName) ?? (await openTab(tabName));
+      await page.bringToFront();
       return;
     case "block-api":
       await page.route(`${API_URL}/**`, (route) =>
@@ -127,9 +127,48 @@ function parseSteps(argv) {
   return parsed;
 }
 
-/** @param {string} line */
-function log(line) {
-  const entry = `${new Date().toISOString()} ${line}`;
+/**
+ * A tab is a second person at another browser on the same app, so one run can stage a conflict.
+ * @param {string} name
+ */
+async function openTab(name) {
+  const tab = await browser.newPage();
+  /** @param {string} line */
+  function tabLog(line) {
+    log(line, name);
+  }
+  tab.setDefaultTimeout(STEP_TIMEOUT_MS);
+  tab.on("console", (message) => {
+    if (message.type() === "error") {
+      tabLog(`console.error ${message.text()}`);
+    }
+  });
+  tab.on("requestfinished", async (request) => {
+    if (!request.url().startsWith(API_URL)) {
+      return;
+    }
+    const response = await request.response();
+    tabLog(`net ${request.method()} ${request.url()} -> ${response?.status()}`);
+  });
+  tab.on("requestfailed", (request) => {
+    tabLog(
+      `net ${request.method()} ${request.url()} -> FAILED ${request.failure()?.errorText}`,
+    );
+  });
+  pages.set(name, tab);
+  return tab;
+}
+
+/**
+ * @param {string} line
+ * @param {string} [tab] the tab the line is about; defaults to the one steps drive
+ */
+function log(line, tab = tabName) {
+  let prefix = "";
+  if (tab !== "main") {
+    prefix = `[${tab}] `;
+  }
+  const entry = `${new Date().toISOString()} ${prefix}${line}`;
   console.log(entry);
   appendFileSync(logFile, `${entry}\n`);
 }
