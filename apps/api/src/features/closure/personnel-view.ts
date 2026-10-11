@@ -67,6 +67,34 @@ function latestReported(
   return latest;
 }
 
+/** Baseline order: the earlier start wins, and at the same start the later report (a correction) wins. */
+function startsBefore(a: StatusEvent, b: StatusEvent): boolean {
+  return (
+    (Date.parse(a.effectiveFrom) - Date.parse(b.effectiveFrom) ||
+      Date.parse(b.reportedAt) - Date.parse(a.reportedAt) ||
+      b.id - a.id) < 0
+  );
+}
+
+/** The next event reported by `now` that has not taken effect yet: what the baseline becomes next. */
+function nextScheduled(
+  statusEvents: readonly StatusEvent[],
+  now: string,
+): StatusEvent | null {
+  const nowMs = Date.parse(now);
+  let next: StatusEvent | null = null;
+  for (const event of statusEvents) {
+    if (
+      Date.parse(event.reportedAt) <= nowMs &&
+      Date.parse(event.effectiveFrom) > nowMs &&
+      (next === null || startsBefore(event, next))
+    ) {
+      next = event;
+    }
+  }
+  return next;
+}
+
 /** One pass over the event history, so resolving the roster stays linear as add-only history grows. */
 function byEmployee(
   statusEvents: readonly StatusEvent[],
@@ -134,6 +162,7 @@ function personnelView(
           hasAccessibilityNeeds: employee.accessibilityNeeds !== null,
           baseline,
           latestEvent: latestReported(employee.id, statusEvents, now),
+          nextEvent: nextScheduled(statusEvents, now),
         },
         effective,
       };

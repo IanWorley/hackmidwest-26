@@ -111,6 +111,8 @@ const personSchema = t.Object({
   baseline: baselineSchema,
   /** The newest event reported so far, which may take effect later than now. */
   latestEvent: t.Nullable(statusEventSchema),
+  /** The next scheduled event, which the baseline becomes when it takes effect. */
+  nextEvent: t.Nullable(statusEventSchema),
 });
 
 const personnelContextFields = {

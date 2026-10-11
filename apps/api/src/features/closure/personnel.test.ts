@@ -105,3 +105,24 @@ it("leaves an event reported after asOf out of latestEvent", async () => {
     });
   });
 });
+
+it("keeps a scheduled event as nextEvent after a later immediate update", async () => {
+  await withApp(async ({ request }) => {
+    const path = `/api/employees/${AVERY_TELEWORK_ELIGIBLE}/status`;
+    await request(path, {
+      status: "not_working",
+      note: "Leave starts this afternoon.",
+      reportedById: DECIDER_ID,
+      effectiveFrom: LATER,
+    });
+    await request(path, { status: "teleworking", reportedById: DECIDER_ID });
+
+    const avery = person(await personnel(request), AVERY_TELEWORK_ELIGIBLE);
+
+    expect(avery).toMatchObject({
+      baseline: { status: "teleworking" },
+      latestEvent: { status: "teleworking" },
+      nextEvent: { status: "not_working", effectiveFrom: LATER },
+    });
+  });
+});
